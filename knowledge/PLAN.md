@@ -16,8 +16,8 @@ Pothos is a self-hostable, open-source budget and expense tracking app for indiv
 | T6 — Shared types           | ✅ Complete    |
 | T7 — User Settings & Me     | ✅ Complete    |
 | T8 — Accounts               | ✅ Complete    |
-| T9 — Categories             | 🔄 In progress |
-| T10 — Transactions          | ⬜ Not started |
+| T9 — Categories             | ✅ Complete    |
+| T10 — Transactions          | 🔄 In progress |
 | T11 — Budgets               | ⬜ Not started |
 | T12 — Reports               | ⬜ Not started |
 | WS4 — Frontend              | ⬜ Not started |
@@ -167,12 +167,12 @@ pothos/
 - `POST /api/v1/accounts/:id/close` — only allowed if balance = 0, sets is_active = false
 - `POST /api/v1/accounts/:id/reopen` — sets is_active = true
 
-**T9 — Categories** `🔄 in progress`
+**T9 — Categories** `✅ complete`
 
-- `GET /api/v1/categories` — global defaults + user custom categories
-- `POST /api/v1/categories` — create custom category
-- `PUT /api/v1/categories/:id` — update custom category only
-- `DELETE /api/v1/categories/:id` — only if no transactions reference it, never global defaults
+- `GET /api/v1/categories` — returns global defaults (null user_id) + user's custom categories
+- `POST /api/v1/categories` — create custom category with name, icon, color, type
+- `PUT /api/v1/categories/:id` — update custom category only; global defaults return 403
+- `DELETE /api/v1/categories/:id` — blocked if transactions reference it; global defaults return 403
 
 **T10 — Transactions** `⬜ not started`
 

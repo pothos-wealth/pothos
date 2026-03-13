@@ -6,6 +6,7 @@ import { healthRoutes } from "./routes/v1/health.js";
 import { authRoutes } from "./routes/v1/auth.js";
 import { userRoutes } from "./routes/v1/user.js";
 import { accountRoutes } from "./routes/v1/accounts.js";
+import { categoryRoutes } from "./routes/v1/categories.js";
 
 dotenv.config();
 
@@ -40,6 +41,7 @@ await app.register(healthRoutes, { prefix: "/api/v1" });
 await app.register(authRoutes, { prefix: "/api/v1" });
 await app.register(userRoutes, { prefix: "/api/v1" });
 await app.register(accountRoutes, { prefix: "/api/v1" });
+await app.register(categoryRoutes, { prefix: "/api/v1" });
 
 // ─── Global Error Handler ─────────────────────────────────────────────────────
 
