@@ -1,0 +1,11 @@
+node_modules
+dist
+data
+drizzle
+.env
+*.db
+*.db-shm
+*.db-wal
+src
+tsconfig.json
+drizzle.config.ts
