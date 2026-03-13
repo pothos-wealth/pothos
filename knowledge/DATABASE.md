@@ -57,10 +57,13 @@ Enums are implemented as Drizzle `text` columns with an `enum` option. SQLite st
 | name            | text    | e.g. "Chase Checking"                         |
 | type            | text    | free-form, e.g. "checking", "savings", "cash" |
 | initial_balance | integer | in minor units (paise/cents)                  |
+| is_active       | integer | boolean, 1 = active, 0 = closed. Default 1    |
 | created_at      | integer | Unix timestamp                                |
 | updated_at      | integer | Unix timestamp                                |
 
 > Account balance is always derived: `initial_balance` + sum of transactions. Never stored directly.
+> Accounts are never hard deleted if transactions exist. Use close/reopen instead.
+> Hard delete is only allowed if the account has zero transactions (created by mistake).
 
 ### `categories`
 

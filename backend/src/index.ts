@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import type { FastifyError } from "fastify";
 import { healthRoutes } from "./routes/v1/health.js";
 import { authRoutes } from "./routes/v1/auth.js";
+import { userRoutes } from "./routes/v1/user.js";
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ await app.register(cookie, {
 
 await app.register(healthRoutes, { prefix: "/api/v1" });
 await app.register(authRoutes, { prefix: "/api/v1" });
+await app.register(userRoutes, { prefix: "/api/v1" });
 
 // ─── Global Error Handler ─────────────────────────────────────────────────────
 

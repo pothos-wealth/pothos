@@ -6,18 +6,23 @@ Pothos is a self-hostable, open-source budget and expense tracking app for indiv
 
 ## Progress
 
-| Task                         | Status         |
-| ---------------------------- | -------------- |
-| T1 — Repo scaffold           | ✅ Complete    |
-| T2 — DB schema + migrations  | ✅ Complete    |
-| T3 — API scaffold            | ✅ Complete    |
-| T4 — Auth system             | ✅ Complete    |
-| T5 — Docker Compose          | ✅ Complete    |
-| T6 — Shared types            | ✅ Complete    |
-| WS2 — Transactions & Budgets | ⬜ Not started |
-| WS3 — Gmail Ingestion        | ⬜ Not started |
-| WS4 — Frontend               | ⬜ Not started |
-| WS5 — MCP Server             | ⬜ Not started |
+| Task                        | Status         |
+| --------------------------- | -------------- |
+| T1 — Repo scaffold          | ✅ Complete    |
+| T2 — DB schema + migrations | ✅ Complete    |
+| T3 — API scaffold           | ✅ Complete    |
+| T4 — Auth system            | ✅ Complete    |
+| T5 — Docker Compose         | ✅ Complete    |
+| T6 — Shared types           | ✅ Complete    |
+| T7 — User Settings & Me     | ✅ Complete    |
+| T8 — Accounts               | ⬜ Not started |
+| T9 — Categories             | ⬜ Not started |
+| T10 — Transactions          | ⬜ Not started |
+| T11 — Budgets               | ⬜ Not started |
+| T12 — Reports               | ⬜ Not started |
+| WS4 — Frontend              | ⬜ Not started |
+| WS3 — Gmail Ingestion       | ⬜ Not started |
+| WS5 — MCP Server            | ⬜ Not started |
 
 ## V1 Feature Scope
 
@@ -64,23 +69,9 @@ pothos/
 
 ## Workstreams
 
-### WS1 — Core Backend
+### WS1 — Core Backend `✅ complete`
 
 **Goal:** Establish the foundation every other workstream depends on. Repo structure, database, API scaffold, auth, Docker, and shared types.
-
-#### Task flow
-
-```
-T1 (monorepo scaffold)
-    ├── T2 (DB schema)      ← parallel
-    └── T3 (API scaffold)   ← parallel
-            ↓
-        T4 (auth system)    ← sequential, needs T2 + T3
-            ├── T5 (Docker Compose)   ← parallel
-            └── T6 (shared types)     ← parallel
-```
-
-WS2, WS3, WS4, WS5 all unblock after T4 ships.
 
 #### Tasks
 
@@ -140,47 +131,97 @@ WS2, WS3, WS4, WS5 all unblock after T4 ships.
 
 ---
 
-### WS2 — Transactions & Budgets
+### WS2 — Transactions & Budgets `🔄 in progress`
 
 **Goal:** Manual transaction entry, account management, budget management, categories, transfer support. Backend is single source of truth for all math.
-
-> Tasks TBD — to be planned at start of WS2.
 
 **Dependencies:** WS1 complete
 
 **Key constraints:**
 
-- Transfers create two linked transaction records via `transfer_id`
-- Transfers excluded from budget and spending reports
-- Account balance derived from `initial_balance` + transactions, never stored directly
-- Single currency per user, stored in `user_settings`
+- All math server-side, never in the LLM
+- Transfers excluded from all budget and report calculations
+- Account balance always derived from `initial_balance` + transactions, never stored
+- Closed account transactions included in reports
+- Active accounts only in default account list unless `?includeInactive=true`
+- Global default categories (null user_id) are never deletable or editable
+- better-sqlite3 is synchronous — all transactions use `.run()` explicitly
+
+#### Tasks
+
+**T7 — User Settings & Me** `⬜ not started`
+
+- `GET /api/v1/user/me` — current user (no password hash)
+- `GET /api/v1/user/settings` — user settings
+- `PUT /api/v1/user/settings` — update currency
+
+**T8 — Accounts** `⬜ not started`
+
+- Migration: add `is_active` column to `accounts` table (default true)
+- `GET /api/v1/accounts` — list active accounts with derived balance
+- `GET /api/v1/accounts?includeInactive=true` — include closed accounts
+- `POST /api/v1/accounts` — create account
+- `GET /api/v1/accounts/:id` — single account with derived balance
+- `PUT /api/v1/accounts/:id` — update name/type
+- `DELETE /api/v1/accounts/:id` — only allowed if zero transactions
+- `POST /api/v1/accounts/:id/close` — only allowed if balance = 0, sets is_active = false
+- `POST /api/v1/accounts/:id/reopen` — sets is_active = true
+
+**T9 — Categories** `⬜ not started`
+
+- `GET /api/v1/categories` — global defaults + user custom categories
+- `POST /api/v1/categories` — create custom category
+- `PUT /api/v1/categories/:id` — update custom category only
+- `DELETE /api/v1/categories/:id` — only if no transactions reference it, never global defaults
+
+**T10 — Transactions** `⬜ not started`
+
+- `GET /api/v1/transactions` — paginated list
+    - Filters: `accountId`, `categoryId`, `type`, `startDate`, `endDate`, `page`, `limit`
+- `POST /api/v1/transactions` — create income/expense
+- `GET /api/v1/transactions/:id` — single transaction
+- `PUT /api/v1/transactions/:id` — update transaction
+- `DELETE /api/v1/transactions/:id` — if transfer, deletes both sides atomically
+- `POST /api/v1/transactions/transfer` — atomic transfer, creates two linked records
+
+**T11 — Budgets** `⬜ not started`
+
+- `GET /api/v1/budgets?month=&year=` — list budgets with actual spending for period
+- `POST /api/v1/budgets` — create or update (upsert on unique constraint)
+- `DELETE /api/v1/budgets/:id`
+
+**T12 — Reports** `⬜ not started`
+
+- `GET /api/v1/reports/overview?month=&year=` — total income, expenses, net. Defaults to current month
+- `GET /api/v1/reports/categories?month=&year=` — expenses grouped by category for period
+- `GET /api/v1/reports/trends?months=12` — monthly totals over N months, defaults to 12
 
 ---
 
-### WS3 — Gmail Ingestion
+### WS4 — Frontend `⬜ not started`
+
+**Goal:** Next.js app with Tailwind + shadcn/ui. Dashboard, transaction list, manual entry, budget views, account management, settings.
+
+> Tasks TBD — to be planned at start of WS4.
+
+**Dependencies:** WS2 complete
+
+---
+
+### WS3 — Gmail Ingestion `⬜ not started`
 
 **Goal:** IMAP connection, email polling with cursor per user, LLM adapter, pending queue, fallback chain (LLM → regex → pending).
 
 > Tasks TBD — to be planned at start of WS3.
 
-**Dependencies:** WS1 complete, WS2 (transaction shape)
+**Dependencies:** WS2 complete, WS4 complete
 
 ---
 
-### WS4 — Frontend
-
-**Goal:** Next.js app with Tailwind + shadcn/ui. Dashboard, transaction list, manual entry, budget views, account management, Gmail setup.
-
-> Tasks TBD — to be planned at start of WS4.
-
-**Dependencies:** WS1 complete
-
----
-
-### WS5 — MCP Server
+### WS5 — MCP Server `⬜ not started`
 
 **Goal:** Thin tool-exposure layer. Calls backend for all logic. Includes `parse_pending` for local Ollama users.
 
 > Tasks TBD — to be planned at start of WS5.
 
-**Dependencies:** WS1 complete
+**Dependencies:** WS3 complete
