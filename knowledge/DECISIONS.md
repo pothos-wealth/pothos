@@ -1,58 +1,115 @@
 # Decision Log
 
-| Topic                           | Decision                                                                                                                                                                              | Reason                                                                                                                          |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Drizzle ORM version awareness   | Always verify Drizzle ORM and drizzle-kit usage against the official docs at https://orm.drizzle.team — the API is actively evolving and patterns from older examples may be outdated | Drizzle is a relatively new ORM with frequent changes between minor versions                                                    |
-| Repo structure                  | Single repo, three independent folders: `backend/`, `frontend/`, `mcp/`                                                                                                               | Simple, no monorepo tooling overhead                                                                                            |
-| Monorepo tooling                | None (no Turborepo)                                                                                                                                                                   | Each folder is its own Node project, keeps it simple                                                                            |
-| Database                        | SQLite via Drizzle ORM                                                                                                                                                                | Single file, zero infra, perfect for t2.micro self-hosted setup                                                                 |
-| SQLite driver                   | `better-sqlite3`                                                                                                                                                                      | Synchronous, no external deps, battle-tested                                                                                    |
-| SQLite transactions             | Synchronous only — no async callbacks                                                                                                                                                 | `better-sqlite3` limitation; use `.run()` explicitly inside transactions                                                        |
-| Backend framework               | Fastify v5                                                                                                                                                                            | Fast, TypeScript-native, ships with Pino logging                                                                                |
-| Auth                            | Email + password, server-side sessions in SQLite, HttpOnly cookie                                                                                                                     | Simple, no OAuth complexity in v1                                                                                               |
-| Session expiry                  | 7 days, fixed                                                                                                                                                                         | Reasonable balance of convenience and security                                                                                  |
-| Session invalidation            | All sessions deleted on password change                                                                                                                                               | Security best practice                                                                                                          |
-| Password policy                 | Min 8 chars, at least one uppercase, one number, one special character                                                                                                                | Moderate security without being annoying                                                                                        |
-| Timing attack prevention        | Constant-time bcrypt comparison on login even when user not found                                                                                                                     | Prevents user enumeration via response timing                                                                                   |
-| Frontend framework              | Next.js + Tailwind CSS + shadcn/ui                                                                                                                                                    | Modern, well-supported, great DX                                                                                                |
-| Email ingestion                 | Gmail only (v1) via IMAP + App Password                                                                                                                                               | No OAuth complexity, sufficient for v1                                                                                          |
-| LLM provider                    | Adapter pattern, OpenAI default, user-configurable via env vars                                                                                                                       | Flexible, bring-your-own key                                                                                                    |
-| Pending queue                   | DB-backed (SQLite table + poller)                                                                                                                                                     | No Redis or BullMQ needed at this scale                                                                                         |
-| Shared types                    | Types live in `backend/src/types/` only                                                                                                                                               | Frontend mirrors shapes locally, no cross-folder imports                                                                        |
-| Deployment                      | Single `docker-compose.yml`, production only                                                                                                                                          | Dev runs natively, no Docker complexity in development                                                                          |
-| Dev workflow                    | `npm run dev` natively per folder                                                                                                                                                     | Avoids Windows/Docker hot-reload issues                                                                                         |
-| Production build                | `tsc` compile to `dist/`, run via `node dist/index.js`                                                                                                                                | Clean production artifact, no tsx in prod                                                                                       |
-| Startup sequence                | Migrations → seed → server start via `docker-entrypoint.sh`                                                                                                                           | Ensures DB is always up to date on cold boot                                                                                    |
-| Package manager                 | npm                                                                                                                                                                                   | Standard, no extra tooling                                                                                                      |
-| Linting                         | ESLint v9 flat config + typescript-eslint v8                                                                                                                                          | Modern, forward-compatible                                                                                                      |
-| Formatting                      | Prettier (double quotes, 4 spaces, 100 print width)                                                                                                                                   | Consistent, enforced on save via VS Code                                                                                        |
-| Money storage                   | Integer minor units (paise/cents)                                                                                                                                                     | Avoids float precision issues entirely                                                                                          |
-| Currency standard               | ISO 4217 codes (e.g. "INR", "USD")                                                                                                                                                    | Universal standard                                                                                                              |
-| Default currency                | "INR"                                                                                                                                                                                 | Primary user base                                                                                                               |
-| Currency config                 | Stored in `user_settings`, not `users`                                                                                                                                                | Extensible — more settings will be added (rollover, notifications, etc.)                                                        |
-| Account balance                 | Derived from `initial_balance` + transactions                                                                                                                                         | Never stored directly, always consistent                                                                                        |
-| Account type                    | Free-form text                                                                                                                                                                        | Flexible for v1, UI can suggest common types                                                                                    |
-| Transfers                       | Two linked transaction records via `transfer_id`                                                                                                                                      | Clean, excludable from reports                                                                                                  |
-| Budgets                         | One per category per month, unique constraint                                                                                                                                         | Simple, edit updates existing row                                                                                               |
-| Enums                           | Drizzle `text` with `enum` option                                                                                                                                                     | SQLite has no native enum; TypeScript enforces at compile time                                                                  |
-| Categories                      | Global defaults (null user_id) + user-defined                                                                                                                                         | Seeded on first run, users can add custom                                                                                       |
-| MCP balance query               | Per-account breakdown + net worth total                                                                                                                                               | Full context in one query                                                                                                       |
-| Reverse proxy                   | Nginx with Let's Encrypt SSL                                                                                                                                                          | Industry standard, handles SSL termination cleanly                                                                              |
-| SSL                             | Let's Encrypt via Certbot, auto-renewal every 12h                                                                                                                                     | Free, automated, production-grade                                                                                               |
-| Domain                          | Subdomain-based e.g. `pothos.test.com`                                                                                                                                                | Keeps Pothos isolated from other services on the same domain                                                                    |
-| CSV import/export               | Deferred to v2                                                                                                                                                                        | Keeps v1 scope tight                                                                                                            |
-| Credit card accounts            | Deferred to v2                                                                                                                                                                        | Inverse balance logic adds complexity                                                                                           |
-| Subcategories                   | Deferred to v2                                                                                                                                                                        | Flat categories sufficient for v1                                                                                               |
-| Recurring transactions          | Deferred to v2                                                                                                                                                                        | Gmail parsing covers most recurring expenses                                                                                    |
-| Budget rollover                 | Deferred to v2                                                                                                                                                                        | Will live in `user_settings` when added                                                                                         |
-| License                         | AGPL v3                                                                                                                                                                               | Ensures hosted deployments must open-source modifications                                                                       |
-| Account deletion                | Hard delete only if zero transactions; soft delete (close) if transactions exist                                                                                                      | Preserves transaction history, mirrors real-world account lifecycle                                                             |
-| Account closure                 | Only allowed if balance = 0; sets is_active = false                                                                                                                                   | Can't close an account with money still in it                                                                                   |
-| Closed accounts in reports      | Included by default                                                                                                                                                                   | Historical accuracy — past spending happened regardless of account status                                                       |
-| Closed accounts in account list | Excluded by default, opt-in via ?includeInactive=true                                                                                                                                 | Keeps UI clean while preserving data                                                                                            |
-| Category deletion               | Blocked if any transactions reference it; global defaults never deletable                                                                                                             | Prevents accidental loss of categorized transaction history                                                                     |
-| Workstream order                | WS1 → WS2 → WS4 → WS3 → WS5                                                                                                                                                           | Frontend before Gmail/MCP — core product usability first                                                                        |
-| Signed amounts                  | Amounts are signed integers — positive for inflows, negative for outflows                                                                                                             | Mirrors YNAB's proven data model. Balance calculation becomes `initial_balance + SUM(amount)` — trivially simple                |
-| Transfer linking                | Each transfer transaction stores `transfer_account_id` and `transfer_transaction_id`                                                                                                  | Direct lookup of paired transaction without a separate linking table or shared ID. Mirrors YNAB's `transfer_account_id` pattern |
-| Removed `transfer_id`           | Replaced by `transfer_transaction_id` on each record                                                                                                                                  | Cleaner — direct reference to paired transaction instead of a shared nanoid                                                     |
-| YNAB as reference               | YNAB used as primary reference for finance data model decisions                                                                                                                       | Well-designed, battle-tested personal finance app with a public API and documented data model                                   |
+## Infrastructure & Tooling
+
+**Repo structure** — Single repo, three independent folders: `backend/`, `frontend/`, `mcp/`. No monorepo tooling (no Turborepo). Each folder is its own Node project.
+
+**Database** — SQLite via Drizzle ORM. Single file, zero infra, perfect for t2.micro self-hosted setup. Driver: `better-sqlite3` (synchronous, no external deps, battle-tested).
+
+**SQLite transactions** — Synchronous only, no async callbacks. `better-sqlite3` limitation — use `.run()` explicitly inside transactions.
+
+**Drizzle ORM version awareness** — Always verify usage against the official docs at https://orm.drizzle.team. The API is actively evolving and patterns from older examples may be outdated.
+
+**Backend framework** — Fastify v5. Fast, TypeScript-native, ships with Pino logging.
+
+**Frontend framework** — Next.js + Tailwind CSS + shadcn/ui. Modern, well-supported, great DX.
+
+**Deployment** — Single `docker-compose.yml`, production only. Dev runs natively via `npm run dev` per folder to avoid Windows/Docker hot-reload issues.
+
+**Production build** — `tsc` compile to `dist/`, run via `node dist/index.js`. No tsx in prod.
+
+**Reverse proxy** — Nginx with Let's Encrypt SSL via Certbot, auto-renewal every 12h. Subdomain-based e.g. `pothos.test.com`.
+
+**License** — AGPL v3. Ensures hosted deployments must open-source modifications.
+
+---
+
+## Auth
+
+**Auth strategy** — Email + password with server-side sessions stored in SQLite, HttpOnly cookie. No OAuth complexity in v1.
+
+**Session expiry** — 7 days, fixed. Reasonable balance of convenience and security.
+
+**Session invalidation** — All sessions deleted on password change.
+
+**Password policy** — Min 8 chars, at least one uppercase, one number, one special character.
+
+**Timing attack prevention** — Constant-time bcrypt comparison on login even when user not found. Prevents user enumeration via response timing.
+
+---
+
+## Data Model
+
+**YNAB as reference** — YNAB used as the primary reference for finance data model decisions. Well-designed, battle-tested personal finance app with a public API and documented data model.
+
+**Signed amounts** — Amounts are signed integers in minor units. Positive = inflow (income, transfer credit). Negative = outflow (expense, transfer debit). Balance calculation becomes `initial_balance + SUM(amount)` — trivially simple. Mirrors YNAB's proven data model.
+
+**Transfer linking** — Each transfer transaction stores `transfer_account_id` (the other account) and `transfer_transaction_id` (the paired transaction ID). Direct lookup without a separate linking table. Replaces the old `transfer_id` shared nanoid approach.
+
+**Shared types** — Types live in `backend/src/types/` only. Frontend mirrors shapes locally, no cross-folder imports.
+
+**Enums** — Drizzle `text` with `enum` option. SQLite has no native enum; TypeScript enforces at compile time. Adding a new value requires a migration.
+
+---
+
+## Accounts
+
+**Account deletion** — Hard delete only if zero transactions. Soft delete (close) if transactions exist. Preserves transaction history and mirrors real-world account lifecycle.
+
+**Account closure** — Only allowed if balance = 0. Sets `is_active = false`. Can't close an account with money still in it.
+
+**Closed accounts in reports** — Included by default. Historical accuracy — past spending happened regardless of account status.
+
+**Closed accounts in account list** — Excluded by default, opt-in via `?includeInactive=true`. Keeps UI clean while preserving data.
+
+---
+
+## Categories
+
+**Global defaults** — Seeded on first run with `user_id = null`. Users can add custom categories on top.
+
+**Category deletion** — Blocked if any transactions reference it. Global defaults are never deletable or editable.
+
+---
+
+## Budgets
+
+**Budget structure** — One budget per category per month, enforced via unique constraint on `(user_id, category_id, month, year)`. Posting to the same category/month/year upserts the existing row.
+
+**Budget recurrence** — Budgets default to `is_recurring = true`. When a month is first viewed, the backend auto-generates budget rows for that month from the most recent recurring entry per category. Avoids users having to manually recreate budgets every month.
+
+**Future month budgets** — Allowed with no restriction. Budgeting is planning — users should be able to set budgets for upcoming months freely.
+
+**Budget rollover** — Deferred to v2. Will live in `user_settings` when added.
+
+---
+
+## Email & Integrations
+
+**Email ingestion** — Gmail only in v1 via IMAP + App Password. No OAuth complexity.
+
+**LLM provider** — Adapter pattern, OpenAI default, user-configurable via env vars. Bring-your-own key.
+
+**Pending queue** — DB-backed via SQLite table + poller. No Redis or BullMQ needed at this scale.
+
+**MCP balance query** — Returns per-account breakdown + net worth total. Full context in one query.
+
+---
+
+## Deferred to v2
+
+- CSV import/export
+- Credit card accounts (inverse balance logic adds complexity)
+- Subcategories (flat categories sufficient for v1)
+- Recurring transactions (Gmail parsing covers most recurring expenses)
+- Budget rollover
+- Budget alerts
+- Multi-user / family
+- Bank sync (Plaid)
+- Savings goals
+
+---
+
+## Workstream Order
+
+WS1 → WS2 → WS4 → WS3 → WS5. Frontend before Gmail/MCP — core product usability first.

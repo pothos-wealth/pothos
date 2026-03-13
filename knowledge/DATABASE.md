@@ -102,18 +102,21 @@ Enums are implemented as Drizzle `text` columns with an `enum` option. SQLite st
 
 ### `budgets`
 
-| Column      | Type    | Notes           |
-| ----------- | ------- | --------------- |
-| id          | text    | nanoid, PK      |
-| user_id     | text    | FK → users      |
-| category_id | text    | FK → categories |
-| amount      | integer | minor units     |
-| month       | integer | 1–12            |
-| year        | integer | e.g. 2025       |
-| created_at  | integer | Unix timestamp  |
-| updated_at  | integer | Unix timestamp  |
+| Column       | Type    | Notes                                       |
+| ------------ | ------- | ------------------------------------------- |
+| id           | text    | nanoid, PK                                  |
+| user_id      | text    | FK → users                                  |
+| category_id  | text    | FK → categories                             |
+| amount       | integer | minor units, always positive                |
+| month        | integer | 1–12                                        |
+| year         | integer | e.g. 2026                                   |
+| is_recurring | integer | boolean, default true. Auto-carries forward |
+| created_at   | integer | Unix timestamp                              |
+| updated_at   | integer | Unix timestamp                              |
 
-> Unique constraint on `(user_id, category_id, month, year)`. One budget per category per month. Editing updates the existing row.
+> Unique constraint on `(user_id, category_id, month, year)`.
+> If `is_recurring = true`, the budget auto-generates for future months when first viewed, using the most recent recurring entry per category.
+> Future months are supported — users can plan ahead.
 
 ### `pending_messages`
 

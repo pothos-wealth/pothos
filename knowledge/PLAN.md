@@ -18,8 +18,8 @@ Pothos is a self-hostable, open-source budget and expense tracking app for indiv
 | T8 — Accounts               | ✅ Complete    |
 | T9 — Categories             | ✅ Complete    |
 | T10 — Transactions          | ✅ Complete    |
-| T11 — Budgets               | 🔄 In progress |
-| T12 — Reports               | ⬜ Not started |
+| T11 — Budgets               | ✅ Complete    |
+| T12 — Reports               | 🔄 In progress |
 | WS4 — Frontend              | ⬜ Not started |
 | WS3 — Gmail Ingestion       | ⬜ Not started |
 | WS5 — MCP Server            | ⬜ Not started |
@@ -185,11 +185,13 @@ pothos/
 - Amounts stored as signed integers — income/credit positive, expense/debit negative
 - Account balance derived as `initial_balance + SUM(amount)` — no extra logic needed
 
-**T11 — Budgets** `⬜ not started`
+**T11 — Budgets** `✅ complete`
 
-- `GET /api/v1/budgets?month=&year=` — list budgets with actual spending for period
-- `POST /api/v1/budgets` — create or update (upsert on unique constraint)
+- `GET /api/v1/budgets?month=&year=` — list budgets with actual `spent` and `remaining` for the period. Defaults to current month. Auto-generates recurring budgets for months that haven't been explicitly set
+- `POST /api/v1/budgets` — create or update (upsert on unique constraint of user, category, month, year). Defaults `isRecurring` to true
 - `DELETE /api/v1/budgets/:id`
+- `isRecurring = true` — budget auto-carries forward to future months by finding the most recent recurring entry per category and generating a new row when the month is first viewed
+- Future months are supported — users can plan ahead
 
 **T12 — Reports** `⬜ not started`
 
