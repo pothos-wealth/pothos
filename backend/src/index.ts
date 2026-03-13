@@ -1,0 +1,65 @@
+import Fastify from "fastify";
+import cookie from "@fastify/cookie";
+import dotenv from "dotenv";
+import { healthRoutes } from "./routes/v1/health.js";
+
+dotenv.config();
+
+const PORT = parseInt(process.env.PORT ?? "3001", 10);
+const NODE_ENV = process.env.NODE_ENV ?? "development";
+
+const app = Fastify({
+	logger: {
+		level: NODE_ENV === "development" ? "info" : "warn",
+		transport:
+			NODE_ENV === "development"
+				? {
+						target: "pino-pretty",
+						options: {
+							translateTime: "HH:MM:ss Z",
+							ignore: "pid,hostname",
+						},
+					}
+				: undefined,
+	},
+});
+
+// ─── Plugins ──────────────────────────────────────────────────────────────────
+
+await app.register(cookie, {
+	secret: process.env.SESSION_SECRET ?? "fallback-secret-change-me",
+});
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
+
+await app.register(healthRoutes, { prefix: "/api/v1" });
+
+// ─── Global Error Handler ─────────────────────────────────────────────────────
+
+app.setErrorHandler((error, _request, reply) => {
+	app.log.error(error);
+
+	// Handle Zod validation errors from Fastify
+	if (error.validation) {
+		return reply.status(400).send({
+			error: "Validation error",
+			details: error.validation,
+		});
+	}
+
+	const statusCode = error.statusCode ?? 500;
+	const message =
+		statusCode === 500 && NODE_ENV === "production" ? "Internal server error" : error.message;
+
+	return reply.status(statusCode).send({ error: message });
+});
+
+// ─── Start ────────────────────────────────────────────────────────────────────
+
+try {
+	await app.listen({ port: PORT, host: "0.0.0.0" });
+	app.log.info(`Server running in ${NODE_ENV} mode on port ${PORT}`);
+} catch (err) {
+	app.log.error(err);
+	process.exit(1);
+}

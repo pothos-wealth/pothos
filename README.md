@@ -24,7 +24,7 @@ A self-hostable, open-source budget and expense tracking app for individuals and
 
 ### Prerequisites
 
-- Node.js (latest LTS)
+- Node.js (v20.20.1)
 - npm
 
 ### 1. Clone the repo
