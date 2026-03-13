@@ -91,7 +91,10 @@ export const transactions = sqliteTable("transactions", {
 	categoryId: text("category_id").references(() => categories.id, {
 		onDelete: "set null",
 	}),
-	transferId: text("transfer_id"),
+	transferAccountId: text("transfer_account_id").references(() => accounts.id, {
+		onDelete: "set null",
+	}),
+	transferTransactionId: text("transfer_transaction_id"),
 	type: text("type", { enum: ["income", "expense", "transfer"] }).notNull(),
 	amount: integer("amount").notNull(),
 	date: integer("date").notNull(),

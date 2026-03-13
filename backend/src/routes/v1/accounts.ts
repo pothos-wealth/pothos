@@ -19,46 +19,14 @@ const updateAccountSchema = z.object({
 
 // ─── Balance Helper ───────────────────────────────────────────────────────────
 
-function deriveBalance(
-	initialBalance: number,
-	transactionRows: { type: string; amount: number }[]
-): number {
-	return transactionRows.reduce((balance, tx) => {
-		if (tx.type === "income" || tx.type === "transfer_in") {
-			return balance + tx.amount;
-		}
-		if (tx.type === "expense" || tx.type === "transfer_out") {
-			return balance - tx.amount;
-		}
-		return balance;
-	}, initialBalance);
-}
-
 function getAccountBalance(accountId: string, initialBalance: number): number {
-	const txRows = db
-		.select({
-			type: transactions.type,
-			amount: transactions.amount,
-		})
+	const result = db
+		.select({ total: sql<number>`COALESCE(SUM(amount), 0)` })
 		.from(transactions)
 		.where(eq(transactions.accountId, accountId))
-		.all();
+		.get();
 
-	// For transfers: debit side reduces balance, credit side increases balance
-	const adjustedRows = txRows.map((tx) => {
-		if (tx.type === "transfer") {
-			// We need to know which side of the transfer this account is on
-			// The debit (source) side reduces balance
-			return { type: "expense", amount: tx.amount };
-		}
-		return tx;
-	});
-
-	return adjustedRows.reduce((balance, tx) => {
-		if (tx.type === "income") return balance + tx.amount;
-		if (tx.type === "expense") return balance - tx.amount;
-		return balance;
-	}, initialBalance);
+	return initialBalance + (result?.total ?? 0);
 }
 
 export async function accountRoutes(app: FastifyInstance) {

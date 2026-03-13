@@ -17,8 +17,8 @@ Pothos is a self-hostable, open-source budget and expense tracking app for indiv
 | T7 — User Settings & Me     | ✅ Complete    |
 | T8 — Accounts               | ✅ Complete    |
 | T9 — Categories             | ✅ Complete    |
-| T10 — Transactions          | 🔄 In progress |
-| T11 — Budgets               | ⬜ Not started |
+| T10 — Transactions          | ✅ Complete    |
+| T11 — Budgets               | 🔄 In progress |
 | T12 — Reports               | ⬜ Not started |
 | WS4 — Frontend              | ⬜ Not started |
 | WS3 — Gmail Ingestion       | ⬜ Not started |
@@ -174,15 +174,16 @@ pothos/
 - `PUT /api/v1/categories/:id` — update custom category only; global defaults return 403
 - `DELETE /api/v1/categories/:id` — blocked if transactions reference it; global defaults return 403
 
-**T10 — Transactions** `⬜ not started`
+**T10 — Transactions** `✅ complete`
 
-- `GET /api/v1/transactions` — paginated list
-    - Filters: `accountId`, `categoryId`, `type`, `startDate`, `endDate`, `page`, `limit`
-- `POST /api/v1/transactions` — create income/expense
+- `GET /api/v1/transactions` — paginated list with filters: `accountId`, `categoryId`, `type`, `startDate`, `endDate`, `page`, `limit`
+- `POST /api/v1/transactions` — create income/expense. Amount is always passed as positive — sign applied server-side based on type
 - `GET /api/v1/transactions/:id` — single transaction
-- `PUT /api/v1/transactions/:id` — update transaction
-- `DELETE /api/v1/transactions/:id` — if transfer, deletes both sides atomically
-- `POST /api/v1/transactions/transfer` — atomic transfer, creates two linked records
+- `PUT /api/v1/transactions/:id` — update category, amount, date, description, notes. Transfer transactions cannot be edited
+- `DELETE /api/v1/transactions/:id` — if transfer, deletes both sides atomically via `transferTransactionId`
+- `POST /api/v1/transactions/transfer` — atomic transfer, creates debit (negative) on source and credit (positive) on destination, linked via `transferAccountId` and `transferTransactionId`
+- Amounts stored as signed integers — income/credit positive, expense/debit negative
+- Account balance derived as `initial_balance + SUM(amount)` — no extra logic needed
 
 **T11 — Budgets** `⬜ not started`
 

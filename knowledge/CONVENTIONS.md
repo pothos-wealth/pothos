@@ -2,11 +2,12 @@
 
 ## Money
 
-- All monetary amounts are stored as **integers in minor units** (paise for INR, cents for USD).
-- Example: ₹12.50 → `1250`, $99.99 → `9999`
+- All monetary amounts are stored as **signed integers in minor units** (paise for INR, cents for USD).
+- Inflows (income, transfer credits) are **positive**. Outflows (expenses, transfer debits) are **negative**.
+- Example: ₹12.50 income → `1250`, ₹12.50 expense → `-1250`
 - Division by 100 happens only at the display layer (frontend).
 - The word "cents" is avoided in code — use "amount" or "minor units" to stay currency-agnostic.
-- Amounts are **always positive** in the database. The `type` field (`income`, `expense`, `transfer`) determines the sign semantics.
+- Account balance is always derived: `initial_balance + SUM(amount)`. Never stored directly.
 
 ## Currency
 
@@ -36,10 +37,14 @@
 ## Transfers
 
 - A transfer between accounts creates **exactly two transaction records**.
-- Both records share the same `transfer_id` (a nanoid generated at creation time).
-- The debit side has `type = "transfer"` on the source account.
-- The credit side has `type = "transfer"` on the destination account.
+- Both records have `type = "transfer"`.
+- The debit side (source account) has a **negative amount**.
+- The credit side (destination account) has a **positive amount**.
+- Each transfer transaction stores:
+    - `transfer_account_id` — the other account in the transfer
+    - `transfer_transaction_id` — the ID of the paired transaction
 - Transfers are **always excluded** from budget calculations and spending reports.
+- To find the paired transaction: use `transfer_transaction_id` for a direct lookup.
 
 ## API
 

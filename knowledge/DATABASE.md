@@ -79,22 +79,26 @@ Enums are implemented as Drizzle `text` columns with an `enum` option. SQLite st
 
 ### `transactions`
 
-| Column      | Type             | Notes                                        |
-| ----------- | ---------------- | -------------------------------------------- |
-| id          | text             | nanoid, PK                                   |
-| user_id     | text             | FK → users                                   |
-| account_id  | text             | FK → accounts                                |
-| category_id | text             | FK → categories, nullable                    |
-| transfer_id | text             | links paired transfer transactions, nullable |
-| type        | transaction_type | "income", "expense", "transfer"              |
-| amount      | integer          | minor units, always positive                 |
-| date        | integer          | Unix timestamp                               |
-| description | text             | merchant or note                             |
-| notes       | text             | nullable                                     |
-| created_at  | integer          | Unix timestamp                               |
-| updated_at  | integer          | Unix timestamp                               |
+| Column                  | Type             | Notes                                                     |
+| ----------------------- | ---------------- | --------------------------------------------------------- |
+| id                      | text             | nanoid, PK                                                |
+| user_id                 | text             | FK → users                                                |
+| account_id              | text             | FK → accounts                                             |
+| category_id             | text             | FK → categories, nullable                                 |
+| transfer_account_id     | text             | FK → accounts, nullable. Other account in transfer        |
+| transfer_transaction_id | text             | FK → transactions, nullable. Paired transaction           |
+| type                    | transaction_type | "income", "expense", "transfer"                           |
+| amount                  | integer          | signed minor units. Positive = inflow, negative = outflow |
+| date                    | integer          | Unix timestamp                                            |
+| description             | text             | merchant or note                                          |
+| notes                   | text             | nullable                                                  |
+| created_at              | integer          | Unix timestamp                                            |
+| updated_at              | integer          | Unix timestamp                                            |
 
-> Transfer transactions are always created in pairs. The `transfer_id` links both sides. Transfers are excluded from budget and spending reports.
+> Transfer transactions are always created in pairs.
+> Each side stores `transfer_account_id` and `transfer_transaction_id` pointing to the counterpart.
+> Transfers are excluded from budget and spending reports.
+> Balance calculation: `initial_balance + SUM(amount)` — sign encodes direction.
 
 ### `budgets`
 
