@@ -15,8 +15,8 @@ Pothos is a self-hostable, open-source budget and expense tracking app for indiv
 | T5 — Docker Compose         | ✅ Complete    |
 | T6 — Shared types           | ✅ Complete    |
 | T7 — User Settings & Me     | ✅ Complete    |
-| T8 — Accounts               | ⬜ Not started |
-| T9 — Categories             | ⬜ Not started |
+| T8 — Accounts               | ✅ Complete    |
+| T9 — Categories             | 🔄 In progress |
 | T10 — Transactions          | ⬜ Not started |
 | T11 — Budgets               | ⬜ Not started |
 | T12 — Reports               | ⬜ Not started |
@@ -149,13 +149,13 @@ pothos/
 
 #### Tasks
 
-**T7 — User Settings & Me** `⬜ not started`
+**T7 — User Settings & Me** `✅ complete`
 
 - `GET /api/v1/user/me` — current user (no password hash)
 - `GET /api/v1/user/settings` — user settings
 - `PUT /api/v1/user/settings` — update currency
 
-**T8 — Accounts** `⬜ not started`
+**T8 — Accounts** `✅ complete`
 
 - Migration: add `is_active` column to `accounts` table (default true)
 - `GET /api/v1/accounts` — list active accounts with derived balance
@@ -167,7 +167,7 @@ pothos/
 - `POST /api/v1/accounts/:id/close` — only allowed if balance = 0, sets is_active = false
 - `POST /api/v1/accounts/:id/reopen` — sets is_active = true
 
-**T9 — Categories** `⬜ not started`
+**T9 — Categories** `🔄 in progress`
 
 - `GET /api/v1/categories` — global defaults + user custom categories
 - `POST /api/v1/categories` — create custom category

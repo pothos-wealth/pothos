@@ -55,6 +55,7 @@ export const accounts = sqliteTable("accounts", {
 	name: text("name").notNull(),
 	type: text("type").notNull(),
 	initialBalance: integer("initial_balance").notNull().default(0),
+	isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
 	createdAt: integer("created_at")
 		.notNull()
 		.default(sql`(unixepoch())`),
