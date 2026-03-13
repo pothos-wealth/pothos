@@ -9,6 +9,7 @@ import { accountRoutes } from "./routes/v1/accounts.js";
 import { categoryRoutes } from "./routes/v1/categories.js";
 import { transactionRoutes } from "./routes/v1/transactions.js";
 import { budgetRoutes } from "./routes/v1/budgets.js";
+import { reportRoutes } from "./routes/v1/reports.js";
 
 dotenv.config();
 
@@ -46,6 +47,7 @@ await app.register(accountRoutes, { prefix: "/api/v1" });
 await app.register(categoryRoutes, { prefix: "/api/v1" });
 await app.register(transactionRoutes, { prefix: "/api/v1" });
 await app.register(budgetRoutes, { prefix: "/api/v1" });
+await app.register(reportRoutes, { prefix: "/api/v1" });
 
 // ─── Global Error Handler ─────────────────────────────────────────────────────
 

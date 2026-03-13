@@ -19,7 +19,7 @@ Pothos is a self-hostable, open-source budget and expense tracking app for indiv
 | T9 — Categories             | ✅ Complete    |
 | T10 — Transactions          | ✅ Complete    |
 | T11 — Budgets               | ✅ Complete    |
-| T12 — Reports               | 🔄 In progress |
+| T12 — Reports               | ✅ Complete    |
 | WS4 — Frontend              | ⬜ Not started |
 | WS3 — Gmail Ingestion       | ⬜ Not started |
 | WS5 — MCP Server            | ⬜ Not started |
@@ -131,7 +131,7 @@ pothos/
 
 ---
 
-### WS2 — Transactions & Budgets `🔄 in progress`
+### WS2 — Transactions & Budgets `✅ complete`
 
 **Goal:** Manual transaction entry, account management, budget management, categories, transfer support. Backend is single source of truth for all math.
 
@@ -193,11 +193,11 @@ pothos/
 - `isRecurring = true` — budget auto-carries forward to future months by finding the most recent recurring entry per category and generating a new row when the month is first viewed
 - Future months are supported — users can plan ahead
 
-**T12 — Reports** `⬜ not started`
+**T12 — Reports** `✅ complete`
 
-- `GET /api/v1/reports/overview?month=&year=` — total income, expenses, net. Defaults to current month
-- `GET /api/v1/reports/categories?month=&year=` — expenses grouped by category for period
-- `GET /api/v1/reports/trends?months=12` — monthly totals over N months, defaults to 12
+- `GET /api/v1/reports/overview?month=&year=` — total income, expenses, and net for a given month. Defaults to current month. Transfers excluded
+- `GET /api/v1/reports/categories?month=&year=` — expenses grouped by category for the period, with category name, icon, and color. Defaults to current month. Transfers excluded
+- `GET /api/v1/reports/trends?months=12` — monthly income, expenses, and net over the last N months. Defaults to 12, max 24. Months with no transactions return zeroes. Transfers excluded
 
 ---
 
