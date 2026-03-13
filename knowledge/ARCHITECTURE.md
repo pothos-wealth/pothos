@@ -25,6 +25,15 @@ Any MCP-compatible client — OpenClaw, Cline, Claude Desktop, or others — can
 - Local LLMs are supported via a poll-based queue. No always-on connectivity required.
 - Transfers between accounts are represented as linked transaction pairs to avoid double-counting in reports.
 
+## Auth
+
+- Email + password authentication with server-side sessions stored in SQLite.
+- Sessions are stored as HttpOnly cookies and expire after 7 days.
+- All sessions for a user are invalidated on password change.
+- Passwords are hashed with bcrypt (12 salt rounds).
+- Timing attack prevention on login via constant-time bcrypt comparison.
+- Protected routes use the `authenticate` preHandler middleware.
+
 ## Further Reading
 
 - [Database Schema](docs/DATABASE.md)

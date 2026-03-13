@@ -1,7 +1,9 @@
 import Fastify from "fastify";
 import cookie from "@fastify/cookie";
 import dotenv from "dotenv";
+import type { FastifyError } from "fastify";
 import { healthRoutes } from "./routes/v1/health.js";
+import { authRoutes } from "./routes/v1/auth.js";
 
 dotenv.config();
 
@@ -33,10 +35,11 @@ await app.register(cookie, {
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
 await app.register(healthRoutes, { prefix: "/api/v1" });
+await app.register(authRoutes, { prefix: "/api/v1" });
 
 // ─── Global Error Handler ─────────────────────────────────────────────────────
 
-app.setErrorHandler((error, _request, reply) => {
+app.setErrorHandler((error: FastifyError, _request, reply) => {
 	app.log.error(error);
 
 	// Handle Zod validation errors from Fastify

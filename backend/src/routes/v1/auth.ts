@@ -1,0 +1,213 @@
+import type { FastifyInstance } from "fastify";
+import { z } from "zod";
+import bcrypt from "bcrypt";
+import { nanoid } from "nanoid";
+import { eq } from "drizzle-orm";
+import { db } from "../../db/index.js";
+import { users, sessions, userSettings } from "../../db/schema.js";
+import { authenticate } from "../../middleware/authenticate.js";
+
+const SALT_ROUNDS = 12;
+const SESSION_TTL_DAYS = parseInt(process.env.SESSION_TTL_DAYS ?? "7", 10);
+
+const registerSchema = z.object({
+	email: z.string().email().toLowerCase(),
+	password: z
+		.string()
+		.min(8, "Password must be at least 8 characters")
+		.regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+		.regex(/[0-9]/, "Password must contain at least one number")
+		.regex(/[^a-zA-Z0-9]/, "Password must contain at least one special character"),
+});
+
+const loginSchema = z.object({
+	email: z.string().email().toLowerCase(),
+	password: z.string().min(1),
+});
+
+const changePasswordSchema = z.object({
+	currentPassword: z.string().min(1),
+	newPassword: z
+		.string()
+		.min(8, "Password must be at least 8 characters")
+		.regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+		.regex(/[0-9]/, "Password must contain at least one number")
+		.regex(/[^a-zA-Z0-9]/, "Password must contain at least one special character"),
+});
+
+function createSessionCookie(sessionId: string, expiresAt: number) {
+	return {
+		httpOnly: true,
+		secure: process.env.NODE_ENV === "production",
+		sameSite: "lax" as const,
+		path: "/",
+		expires: new Date(expiresAt * 1000),
+	};
+}
+
+export async function authRoutes(app: FastifyInstance) {
+	// ─── Register ─────────────────────────────────────────────────────────────
+
+	app.post("/auth/register", async (request, reply) => {
+		const result = registerSchema.safeParse(request.body);
+
+		if (!result.success) {
+			return reply.status(400).send({
+				error: "Validation error",
+				details: result.error.flatten(),
+			});
+		}
+
+		const { email, password } = result.data;
+		const now = Math.floor(Date.now() / 1000);
+
+		// Check if email already exists
+		const existing = await db
+			.select({ id: users.id })
+			.from(users)
+			.where(eq(users.email, email))
+			.get();
+
+		if (existing) {
+			return reply.status(409).send({ error: "Email already in use" });
+		}
+
+		const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+		const userId = nanoid();
+		const settingsId = nanoid();
+		const sessionId = nanoid();
+		const expiresAt = now + SESSION_TTL_DAYS * 24 * 60 * 60;
+
+		// Create user, settings, and session in a transaction
+		db.transaction((tx) => {
+			tx.insert(users)
+				.values({
+					id: userId,
+					email,
+					passwordHash,
+					createdAt: now,
+					updatedAt: now,
+				})
+				.run();
+
+			tx.insert(userSettings)
+				.values({
+					id: settingsId,
+					userId,
+					currency: "INR",
+					createdAt: now,
+					updatedAt: now,
+				})
+				.run();
+
+			tx.insert(sessions)
+				.values({
+					id: sessionId,
+					userId,
+					expiresAt,
+					createdAt: now,
+				})
+				.run();
+		});
+
+		return reply
+			.status(201)
+			.setCookie("session_id", sessionId, createSessionCookie(sessionId, expiresAt))
+			.send({ message: "Account created successfully" });
+	});
+
+	// ─── Login ────────────────────────────────────────────────────────────────
+
+	app.post("/auth/login", async (request, reply) => {
+		const result = loginSchema.safeParse(request.body);
+
+		if (!result.success) {
+			return reply.status(400).send({
+				error: "Validation error",
+				details: result.error.flatten(),
+			});
+		}
+
+		const { email, password } = result.data;
+		const now = Math.floor(Date.now() / 1000);
+
+		const user = db.select().from(users).where(eq(users.email, email)).get();
+
+		// Use constant-time comparison to prevent timing attacks
+		const passwordMatch = user
+			? await bcrypt.compare(password, user.passwordHash)
+			: await bcrypt.compare(password, "$2b$12$placeholderhashingtopreventimingtattack");
+
+		if (!user || !passwordMatch) {
+			return reply.status(401).send({ error: "Invalid email or password" });
+		}
+
+		const sessionId = nanoid();
+		const expiresAt = now + SESSION_TTL_DAYS * 24 * 60 * 60;
+
+		await db.insert(sessions).values({
+			id: sessionId,
+			userId: user.id,
+			expiresAt,
+			createdAt: now,
+		});
+
+		return reply
+			.setCookie("session_id", sessionId, createSessionCookie(sessionId, expiresAt))
+			.send({ message: "Logged in successfully" });
+	});
+
+	// ─── Logout ───────────────────────────────────────────────────────────────
+
+	app.post("/auth/logout", { preHandler: authenticate }, async (request, reply) => {
+		await db.delete(sessions).where(eq(sessions.id, request.session.id));
+
+		return reply
+			.clearCookie("session_id", { path: "/" })
+			.send({ message: "Logged out successfully" });
+	});
+
+	// ─── Change Password ──────────────────────────────────────────────────────
+
+	app.post("/auth/change-password", { preHandler: authenticate }, async (request, reply) => {
+		const result = changePasswordSchema.safeParse(request.body);
+
+		if (!result.success) {
+			return reply.status(400).send({
+				error: "Validation error",
+				details: result.error.flatten(),
+			});
+		}
+
+		const { currentPassword, newPassword } = result.data;
+		const now = Math.floor(Date.now() / 1000);
+
+		const user = db.select().from(users).where(eq(users.id, request.user.id)).get();
+
+		if (!user) {
+			return reply.status(404).send({ error: "User not found" });
+		}
+
+		const passwordMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+
+		if (!passwordMatch) {
+			return reply.status(401).send({ error: "Current password is incorrect" });
+		}
+
+		const newPasswordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+		// Update password and invalidate all sessions in a transaction
+		db.transaction((tx) => {
+			tx.update(users)
+				.set({ passwordHash: newPasswordHash, updatedAt: now })
+				.where(eq(users.id, user.id))
+				.run();
+
+			tx.delete(sessions).where(eq(sessions.userId, user.id)).run();
+		});
+
+		return reply
+			.clearCookie("session_id", { path: "/" })
+			.send({ message: "Password changed successfully" });
+	});
+}

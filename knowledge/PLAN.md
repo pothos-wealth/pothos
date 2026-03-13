@@ -10,9 +10,9 @@ Pothos is a self-hostable, open-source budget and expense tracking app for indiv
 | ---------------------------- | -------------- |
 | T1 — Repo scaffold           | ✅ Complete    |
 | T2 — DB schema + migrations  | ✅ Complete    |
-| T3 — API scaffold            | 🔄 In progress |
-| T4 — Auth system             | ⬜ Not started |
-| T5 — Docker Compose          | ⬜ Not started |
+| T3 — API scaffold            | ✅ Complete    |
+| T4 — Auth system             | ✅ Complete    |
+| T5 — Docker Compose          | 🔄 In progress |
 | T6 — Shared types            | ⬜ Not started |
 | WS2 — Transactions & Budgets | ⬜ Not started |
 | WS3 — Gmail Ingestion        | ⬜ Not started |
