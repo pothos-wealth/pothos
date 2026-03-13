@@ -44,9 +44,17 @@
 ## API
 
 - All routes are versioned under `/api/v1/`.
-- Request bodies are validated with **Zod** schemas.
+- Request bodies are validated with **Zod** schemas defined in `backend/src/types/index.ts`.
 - Responses always return JSON.
 - Errors follow the shape: `{ error: string, details?: unknown }`
+- All protected routes use the `authenticate` preHandler middleware.
+
+## Database
+
+- `better-sqlite3` is synchronous — never use `async/await` inside transactions.
+- Always call `.run()` explicitly on insert/update/delete queries inside transactions.
+- Foreign keys are enforced via `PRAGMA foreign_keys = ON` on every connection.
+- WAL mode is enabled via `PRAGMA journal_mode = WAL` for better read performance.
 
 ## File Structure (Backend)
 
@@ -54,14 +62,16 @@
 backend/src/
 ├── db/
 │   ├── schema.ts       ← Drizzle schema definitions
+│   ├── index.ts        ← database connection + Drizzle instance
 │   ├── migrate.ts      ← migration runner
 │   └── seed.ts         ← default data seed
 ├── routes/
 │   └── v1/             ← versioned route handlers
 ├── middleware/
-│   └── authenticate.ts ← session auth middleware
+│   └── authenticate.ts ← session auth preHandler
 ├── types/
-│   └── index.ts        ← Zod schemas + inferred TS types
+│   ├── index.ts        ← Zod schemas + inferred TS types
+│   └── fastify.d.ts    ← Fastify request augmentation (user, session)
 └── index.ts            ← Fastify app entry point
 ```
 
@@ -73,3 +83,4 @@ backend/src/
 - Max line width: 100 characters.
 - No `any` types without a comment explaining why.
 - Unused variables prefixed with `_` to satisfy the linter.
+- Error type in catch blocks: use `err instanceof Error ? err.message : String(err)`.
