@@ -34,6 +34,23 @@ Any MCP-compatible client — OpenClaw, Cline, Claude Desktop, or others — can
 - Timing attack prevention on login via constant-time bcrypt comparison.
 - Protected routes use the `authenticate` preHandler middleware.
 
+## Security
+
+- **Rate limiting**: 1 request per 10 seconds on auth routes (`/api/v1/auth/*`) to prevent brute-force attacks.
+- **Request limits**: 1 MB max body size to prevent DoS via large uploads.
+- **Health checks**: All services report health. Database connectivity verified on every health check. Nginx waits for backend & frontend to be healthy before starting.
+- **Secrets management**: All secrets (SESSION_SECRET, API keys) externalized via `.env`. Fails fast if secrets are missing.
+- **SSL/TLS**: Let's Encrypt via Certbot. Auto-renewal every 12 hours. HTTP redirects to HTTPS.
+
+## Deployment
+
+- **Docker**: Multi-stage builds for optimized images. All services managed via `docker-compose.yml`.
+- **Startup**: Proper health checks ensure services start in correct order. Nginx only starts after backend & frontend are healthy.
+- **Backups**: Automated daily backups of SQLite database to local filesystem. Keeps last 7 days.
+- **Scripts**: Two simple deployment scripts:
+  - `scripts/setup.sh` — First deploy (interactive, generates secrets, bootstraps SSL, starts app)
+  - `scripts/deploy.sh` — Subsequent deploys (git pull, rebuild, restart)
+
 ## Frontend Architecture
 
 The frontend (Next.js + React) fetches data from the backend API and displays it. All amounts are stored as integers in minor units (paise/cents) and converted for display via `formatCurrency()`.

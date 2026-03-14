@@ -4,27 +4,38 @@ services:
             context: ./backend
             target: production
         restart: unless-stopped
+        env_file: .env
         environment:
             NODE_ENV: production
             PORT: 3001
             DATABASE_URL: /app/data/pothos.db
-            SESSION_SECRET: ${SESSION_SECRET}
-            SESSION_TTL_DAYS: ${SESSION_TTL_DAYS}
         volumes:
             - sqlite_data:/app/data
         networks:
             - internal
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:3001/api/v1/health"]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+            start_period: 10s
 
     frontend:
         build:
             context: ./frontend
             target: production
         restart: unless-stopped
+        env_file: .env
         environment:
             NODE_ENV: production
-            NEXT_PUBLIC_API_URL: https://pothos.test.com
         networks:
             - internal
+        healthcheck:
+            test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+            start_period: 10s
 
     nginx:
         image: nginx:alpine
@@ -37,10 +48,18 @@ services:
             - ./certbot/conf:/etc/letsencrypt:ro
             - ./certbot/www:/var/www/certbot:ro
         depends_on:
-            - backend
-            - frontend
+            backend:
+                condition: service_healthy
+            frontend:
+                condition: service_healthy
         networks:
             - internal
+        healthcheck:
+            test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/api/v1/health"]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+            start_period: 10s
 
     certbot:
         image: certbot/certbot

@@ -125,8 +125,9 @@ pothos/
 - `docker-compose.yml` with `backend`, `frontend`, `nginx`, `certbot` services
 - SQLite mounted as named volume at `/app/data`
 - Nginx reverse proxy: `/api/*` → backend, `/*` → frontend
-- Let's Encrypt SSL via Certbot with auto-renewal
-- `scripts/init-ssl.sh` for first-time SSL bootstrap
+- Let's Encrypt SSL via Certbot with auto-renewal (every 12h)
+- `scripts/setup.sh` for first-time deployment (interactive setup + SSL bootstrap)
+- `scripts/deploy.sh` for code updates (git pull + rebuild + restart)
 - `.dockerignore` for lean images
 
 **T6 — Shared types** `✅ complete`

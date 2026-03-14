@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import cookie from "@fastify/cookie";
+import rateLimit from "@fastify/rate-limit";
 import dotenv from "dotenv";
 import type { FastifyError } from "fastify";
 import { healthRoutes } from "./routes/v1/health.js";
@@ -30,12 +31,30 @@ const app = Fastify({
 					}
 				: undefined,
 	},
+	bodyLimit: 1048576, // 1 MB
 });
 
 // ─── Plugins ──────────────────────────────────────────────────────────────────
 
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret) {
+	throw new Error("SESSION_SECRET environment variable is required");
+}
+
 await app.register(cookie, {
-	secret: process.env.SESSION_SECRET ?? "fallback-secret-change-me",
+	secret: sessionSecret,
+});
+
+// Rate limiting for auth routes (brute-force protection)
+await app.register(rateLimit, {
+	max: 1,
+	timeWindow: "10 seconds",
+	cache: 10000,
+	keyGenerator: (request) => request.ip,
+	skip: (request) => {
+		// Only rate limit auth routes
+		return !request.url.includes("/api/v1/auth/");
+	},
 });
 
 // ─── Routes ───────────────────────────────────────────────────────────────────

@@ -124,6 +124,32 @@
 
 ---
 
+---
+
+## Deployment & Security
+
+**Environment secrets** — All secrets (SESSION_SECRET, API keys) externalized via `.env` file. Never hardcoded fallbacks. Fails fast if secrets are missing.
+
+**Session secret generation** — 32-byte random hex string. Generated automatically via `scripts/setup.sh` using Node's crypto module. Non-negotiable for production.
+
+**Rate limiting** — 1 request per 10 seconds on auth routes (`/api/v1/auth/*`). Prevents brute-force attacks on login/signup. IP-based keying via `request.ip`.
+
+**Request size limit** — 1 MB max body size. Prevents accidental/malicious large uploads. Configured in Fastify: `bodyLimit: 1048576`.
+
+**Health checks** — All services have Docker health checks. Backend verifies database connectivity. Nginx only starts after backend & frontend report healthy. Enables proper startup ordering and self-healing.
+
+**Database backups** — Daily automated backups via cron (2 AM). Saves to local filesystem, keeps last 7 days. Simple, no external deps. Located at `/opt/pothos/backups/`.
+
+**SSL/TLS** — Let's Encrypt via Certbot. Initial bootstrap manual (one-time). Auto-renewal every 12 hours. Nginx enforces HTTPS with redirect from HTTP.
+
+**Deployment scripts** — Two scripts for minimal manual effort:
+- `scripts/setup.sh` — First deploy (asks for domain, email, generates secrets, bootstraps SSL, starts app)
+- `scripts/deploy.sh` — Subsequent deploys (git pull, rebuild, restart)
+
+**Docker health ordering** — Nginx `depends_on` uses `condition: service_healthy` to wait for backend & frontend before starting. Prevents startup race conditions.
+
+---
+
 ## Deferred to v2
 
 - CSV import/export
@@ -135,9 +161,14 @@
 - Multi-user / family
 - Bank sync (Plaid)
 - Savings goals
+- Helmet.js security headers (nice-to-have, not critical for self-hosted)
+- CORS configuration (unnecessary with same-origin proxy setup)
+- Prometheus metrics / Grafana monitoring (Docker logs sufficient for v1)
 
 ---
 
 ## Workstream Order
 
 WS1 → WS2 → WS4 → WS3 → WS5. Frontend before Gmail/MCP — core product usability first.
+
+Post-v1: Security hardening (Helmet, advanced monitoring), MCP refinement, Gmail integration, deployment to production.

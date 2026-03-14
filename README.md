@@ -75,47 +75,44 @@ Frontend runs on `http://localhost:3000`, backend on `http://localhost:3001`.
 
 ## Production Deployment
 
-### Prerequisites
+See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment guide.
 
-- AWS EC2 instance (t2.micro or larger)
-- Domain pointed at your instance IP (`pothos.test.com → your-ec2-ip`)
-- Ports 80 and 443 open in your security group
-- Docker and Docker Compose installed on the instance
-
-### First Deploy
-
-1. Clone the repo and configure environment:
+### Quick Start (First Deploy)
 
 ```bash
 git clone https://github.com/your-username/pothos.git
 cd pothos
-cp .env.example .env
-# Edit .env with your values — especially SESSION_SECRET
+chmod +x scripts/setup.sh
+./scripts/setup.sh
 ```
 
-2. Bootstrap SSL (one-time):
-
-```bash
-chmod +x scripts/init-ssl.sh
-./scripts/init-ssl.sh
-```
-
-3. Start all services:
-
-```bash
-docker compose up -d
-```
+This handles:
+- Environment configuration (generates `SESSION_SECRET` automatically)
+- Nginx configuration (updates domain)
+- SSL certificate bootstrap (Let's Encrypt)
+- Container startup
 
 ### Subsequent Deploys
 
 ```bash
-docker compose build
-docker compose up -d
+git pull
+./scripts/deploy.sh
 ```
 
-### SSL Renewal
+### Requirements
 
-Certbot renews automatically every 12 hours via the certbot service. No manual action needed.
+- AWS t2.micro or larger (1 GB RAM minimum)
+- Domain pointed at instance IP
+- Ports 80 and 443 open
+- Docker & Docker Compose installed
+- Ubuntu/Debian OS recommended
+
+### Documentation
+
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** — Full deployment guide
+- **[BACKUPS.md](BACKUPS.md)** — Database backup strategy
+- **[MONITORING.md](MONITORING.md)** — Health checks & troubleshooting
+- **[CLAUDE.md](CLAUDE.md)** — Development guidelines
 
 ## MCP Server
 

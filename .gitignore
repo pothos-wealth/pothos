@@ -28,3 +28,9 @@ Thumbs.db
 
 # Docker
 docker-compose.override.yml
+certbot/
+
+# Runtime
+*.stackdump
+tests/
+.claude/settings.local.json
