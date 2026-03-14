@@ -49,11 +49,12 @@ if [ ! -f "certbot/conf/live/$DOMAIN/fullchain.pem" ]; then
     echo "Step 3: Bootstrapping SSL certificate..."
     mkdir -p certbot/conf certbot/www
 
+    # Use DNS-01 validation via Route 53 (no running web server needed)
     docker run --rm \
         -v "$(pwd)/certbot/conf:/etc/letsencrypt" \
-        -v "$(pwd)/certbot/www:/var/www/certbot" \
+        -v ~/.aws:/root/.aws:ro \
         certbot/certbot certonly \
-        --webroot -w /var/www/certbot \
+        --dns-route53 \
         -d "$DOMAIN" \
         --email "$EMAIL" \
         --agree-tos \
