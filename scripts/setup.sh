@@ -49,12 +49,12 @@ if [ ! -f "certbot/conf/live/$DOMAIN/fullchain.pem" ]; then
     echo "Step 3: Bootstrapping SSL certificate..."
     mkdir -p certbot/conf certbot/www
 
-    # Use DNS-01 validation via Route 53 (no running web server needed)
+    # Use standalone mode (creates temporary web server on port 80)
     docker run --rm \
         -v "$(pwd)/certbot/conf:/etc/letsencrypt" \
-        -v ~/.aws:/root/.aws:ro \
+        --network host \
         certbot/certbot certonly \
-        --dns-route53 \
+        --standalone \
         -d "$DOMAIN" \
         --email "$EMAIL" \
         --agree-tos \
