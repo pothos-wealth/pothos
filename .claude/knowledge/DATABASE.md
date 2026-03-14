@@ -27,15 +27,15 @@ Enums are implemented as Drizzle `text` columns with an `enum` option. SQLite st
 
 ### `user_settings`
 
-| Column     | Type    | Notes                        |
-| ---------- | ------- | ---------------------------- |
-| id         | text    | nanoid, PK                   |
-| user_id    | text    | FK → users, unique           |
-| currency   | text    | ISO 4217 code, default "INR" |
-| created_at | integer | Unix timestamp               |
-| updated_at | integer | Unix timestamp               |
+| Column     | Type    | Notes                                             |
+| ---------- | ------- | ------------------------------------------------- |
+| id         | text    | nanoid, PK                                        |
+| user_id    | text    | FK → users, unique                                |
+| currency   | text    | ISO 4217 code, set at signup, immutable. Default "INR" |
+| created_at | integer | Unix timestamp                                    |
+| updated_at | integer | Unix timestamp                                    |
 
-> Created automatically on user registration with defaults. Future fields: `budget_rollover`, `notification_preferences`, `week_start_day`.
+> Created automatically on user registration with defaults. `currency` is set during signup and cannot be changed (backend validates this). Future fields: `budget_rollover`, `notification_preferences`, `week_start_day`.
 
 ### `sessions`
 

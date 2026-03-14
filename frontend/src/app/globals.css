@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes shimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+}
+
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        var(--color-bg-3) 25%,
+        var(--color-bg-2) 50%,
+        var(--color-bg-3) 75%
+    );
+    background-size: 800px 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@layer base {
+    :root {
+        --color-bg: #FAF8F3;
+        --color-bg-2: #F0EBE0;
+        --color-bg-3: #E5DDD0;
+        --color-fg: #1E2416;
+        --color-fg-muted: #6B7160;
+        --color-primary: #3D4F2C;
+        --color-primary-hover: #4F6438;
+        --color-accent: #B5CC8E;
+        --color-accent-light: #DDE9CC;
+        --color-border: #D8D2C4;
+        --color-expense: #B85C3E;
+        --color-expense-light: #F5EAE6;
+    }
+
+    .dark {
+        --color-bg: #111710;
+        --color-bg-2: #192214;
+        --color-bg-3: #1F2C18;
+        --color-fg: #ECF0E4;
+        --color-fg-muted: #AABB9A;
+        --color-primary: #5A8A40;
+        --color-primary-hover: #6A9E4E;
+        --color-accent: #3A5225;
+        --color-accent-light: #263818;
+        --color-border: #2A3A1E;
+        --color-expense: #D4765A;
+        --color-expense-light: #3A1E14;
+    }
+
+    html,
+    body {
+        height: 100%;
+        scroll-behavior: smooth;
+    }
+
+    body {
+        font-feature-settings: 'rlig' 1, 'calt' 1;
+    }
+}

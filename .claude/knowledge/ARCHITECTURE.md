@@ -34,8 +34,26 @@ Any MCP-compatible client — OpenClaw, Cline, Claude Desktop, or others — can
 - Timing attack prevention on login via constant-time bcrypt comparison.
 - Protected routes use the `authenticate` preHandler middleware.
 
+## Frontend Architecture
+
+The frontend (Next.js + React) fetches data from the backend API and displays it. All amounts are stored as integers in minor units (paise/cents) and converted for display via `formatCurrency()`.
+
+**Currency Handling:**
+- Users select a currency (ISO 4217 code) during signup
+- Currency is immutable after account creation (prevents data corruption)
+- `CurrencyProvider` context fetches and provides the user's currency to all components
+- `useCurrencyFormatter()` hook returns a formatter that uses the user's currency
+- All pages use this hook instead of hardcoding 'INR'
+
+**Decimal Amounts:**
+- Form inputs accept decimals (e.g., "100.50")
+- On submit, multiply by 100 before sending to backend (100.50 → 10050)
+- On display, divide by 100 and format with 2 decimal places (10050 → "₹100.50")
+- `Intl.NumberFormat` handles locale-specific symbols and grouping
+
 ## Further Reading
 
-- [Database Schema](docs/DATABASE.md)
-- [Decision Log](docs/DECISIONS.md)
-- [Conventions](docs/CONVENTIONS.md)
+- [Database Schema](.claude/knowledge/DATABASE.md)
+- [Decision Log](.claude/knowledge/DECISIONS.md)
+- [Conventions](.claude/knowledge/CONVENTIONS.md)
+- [Frontend Architecture](.claude/knowledge/FRONTEND.md)

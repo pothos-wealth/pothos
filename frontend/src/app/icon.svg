@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <style>
+    .bg { fill: #F0EBE0; }
+    .pl { fill: #3D4F2C; }
+    .st { stroke: #3D4F2C; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #192214; }
+      .pl { fill: #5A8A40; }
+      .st { stroke: #5A8A40; }
+    }
+  </style>
+  <circle cx="50" cy="56" r="42" class="bg"/>
+  <path d="M48 73 C46 60 45 50 51 35" fill="none" stroke-width="3" stroke-linecap="round" class="st"/>
+  <path d="M47 61 C40 56 33 52 34 44 C41 44 47 53 47 61z" class="pl"/>
+  <path d="M51 49 C57 41 65 40 65 32 C59 32 52 41 51 49z" class="pl"/>
+</svg>

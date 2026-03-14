@@ -59,6 +59,19 @@ export async function userRoutes(app: FastifyInstance) {
 			});
 		}
 
+		// Currency is immutable - set at registration, cannot be changed
+		const existing = db
+			.select({ currency: userSettings.currency })
+			.from(userSettings)
+			.where(eq(userSettings.userId, request.user.id))
+			.get();
+
+		if (existing && result.data.currency !== existing.currency) {
+			return reply.status(400).send({
+				error: "Currency cannot be changed after account creation",
+			});
+		}
+
 		const now = Math.floor(Date.now() / 1000);
 
 		const updated = db

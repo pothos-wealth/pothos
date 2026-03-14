@@ -18,6 +18,7 @@ const registerSchema = z.object({
 		.regex(/[A-Z]/, "Password must contain at least one uppercase letter")
 		.regex(/[0-9]/, "Password must contain at least one number")
 		.regex(/[^a-zA-Z0-9]/, "Password must contain at least one special character"),
+	currency: z.string().length(3, "Currency must be a valid ISO 4217 code").toUpperCase().default("INR"),
 });
 
 const loginSchema = z.object({
@@ -58,7 +59,7 @@ export async function authRoutes(app: FastifyInstance) {
 			});
 		}
 
-		const { email, password } = result.data;
+		const { email, password, currency } = result.data;
 		const now = Math.floor(Date.now() / 1000);
 
 		// Check if email already exists
@@ -94,7 +95,7 @@ export async function authRoutes(app: FastifyInstance) {
 				.values({
 					id: settingsId,
 					userId,
-					currency: "INR",
+					currency,
 					createdAt: now,
 					updatedAt: now,
 				})

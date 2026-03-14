@@ -52,6 +52,34 @@
 
 ---
 
+## Currency
+
+**Single currency per user, immutable** — Each user selects a currency (ISO 4217 code) during signup. Cannot be changed after account creation. Prevents data corruption from mid-session conversions and avoids complex multi-currency calculations.
+
+**Why immutable** — Amounts are stored as integers in the smallest currency unit (paise for INR, cents for USD, etc.). Changing currency mid-stream would reinterpret all historical data (100 INR stored as 10050 would display as $100.50, a 12x difference). Single, immutable currency avoids this trap.
+
+**Storage** — `user_settings.currency` set at registration. Backend validates via `z.string().length(3).toUpperCase()` (ISO 4217). Settings endpoint rejects any PUT that attempts to change it.
+
+**Supported currencies** — Frontend sign-up offers: INR, USD, EUR, GBP, JPY, AUD, CAD (extensible in `CURRENCIES` array). Backend accepts any valid ISO 4217 code.
+
+**Display formatting** — Frontend uses `Intl.NumberFormat` with the user's currency code. Handles locale-specific symbols and grouping automatically (₹100.50, $100.50, €100,50, etc.).
+
+---
+
+## Decimal Amounts & Formatting
+
+**Storage as integers** — All amounts stored as integers in minor units to avoid floating-point errors. User enters "100.50", frontend multiplies by 100 → backend stores 10050.
+
+**Frontend input** — Form inputs use `type="number" min="0.01" step="0.01"` to allow decimal entry. On submit, multiply by 100. On edit/load, divide by 100.
+
+**Display formatting** — `formatCurrency(amount, currency)` divides by 100 and formats with 2 decimal places using `Intl.NumberFormat`. Example: 10050 → "₹100.50".
+
+**Currency context** — `CurrencyProvider` (React context) fetches user's currency once on app load. `useCurrencyFormatter()` hook returns a formatter that automatically uses the user's currency. All pages that display amounts use this hook instead of hardcoding currency.
+
+**Why context** — Centralized currency management avoids passing currency as a prop through every component. Single source of truth that persists across the app.
+
+---
+
 ## Accounts
 
 **Account deletion** — Hard delete only if zero transactions. Soft delete (close) if transactions exist. Preserves transaction history and mirrors real-world account lifecycle.

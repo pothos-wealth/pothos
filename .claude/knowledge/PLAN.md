@@ -4,6 +4,12 @@
 
 Pothos is a self-hostable, open-source budget and expense tracking app for individuals and families. It runs on a single t2.micro (1 vCPU, 1GB RAM) via Docker Compose.
 
+## Current Status
+
+**MVP Frontend Complete** — All pages built and fully integrated with the backend. Users can sign up, manage accounts, enter transactions with decimal precision, set budgets, and view reports. Currency is selected at signup and displayed correctly throughout the app.
+
+**Next:** Gmail ingestion (WS3) or MCP server (WS5). Recommend starting with Gmail for core product value.
+
 ## Progress
 
 | Task                        | Status         |
@@ -20,7 +26,7 @@ Pothos is a self-hostable, open-source budget and expense tracking app for indiv
 | T10 — Transactions          | ✅ Complete    |
 | T11 — Budgets               | ✅ Complete    |
 | T12 — Reports               | ✅ Complete    |
-| WS4 — Frontend              | ⬜ Not started |
+| WS4 — Frontend              | ✅ Complete    |
 | WS3 — Gmail Ingestion       | ⬜ Not started |
 | WS5 — MCP Server            | ⬜ Not started |
 
@@ -41,7 +47,9 @@ Pothos is a self-hostable, open-source budget and expense tracking app for indiv
 | Income vs expenses                   | ✅  |       |
 | Spending trends over time            | ✅  |       |
 | MCP server (balances + transactions) | ✅  |       |
-| Single currency (user-switchable)    | ✅  |       |
+| Single currency (immutable, set at signup) | ✅  |       |
+| Decimal amounts (0.01 precision)     | ✅  |       |
+| Multi-currency display formatting    | ✅  |       |
 | Subcategories                        |     | ✅    |
 | Recurring transactions               |     | ✅    |
 | Budget rollover                      |     | ✅    |
@@ -201,13 +209,74 @@ pothos/
 
 ---
 
-### WS4 — Frontend `⬜ not started`
+### WS4 — Frontend `✅ complete`
 
-**Goal:** Next.js app with Tailwind + shadcn/ui. Dashboard, transaction list, manual entry, budget views, account management, settings.
-
-> Tasks TBD — to be planned at start of WS4.
+**Goal:** Next.js app with Tailwind CSS. Dashboard, transaction list, manual entry, budget views, account management, settings. All pages built and integrated with backend API.
 
 **Dependencies:** WS2 complete
+
+#### Pages Built
+
+**Authentication Pages:**
+- `/sign-up` — Email + password + currency selector (3-letter ISO 4217 code). Currency immutable after signup.
+- `/sign-in` — Email + password login
+
+**Protected Pages (with sidebar):**
+- `/dashboard` — Overview stats (income, expenses, net), budget progress by category, recent transactions, 6-month spending trends
+- `/accounts` — CRUD with inline modal. Close/reopen accounts. Shows balance derived from transactions. Total balance roll-up.
+- `/transactions` — Paginated list with filters (account, type, date range). Inline add/edit modals. Supports transfers. Decimal amounts (0.01 precision).
+- `/budgets` — Month picker. Progress bars per category (spent vs limit). Upsert modal. Shows when over budget.
+- `/categories` — Tabbed by type (expense/income/neutral). Custom categories with color/icon. System defaults locked (no edit/delete).
+- `/reports` — Stat cards (income, expenses, net). Pie chart by category. 6-month bar chart trends.
+- `/settings` — User email display. Change password. Currency shown as read-only. Sign out.
+
+#### Key Features Implemented
+
+**Currency Handling:**
+- User selects currency during signup (INR, USD, EUR, GBP, JPY, AUD, CAD)
+- Currency immutable after account creation (backend validates)
+- `CurrencyProvider` context fetches user's currency on app load
+- `useCurrencyFormatter()` hook returns formatter using user's currency
+- All pages use the hook; currency displays automatically via `Intl.NumberFormat`
+
+**Decimal Amounts:**
+- Form inputs: `type="number" min="0.01" step="0.01"` allows decimal entry
+- On submit: multiply by 100 (100.50 → 10050) before sending to backend
+- On edit: divide by 100 when loading (10050 → 100.50)
+- Display: divide by 100 and format with 2 decimal places via `formatCurrency()`
+- Supports any currency (₹100.50, $100.50, €100,50, etc.)
+
+**Data Fetching:**
+- No React Query/SWR (simple enough for MVP)
+- Manual loading/error states
+- Auto-redirect to sign-in on 401 UNAUTHORIZED
+- Parallel fetches with `Promise.all`
+
+**Modals & Forms:**
+- Reusable `Modal` component for all add/edit flows
+- Consistent input styling via `inputCls`
+- Form state pattern: `useState` with spread operator updates
+
+**UI/UX:**
+- Responsive design (mobile-first, grid adapts at breakpoints)
+- Sidebar on desktop, bottom nav on mobile
+- Loading states with skeleton screens
+- Empty states with helpful messages
+- Pagination with prev/next buttons
+- Inline add/edit vs modal dialogs throughout
+
+#### Technical Stack
+
+- **Next.js 14** — App router, server/client components, built-in API proxy
+- **React** — `useState`, `useEffect`, context for currency
+- **Tailwind CSS** — Utility-first styling with Pothos color system
+- **Recharts** — Pie and bar charts on dashboard and reports
+- **Lucide React** — Icon library throughout UI
+- **TypeScript** — Full type safety, types mirror backend
+
+#### Documentation
+
+See `FRONTEND.md` for detailed architecture, component structure, and patterns.
 
 ---
 
@@ -228,3 +297,45 @@ pothos/
 > Tasks TBD — to be planned at start of WS5.
 
 **Dependencies:** WS3 complete
+
+---
+
+## Recommendations for Next Steps
+
+### WS3 — Gmail Ingestion (Recommended Next)
+
+**Why:** Adds core product value. Manual entry alone limits user adoption. Gmail parsing enables the "set and forget" UX YNAB offers.
+
+**Key Design Points:**
+- IMAP connection with App Password (no OAuth in v1)
+- Cursor per user per provider (don't re-parse old emails)
+- Fallback chain: LLM first, regex fallback, pending queue for edge cases
+- Parse results flow back to manual transaction list for review
+- Users control which emails are parsed (avoid over-automation)
+
+**Estimated scope:** Email polling loop, LLM adapter (OpenAI default, configurable), pending queue processor, Zod schemas for parsed transactions.
+
+### WS4.1 — Polish & Quality (Optional, Parallel with WS3)
+
+If implementing WS3, consider these low-effort high-value improvements:
+- Add toast notifications for action feedback (transaction saved, budget added, etc.)
+- Keyboard shortcuts for common flows (Ctrl+T to add transaction, Ctrl+K for search)
+- Search bar on transactions/categories pages
+- Export current month as PDF (for user records)
+- Undo for destructive actions (delete transaction)
+
+### WS5 — MCP Server (After WS3)
+
+Once Gmail parsing is working, MCP multiplies the value. Natural language queries on top of parsed + manual transactions.
+
+---
+
+## Known Gaps / Deferred
+
+- **Multi-currency per account** — Decided against to avoid transfer complexity. YNAB recommends separate budgets for different currencies anyway.
+- **Credit card accounts** — Requires inverse balance logic (credit limit - balance). Deferred to v2.
+- **Budget rollover** — UI placeholder exists, backend logic deferred.
+- **Recurring transactions** — Gmail parsing covers most recurring expenses. Native support deferred to v2.
+- **CSV import/export** — Deferred to v2 (manual entry + Gmail parsing sufficient for MVP).
+- **Bank sync (Plaid)** — Nice-to-have, deferred to v2.
+- **Multi-user / family** — Significant scope increase, deferred to v2.
