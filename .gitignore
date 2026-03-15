@@ -15,9 +15,6 @@ out/
 *.db-shm
 *.db-wal
 
-# Drizzle
-drizzle/
-
 # Logs
 *.log
 npm-debug.log*
