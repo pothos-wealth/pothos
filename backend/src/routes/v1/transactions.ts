@@ -120,6 +120,10 @@ export async function transactionRoutes(app: FastifyInstance) {
 			return reply.status(404).send({ error: "Account not found" });
 		}
 
+		if (!account.isActive) {
+			return reply.status(409).send({ error: "Cannot add transactions to a closed account" });
+		}
+
 		const now = Math.floor(Date.now() / 1000);
 		const id = nanoid();
 
@@ -178,6 +182,10 @@ export async function transactionRoutes(app: FastifyInstance) {
 			return reply.status(404).send({ error: "Source account not found" });
 		}
 
+		if (!fromAccount.isActive) {
+			return reply.status(409).send({ error: "Cannot transfer from a closed account" });
+		}
+
 		const toAccount = db
 			.select()
 			.from(accounts)
@@ -186,6 +194,10 @@ export async function transactionRoutes(app: FastifyInstance) {
 
 		if (!toAccount) {
 			return reply.status(404).send({ error: "Destination account not found" });
+		}
+
+		if (!toAccount.isActive) {
+			return reply.status(409).send({ error: "Cannot transfer to a closed account" });
 		}
 
 		const now = Math.floor(Date.now() / 1000);
@@ -233,9 +245,9 @@ export async function transactionRoutes(app: FastifyInstance) {
 				.run();
 		});
 
-		const debit = db.select().from(transactions).where(eq(transactions.id, debitId)).get();
+		const debit = db.select().from(transactions).where(and(eq(transactions.id, debitId), eq(transactions.userId, request.user.id))).get();
 
-		const credit = db.select().from(transactions).where(eq(transactions.id, creditId)).get();
+		const credit = db.select().from(transactions).where(and(eq(transactions.id, creditId), eq(transactions.userId, request.user.id))).get();
 
 		return reply.status(201).send({ debit, credit });
 	});
@@ -336,10 +348,10 @@ export async function transactionRoutes(app: FastifyInstance) {
 		if (transaction.type === "transfer" && transaction.transferTransactionId) {
 			// Delete both sides of the transfer atomically
 			db.transaction((tx) => {
-				tx.delete(transactions).where(eq(transactions.id, id)).run();
+				tx.delete(transactions).where(and(eq(transactions.id, id), eq(transactions.userId, request.user.id))).run();
 
 				tx.delete(transactions)
-					.where(eq(transactions.id, transaction.transferTransactionId!))
+					.where(and(eq(transactions.id, transaction.transferTransactionId!), eq(transactions.userId, request.user.id)))
 					.run();
 			});
 		} else {

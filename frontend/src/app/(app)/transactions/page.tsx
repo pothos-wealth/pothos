@@ -185,7 +185,7 @@ export default function TransactionsPage() {
             setPendingDelete(null)
             load()
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Delete failed')
+            setError(err instanceof Error ? err.message : 'Delete failed')
         } finally {
             setDeleting(false)
         }
@@ -309,6 +309,7 @@ export default function TransactionsPage() {
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setPendingDelete(tx) }}
                                         className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-fg-muted hover:text-expense hover:bg-expense-light transition-all duration-150 shrink-0"
+                                        aria-label="Delete transaction"
                                     >
                                         <Trash2 size={14} />
                                     </button>

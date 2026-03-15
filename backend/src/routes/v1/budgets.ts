@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { eq, and, or, isNull, lt, desc, sql } from "drizzle-orm";
+import { eq, and, or, isNull, lt, desc, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { nanoid } from "nanoid";
 import { db } from "../../db/index.js";
@@ -128,25 +128,39 @@ export async function budgetRoutes(app: FastifyInstance) {
 			}
 		}
 
-		// Calculate actual spending per category for the period
-		const result2 = rows.map((budget) => {
+		// Calculate actual spending per category for the period in a single query
+		const categoryIds = rows.map((b) => b.categoryId);
+		const spendingMap = new Map<string, number>();
+
+		if (categoryIds.length > 0) {
 			const spending = db
-				.select({ total: sql<number>`COALESCE(SUM(amount), 0)` })
+				.select({
+					categoryId: transactions.categoryId,
+					total: sql<number>`COALESCE(SUM(${transactions.amount}), 0)`,
+				})
 				.from(transactions)
 				.where(
 					and(
 						eq(transactions.userId, request.user.id),
-						eq(transactions.categoryId, budget.categoryId),
+						inArray(transactions.categoryId, categoryIds),
 						eq(transactions.type, "expense"),
 						sql`${transactions.date} >= ${start}`,
 						sql`${transactions.date} <= ${end}`
 					)
 				)
-				.get();
+				.groupBy(transactions.categoryId)
+				.all();
 
-			// Spending is stored as negative — convert to positive for display
-			const spent = Math.abs(spending?.total ?? 0);
+			for (const s of spending) {
+				if (s.categoryId) {
+					// Spending is stored as negative — convert to positive for display
+					spendingMap.set(s.categoryId, Math.abs(s.total));
+				}
+			}
+		}
 
+		const result2 = rows.map((budget) => {
+			const spent = spendingMap.get(budget.categoryId) ?? 0;
 			return {
 				...budget,
 				spent,
@@ -172,14 +186,14 @@ export async function budgetRoutes(app: FastifyInstance) {
 		const { categoryId, amount, month, year, isRecurring } = result.data;
 
 		// Verify category exists and belongs to user or is a global default
-		const category = db.select().from(categories).where(eq(categories.id, categoryId)).get();
+		const category = db
+			.select()
+			.from(categories)
+			.where(and(eq(categories.id, categoryId), or(eq(categories.userId, request.user.id), isNull(categories.userId))))
+			.get();
 
 		if (!category) {
 			return reply.status(404).send({ error: "Category not found" });
-		}
-
-		if (category.userId !== null && category.userId !== request.user.id) {
-			return reply.status(403).send({ error: "Forbidden" });
 		}
 
 		const now = Math.floor(Date.now() / 1000);
@@ -207,7 +221,7 @@ export async function budgetRoutes(app: FastifyInstance) {
 				.returning()
 				.get();
 
-			return reply.send(updated);
+			return reply.status(200).send(updated);
 		}
 
 		// Create new budget

@@ -193,7 +193,7 @@ export default function DashboardPage() {
 							<p className="text-sm text-fg-muted">No data yet</p>
 						</div>
 					) : (
-						<div className="h-[200px]">
+						<div className="h-[200px]" role="img" aria-label="Monthly income and expenses bar chart">
 							<ResponsiveContainer width="100%" height="100%">
 								<BarChart data={trendData} barGap={4} barSize={14}>
 									<XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--color-fg-muted)" }} axisLine={false} tickLine={false} />

@@ -65,7 +65,7 @@ export async function authRoutes(app: FastifyInstance) {
 		const now = Math.floor(Date.now() / 1000);
 
 		// Check if email already exists
-		const existing = await db
+		const existing = db
 			.select({ id: users.id })
 			.from(users)
 			.where(eq(users.email, email))
@@ -148,12 +148,12 @@ export async function authRoutes(app: FastifyInstance) {
 		const sessionId = nanoid();
 		const expiresAt = now + SESSION_TTL_DAYS * 24 * 60 * 60;
 
-		await db.insert(sessions).values({
+		db.insert(sessions).values({
 			id: sessionId,
 			userId: user.id,
 			expiresAt,
 			createdAt: now,
-		});
+		}).run();
 
 		return reply
 			.setCookie("session_id", sessionId, createSessionCookie(sessionId, expiresAt))
@@ -163,7 +163,7 @@ export async function authRoutes(app: FastifyInstance) {
 	// ─── Logout ───────────────────────────────────────────────────────────────
 
 	app.post("/auth/logout", { preHandler: authenticate }, async (request, reply) => {
-		await db.delete(sessions).where(eq(sessions.id, request.session.id));
+		db.delete(sessions).where(eq(sessions.id, request.session.id)).run();
 
 		return reply
 			.clearCookie("session_id", { path: "/" })

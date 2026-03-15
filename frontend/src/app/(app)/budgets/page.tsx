@@ -107,7 +107,7 @@ export default function BudgetsPage() {
             setBudgets((prev) => prev.filter((b) => b.id !== pendingDelete.id))
             setPendingDelete(null)
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Delete failed')
+            setError(err instanceof Error ? err.message : 'Delete failed')
         } finally {
             setDeleting(false)
         }
@@ -216,12 +216,14 @@ export default function BudgetsPage() {
                                                 <button
                                                     onClick={() => openEdit(budget)}
                                                     className="p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-bg-3 transition-colors duration-150"
+                                                    aria-label="Edit budget"
                                                 >
                                                     <Pencil size={13} />
                                                 </button>
                                                 <button
                                                     onClick={() => setPendingDelete(budget)}
                                                     className="p-1.5 rounded-lg text-fg-muted hover:text-expense hover:bg-expense-light transition-colors duration-150"
+                                                    aria-label="Delete budget"
                                                 >
                                                     <Trash2 size={13} />
                                                 </button>
@@ -303,8 +305,9 @@ export default function BudgetsPage() {
                     )}
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-fg">Category</label>
+                        <label htmlFor="budget-category" className="text-sm font-medium text-fg">Category</label>
                         <select
+                            id="budget-category"
                             value={form.categoryId}
                             onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
                             disabled={!!editing}
@@ -317,8 +320,9 @@ export default function BudgetsPage() {
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-fg">Budget Amount</label>
+                        <label htmlFor="budget-amount" className="text-sm font-medium text-fg">Budget Amount</label>
                         <input
+                            id="budget-amount"
                             type="number"
                             min="0.01"
                             step="0.01"

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { eq, and, sum, sql } from "drizzle-orm";
+import { eq, and, sum, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { nanoid } from "nanoid";
 import { db } from "../../db/index.js";
@@ -46,9 +46,28 @@ export async function accountRoutes(app: FastifyInstance) {
 			)
 			.all();
 
+		const accountIds = rows.map((a) => a.id);
+		const balanceMap = new Map<string, number>();
+
+		if (accountIds.length > 0) {
+			const balances = db
+				.select({
+					accountId: transactions.accountId,
+					total: sql<number>`COALESCE(SUM(${transactions.amount}), 0)`,
+				})
+				.from(transactions)
+				.where(inArray(transactions.accountId, accountIds))
+				.groupBy(transactions.accountId)
+				.all();
+
+			for (const b of balances) {
+				balanceMap.set(b.accountId, b.total);
+			}
+		}
+
 		const result = rows.map((account) => ({
 			...account,
-			balance: getAccountBalance(account.id, account.initialBalance),
+			balance: account.initialBalance + (balanceMap.get(account.id) ?? 0),
 		}));
 
 		return reply.send(result);

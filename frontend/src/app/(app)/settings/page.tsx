@@ -172,8 +172,9 @@ export default function SettingsPage() {
                     )}
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-fg">Current Password</label>
+                        <label htmlFor="current-password" className="text-sm font-medium text-fg">Current Password</label>
                         <input
+                            id="current-password"
                             type="password"
                             required
                             autoComplete="current-password"
@@ -184,8 +185,9 @@ export default function SettingsPage() {
                         />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-fg">New Password</label>
+                        <label htmlFor="new-password" className="text-sm font-medium text-fg">New Password</label>
                         <input
+                            id="new-password"
                             type="password"
                             required
                             autoComplete="new-password"
@@ -197,8 +199,9 @@ export default function SettingsPage() {
                         <p className="text-xs text-fg-muted">Min 8 chars, uppercase, number, special character</p>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-fg">Confirm New Password</label>
+                        <label htmlFor="confirm-password" className="text-sm font-medium text-fg">Confirm New Password</label>
                         <input
+                            id="confirm-password"
                             type="password"
                             required
                             autoComplete="new-password"

@@ -102,7 +102,7 @@ export default function CategoriesPage() {
             setCategories((prev) => prev.filter((c) => c.id !== pendingDelete.id))
             setPendingDelete(null)
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Delete failed')
+            setError(err instanceof Error ? err.message : 'Delete failed')
         } finally {
             setDeleting(false)
         }
@@ -214,12 +214,14 @@ export default function CategoriesPage() {
                                         <button
                                             onClick={() => openEdit(cat)}
                                             className="p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-bg-3 transition-colors duration-150"
+                                            aria-label="Edit category"
                                         >
                                             <Pencil size={14} />
                                         </button>
                                         <button
                                             onClick={() => setPendingDelete(cat)}
                                             className="p-1.5 rounded-lg text-fg-muted hover:text-expense hover:bg-expense-light transition-colors duration-150"
+                                            aria-label="Delete category"
                                         >
                                             <Trash2 size={14} />
                                         </button>
@@ -245,8 +247,9 @@ export default function CategoriesPage() {
                     )}
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-fg">Name</label>
+                        <label htmlFor="category-name" className="text-sm font-medium text-fg">Name</label>
                         <input
+                            id="category-name"
                             required
                             value={form.name}
                             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -256,8 +259,9 @@ export default function CategoriesPage() {
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-fg">Type</label>
+                        <label htmlFor="category-type" className="text-sm font-medium text-fg">Type</label>
                         <select
+                            id="category-type"
                             value={form.type}
                             onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as TabType }))}
                             className="bg-bg border border-border rounded-xl px-3 py-2.5 text-sm text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-shadow"
@@ -270,8 +274,9 @@ export default function CategoriesPage() {
 
                     <div className="flex gap-3">
                         <div className="flex flex-col gap-1.5 flex-1">
-                            <label className="text-sm font-medium text-fg">Icon (emoji)</label>
+                            <label htmlFor="category-icon" className="text-sm font-medium text-fg">Icon (emoji)</label>
                             <input
+                                id="category-icon"
                                 value={form.icon}
                                 onChange={(e) => setForm((f) => ({ ...f, icon: e.target.value }))}
                                 placeholder="🛒"
@@ -279,8 +284,9 @@ export default function CategoriesPage() {
                             />
                         </div>
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-medium text-fg">Color</label>
+                            <label htmlFor="category-color" className="text-sm font-medium text-fg">Color</label>
                             <input
+                                id="category-color"
                                 type="color"
                                 value={form.color}
                                 onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
