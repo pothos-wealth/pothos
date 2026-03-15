@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, Lock, Tag } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { PageTransition } from '@/components/ui/PageTransition'
 import { api } from '@/lib/api'
@@ -34,6 +35,8 @@ export default function CategoriesPage() {
     const [form, setForm] = useState<CategoryForm>(defaultForm)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
+    const [pendingDelete, setPendingDelete] = useState<Category | null>(null)
+    const [deleting, setDeleting] = useState(false)
 
     function load() {
         api.categories.list()
@@ -91,13 +94,17 @@ export default function CategoriesPage() {
         }
     }
 
-    async function handleDelete(cat: Category) {
-        if (!confirm(`Delete "${cat.name}"?`)) return
+    async function handleDelete() {
+        if (!pendingDelete) return
+        setDeleting(true)
         try {
-            await api.categories.delete(cat.id)
-            setCategories((prev) => prev.filter((c) => c.id !== cat.id))
+            await api.categories.delete(pendingDelete.id)
+            setCategories((prev) => prev.filter((c) => c.id !== pendingDelete.id))
+            setPendingDelete(null)
         } catch (err) {
             alert(err instanceof Error ? err.message : 'Delete failed')
+        } finally {
+            setDeleting(false)
         }
     }
 
@@ -211,7 +218,7 @@ export default function CategoriesPage() {
                                             <Pencil size={14} />
                                         </button>
                                         <button
-                                            onClick={() => handleDelete(cat)}
+                                            onClick={() => setPendingDelete(cat)}
                                             className="p-1.5 rounded-lg text-fg-muted hover:text-expense hover:bg-expense-light transition-colors duration-150"
                                         >
                                             <Trash2 size={14} />
@@ -300,6 +307,15 @@ export default function CategoriesPage() {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmModal
+                open={pendingDelete !== null}
+                onClose={() => setPendingDelete(null)}
+                onConfirm={handleDelete}
+                title="Delete Category"
+                message={`Delete "${pendingDelete?.name}"? This cannot be undone.`}
+                loading={deleting}
+            />
         </div>
         </PageTransition>
     )

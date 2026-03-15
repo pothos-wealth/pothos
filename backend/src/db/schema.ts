@@ -123,6 +123,7 @@ export const budgets = sqliteTable(
 		amount: integer("amount").notNull(),
 		month: integer("month").notNull(),
 		year: integer("year").notNull(),
+		isRecurring: integer("is_recurring", { mode: "boolean" }).notNull().default(true),
 		createdAt: integer("created_at")
 			.notNull()
 			.default(sql`(unixepoch())`),

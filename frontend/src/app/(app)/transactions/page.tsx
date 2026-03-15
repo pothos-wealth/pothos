@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Trash2, ArrowLeftRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { PageTransition } from '@/components/ui/PageTransition'
 import { api } from '@/lib/api'
@@ -74,6 +75,8 @@ export default function TransactionsPage() {
 
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
+    const [pendingDelete, setPendingDelete] = useState<Transaction | null>(null)
+    const [deleting, setDeleting] = useState(false)
 
     const activeAccounts = accounts.filter((a) => a.isActive)
 
@@ -174,13 +177,17 @@ export default function TransactionsPage() {
         }
     }
 
-    async function handleDelete(id: string) {
-        if (!confirm('Delete this transaction?')) return
+    async function handleDelete() {
+        if (!pendingDelete) return
+        setDeleting(true)
         try {
-            await api.transactions.delete(id)
+            await api.transactions.delete(pendingDelete.id)
+            setPendingDelete(null)
             load()
         } catch (err) {
             alert(err instanceof Error ? err.message : 'Delete failed')
+        } finally {
+            setDeleting(false)
         }
     }
 
@@ -300,7 +307,7 @@ export default function TransactionsPage() {
                                         <p className="text-xs text-fg-muted">{formatDate(tx.date)}</p>
                                     </div>
                                     <button
-                                        onClick={(e) => { e.stopPropagation(); handleDelete(tx.id) }}
+                                        onClick={(e) => { e.stopPropagation(); setPendingDelete(tx) }}
                                         className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-fg-muted hover:text-expense hover:bg-expense-light transition-all duration-150 shrink-0"
                                     >
                                         <Trash2 size={14} />
@@ -394,7 +401,7 @@ export default function TransactionsPage() {
                                     <option key={c.id} value={c.id}>{c.name}</option>
                                 ))}
                             </select>
-                            <input type="number" min="0.01" step="0.01" required placeholder="Amount (₹)" value={txForm.amount} onChange={(e) => setTxForm((f) => ({ ...f, amount: e.target.value }))} className={inputCls} />
+                            <input type="number" min="0.01" step="0.01" required placeholder="Amount" value={txForm.amount} onChange={(e) => setTxForm((f) => ({ ...f, amount: e.target.value }))} className={inputCls} />
                             <input type="date" required value={txForm.date} onChange={(e) => setTxForm((f) => ({ ...f, date: e.target.value }))} className={inputCls} />
                             <input required placeholder="Description" value={txForm.description} onChange={(e) => setTxForm((f) => ({ ...f, description: e.target.value }))} className={inputCls} />
                             <input placeholder="Notes (optional)" value={txForm.notes} onChange={(e) => setTxForm((f) => ({ ...f, notes: e.target.value }))} className={inputCls} />
@@ -409,7 +416,7 @@ export default function TransactionsPage() {
                                 <option value="">To account</option>
                                 {activeAccounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                             </select>
-                            <input type="number" min="0.01" step="0.01" required placeholder="Amount (₹)" value={transferForm.amount} onChange={(e) => setTransferForm((f) => ({ ...f, amount: e.target.value }))} className={inputCls} />
+                            <input type="number" min="0.01" step="0.01" required placeholder="Amount" value={transferForm.amount} onChange={(e) => setTransferForm((f) => ({ ...f, amount: e.target.value }))} className={inputCls} />
                             <input type="date" required value={transferForm.date} onChange={(e) => setTransferForm((f) => ({ ...f, date: e.target.value }))} className={inputCls} />
                             <input required placeholder="Description" value={transferForm.description} onChange={(e) => setTransferForm((f) => ({ ...f, description: e.target.value }))} className={inputCls} />
                         </>
@@ -438,7 +445,7 @@ export default function TransactionsPage() {
                         <option value="">No category</option>
                         {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
-                    <input type="number" min="0.01" step="0.01" required placeholder="Amount (₹)" value={editForm.amount ?? ''} onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))} className={inputCls} />
+                    <input type="number" min="0.01" step="0.01" required placeholder="Amount" value={editForm.amount ?? ''} onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))} className={inputCls} />
                     <input type="date" required value={editForm.date ?? ''} onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))} className={inputCls} />
                     <input required placeholder="Description" value={editForm.description ?? ''} onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))} className={inputCls} />
                     <input placeholder="Notes (optional)" value={editForm.notes ?? ''} onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))} className={inputCls} />
@@ -453,6 +460,15 @@ export default function TransactionsPage() {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmModal
+                open={pendingDelete !== null}
+                onClose={() => setPendingDelete(null)}
+                onConfirm={handleDelete}
+                title="Delete Transaction"
+                message="Delete this transaction? This cannot be undone."
+                loading={deleting}
+            />
         </div>
         </PageTransition>
     )

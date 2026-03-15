@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { PageTransition } from "@/components/ui/PageTransition";
 import { api } from "@/lib/api";
-import { useCurrencyFormatter } from "@/lib/utils";
+import { useCurrencyFormatter, useCurrencySymbol } from "@/lib/utils";
 import type {
 	Account,
 	Overview,
@@ -94,6 +94,7 @@ function DashboardSkeleton() {
 
 export default function DashboardPage() {
 	const formatCurrency = useCurrencyFormatter();
+	const currencySymbol = useCurrencySymbol();
 	const [month, setMonth] = useState(() => new Date().getMonth() + 1);
 	const [year, setYear] = useState(() => new Date().getFullYear());
 	const [data, setData] = useState<DashboardData | null>(null);
@@ -196,7 +197,7 @@ export default function DashboardPage() {
 							<ResponsiveContainer width="100%" height="100%">
 								<BarChart data={trendData} barGap={4} barSize={14}>
 									<XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--color-fg-muted)" }} axisLine={false} tickLine={false} />
-									<YAxis tick={{ fontSize: 10, fill: "var(--color-fg-muted)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} width={44} />
+									<YAxis tick={{ fontSize: 10, fill: "var(--color-fg-muted)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${currencySymbol}${(v / 1000).toFixed(0)}k`} width={44} />
 									<Tooltip
 										contentStyle={{ backgroundColor: "var(--color-bg-2)", border: "1px solid var(--color-border)", borderRadius: "12px", fontSize: "12px", color: "var(--color-fg)" }}
 										formatter={(value) => formatCurrency(Number(value))}

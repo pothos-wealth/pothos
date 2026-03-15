@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, Target } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { MonthPicker } from '@/components/dashboard/MonthPicker'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { PageTransition } from '@/components/ui/PageTransition'
@@ -15,6 +16,7 @@ import type { BudgetWithSpent, Category } from '@/lib/types'
 interface BudgetForm {
     categoryId: string
     amount: string
+    isRecurring: boolean
 }
 
 export default function BudgetsPage() {
@@ -27,9 +29,11 @@ export default function BudgetsPage() {
     const [loading, setLoading] = useState(true)
     const [modalOpen, setModalOpen] = useState(false)
     const [editing, setEditing] = useState<BudgetWithSpent | null>(null)
-    const [form, setForm] = useState<BudgetForm>({ categoryId: '', amount: '' })
+    const [form, setForm] = useState<BudgetForm>({ categoryId: '', amount: '', isRecurring: true })
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
+    const [pendingDelete, setPendingDelete] = useState<BudgetWithSpent | null>(null)
+    const [deleting, setDeleting] = useState(false)
 
     const expenseCategories = categories.filter((c) => c.type === 'expense')
 
@@ -50,6 +54,7 @@ export default function BudgetsPage() {
         setForm({
             categoryId: categoryId ?? (expenseCategories[0]?.id ?? ''),
             amount: '',
+            isRecurring: true,
         })
         setError('')
         setModalOpen(true)
@@ -57,7 +62,7 @@ export default function BudgetsPage() {
 
     function openEdit(budget: BudgetWithSpent) {
         setEditing(budget)
-        setForm({ categoryId: budget.categoryId, amount: String(budget.amount / 100) })
+        setForm({ categoryId: budget.categoryId, amount: String(budget.amount / 100), isRecurring: budget.isRecurring })
         setError('')
         setModalOpen(true)
     }
@@ -72,16 +77,19 @@ export default function BudgetsPage() {
                 amount: Math.round(Number(form.amount) * 100),
                 month,
                 year,
+                isRecurring: form.isRecurring,
             })
-            const budgetWithSpent = {
-                ...updated,
-                spent: updated.spent ?? 0,
-                remaining: updated.remaining ?? updated.amount,
-            }
             setBudgets((prev) => {
-                const exists = prev.find((b) => b.id === budgetWithSpent.id)
-                if (exists) return prev.map((b) => (b.id === budgetWithSpent.id ? budgetWithSpent : b))
-                return [...prev, budgetWithSpent]
+                const existing = prev.find((b) => b.id === updated.id)
+                if (existing) {
+                    // Preserve spent — it's not returned by the upsert endpoint
+                    return prev.map((b) =>
+                        b.id === updated.id
+                            ? { ...updated, spent: b.spent, remaining: updated.amount - b.spent }
+                            : b
+                    )
+                }
+                return [...prev, { ...updated, spent: 0, remaining: updated.amount }]
             })
             setModalOpen(false)
         } catch (err) {
@@ -91,13 +99,17 @@ export default function BudgetsPage() {
         }
     }
 
-    async function handleDelete(budget: BudgetWithSpent) {
-        if (!confirm('Remove this budget?')) return
+    async function handleDelete() {
+        if (!pendingDelete) return
+        setDeleting(true)
         try {
-            await api.budgets.delete(budget.id)
-            setBudgets((prev) => prev.filter((b) => b.id !== budget.id))
+            await api.budgets.delete(pendingDelete.id)
+            setBudgets((prev) => prev.filter((b) => b.id !== pendingDelete.id))
+            setPendingDelete(null)
         } catch (err) {
             alert(err instanceof Error ? err.message : 'Delete failed')
+        } finally {
+            setDeleting(false)
         }
     }
 
@@ -208,7 +220,7 @@ export default function BudgetsPage() {
                                                     <Pencil size={13} />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDelete(budget)}
+                                                    onClick={() => setPendingDelete(budget)}
                                                     className="p-1.5 rounded-lg text-fg-muted hover:text-expense hover:bg-expense-light transition-colors duration-150"
                                                 >
                                                     <Trash2 size={13} />
@@ -305,7 +317,7 @@ export default function BudgetsPage() {
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-fg">Budget Amount (₹)</label>
+                        <label className="text-sm font-medium text-fg">Budget Amount</label>
                         <input
                             type="number"
                             min="0.01"
@@ -317,6 +329,16 @@ export default function BudgetsPage() {
                             className="bg-bg border border-border rounded-xl px-3 py-2.5 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-shadow"
                         />
                     </div>
+
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            checked={form.isRecurring}
+                            onChange={(e) => setForm((f) => ({ ...f, isRecurring: e.target.checked }))}
+                            className="w-4 h-4 rounded accent-primary"
+                        />
+                        <span className="text-sm text-fg">Repeat every month</span>
+                    </label>
 
                     <div className="flex gap-2 mt-1">
                         <button
@@ -336,6 +358,16 @@ export default function BudgetsPage() {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmModal
+                open={pendingDelete !== null}
+                onClose={() => setPendingDelete(null)}
+                onConfirm={handleDelete}
+                title="Remove Budget"
+                message="Remove this budget? The category will appear in the unbudgeted section."
+                confirmLabel="Remove"
+                loading={deleting}
+            />
         </div>
         </PageTransition>
     )

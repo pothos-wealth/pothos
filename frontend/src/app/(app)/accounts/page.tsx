@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, Lock, LockOpen, Wallet } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { PageTransition } from '@/components/ui/PageTransition'
 import { api } from '@/lib/api'
@@ -31,6 +32,8 @@ export default function AccountsPage() {
     const [form, setForm] = useState<AccountFormState>(defaultForm)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
+    const [pendingDelete, setPendingDelete] = useState<Account | null>(null)
+    const [deleting, setDeleting] = useState(false)
 
     function load() {
         api.accounts.list()
@@ -81,13 +84,17 @@ export default function AccountsPage() {
         }
     }
 
-    async function handleDelete(account: Account) {
-        if (!confirm(`Delete "${account.name}"? This cannot be undone.`)) return
+    async function handleDelete() {
+        if (!pendingDelete) return
+        setDeleting(true)
         try {
-            await api.accounts.delete(account.id)
-            setAccounts((prev) => prev.filter((a) => a.id !== account.id))
+            await api.accounts.delete(pendingDelete.id)
+            setAccounts((prev) => prev.filter((a) => a.id !== pendingDelete.id))
+            setPendingDelete(null)
         } catch (err) {
             alert(err instanceof Error ? err.message : 'Delete failed')
+        } finally {
+            setDeleting(false)
         }
     }
 
@@ -203,7 +210,7 @@ export default function AccountsPage() {
                                     {account.isActive ? 'Close' : 'Reopen'}
                                 </button>
                                 <button
-                                    onClick={() => handleDelete(account)}
+                                    onClick={() => setPendingDelete(account)}
                                     className="flex items-center gap-1.5 text-xs font-medium text-fg-muted hover:text-expense px-2.5 py-1.5 rounded-lg hover:bg-expense-light transition-colors duration-150 ml-auto"
                                 >
                                     <Trash2 size={13} />
@@ -254,7 +261,7 @@ export default function AccountsPage() {
 
                     {!editing && (
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-medium text-fg">Initial Balance (₹)</label>
+                            <label className="text-sm font-medium text-fg">Initial Balance</label>
                             <input
                                 type="number"
                                 min="0"
@@ -286,6 +293,15 @@ export default function AccountsPage() {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmModal
+                open={pendingDelete !== null}
+                onClose={() => setPendingDelete(null)}
+                onConfirm={handleDelete}
+                title="Delete Account"
+                message={`Delete "${pendingDelete?.name}"? This cannot be undone.`}
+                loading={deleting}
+            />
         </div>
         </PageTransition>
     )

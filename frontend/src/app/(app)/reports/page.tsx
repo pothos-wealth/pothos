@@ -12,7 +12,7 @@ import { MonthPicker } from '@/components/dashboard/MonthPicker'
 import { PothosLottie } from '@/components/ui/PothosLottie'
 import { PageTransition } from '@/components/ui/PageTransition'
 import { api } from '@/lib/api'
-import { useCurrencyFormatter } from '@/lib/utils'
+import { useCurrencyFormatter, useCurrencySymbol } from '@/lib/utils'
 import type { Overview, CategoryReport, TrendsReport } from '@/lib/types'
 
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -20,6 +20,7 @@ const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 export default function ReportsPage() {
     const router = useRouter()
     const formatCurrency = useCurrencyFormatter()
+    const currencySymbol = useCurrencySymbol()
     const [month, setMonth] = useState(() => new Date().getMonth() + 1)
     const [year, setYear] = useState(() => new Date().getFullYear())
     const [overview, setOverview] = useState<Overview | null>(null)
@@ -117,7 +118,7 @@ export default function ReportsPage() {
                                             tick={{ fontSize: 11, fill: 'var(--color-fg-muted)' }}
                                             axisLine={false}
                                             tickLine={false}
-                                            tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`}
+                                            tickFormatter={(v) => `${currencySymbol}${(v / 1000).toFixed(0)}k`}
                                             width={48}
                                         />
                                         <Tooltip

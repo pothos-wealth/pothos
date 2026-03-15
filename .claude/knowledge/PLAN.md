@@ -199,7 +199,7 @@ pothos/
 
 **T11 — Budgets** `✅ complete`
 
-- `GET /api/v1/budgets?month=&year=` — list budgets with actual `spent` and `remaining` for the period. Defaults to current month. Auto-generates recurring budgets for months that haven't been explicitly set
+- `GET /api/v1/budgets?month=&year=` — list budgets with actual `spent` and `remaining` for the period. Defaults to current month. Auto-generates recurring budgets for the current month on first view (past/future months not seeded automatically)
 - `POST /api/v1/budgets` — create or update (upsert on unique constraint of user, category, month, year). Defaults `isRecurring` to true
 - `DELETE /api/v1/budgets/:id`
 - `isRecurring = true` — budget auto-carries forward to future months by finding the most recent recurring entry per category and generating a new row when the month is first viewed
