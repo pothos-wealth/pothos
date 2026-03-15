@@ -6,6 +6,3 @@ drizzle
 *.db
 *.db-shm
 *.db-wal
-src
-tsconfig.json
-drizzle.config.ts
