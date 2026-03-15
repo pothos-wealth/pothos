@@ -261,7 +261,7 @@ export default function AccountsPage() {
 
                     {!editing && (
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-medium text-fg">Initial Balance (₹)</label>
+                            <label className="text-sm font-medium text-fg">Initial Balance</label>
                             <input
                                 type="number"
                                 min="0"

@@ -104,7 +104,7 @@
 
 **Budget structure** — One budget per category per month, enforced via unique constraint on `(user_id, category_id, month, year)`. Posting to the same category/month/year upserts the existing row.
 
-**Budget recurrence** — Budgets default to `is_recurring = true`. When a month is first viewed, the backend auto-generates budget rows for that month from the most recent recurring entry per category. Avoids users having to manually recreate budgets every month.
+**Budget recurrence** — Budgets default to `is_recurring = true`. When the current month is first viewed, the backend auto-generates budget rows from the most recent recurring entry per category. Auto-generation only applies to the current month — past and future months are not seeded automatically.
 
 **Future month budgets** — Allowed with no restriction. Budgeting is planning — users should be able to set budgets for upcoming months freely.
 

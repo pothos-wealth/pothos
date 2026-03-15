@@ -12,6 +12,16 @@ export function useCurrencyFormatter() {
     return (amount: number) => formatCurrency(amount, currency)
 }
 
+// Returns just the currency symbol (e.g. "₹", "$", "€") for the current user's currency
+export function useCurrencySymbol() {
+    const { currency } = useCurrency()
+    return (
+        new Intl.NumberFormat('en', { style: 'currency', currency, minimumFractionDigits: 0 })
+            .formatToParts(0)
+            .find((p) => p.type === 'currency')?.value ?? currency
+    )
+}
+
 export function cn(...classes: (string | undefined | false | null)[]): string {
     return classes.filter(Boolean).join(' ')
 }

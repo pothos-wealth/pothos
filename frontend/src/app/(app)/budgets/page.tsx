@@ -317,7 +317,7 @@ export default function BudgetsPage() {
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-fg">Budget Amount (₹)</label>
+                        <label className="text-sm font-medium text-fg">Budget Amount</label>
                         <input
                             type="number"
                             min="0.01"
