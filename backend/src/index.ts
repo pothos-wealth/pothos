@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import cookie from "@fastify/cookie";
 import rateLimit from "@fastify/rate-limit";
 import dotenv from "dotenv";
-import type { FastifyError } from "fastify";
+import type { FastifyError, FastifyRequest } from "fastify";
 import { healthRoutes } from "./routes/v1/health.js";
 import { authRoutes } from "./routes/v1/auth.js";
 import { userRoutes } from "./routes/v1/user.js";
@@ -50,11 +50,7 @@ await app.register(rateLimit, {
 	max: 1,
 	timeWindow: "10 seconds",
 	cache: 10000,
-	keyGenerator: (request) => request.ip,
-	skip: (request) => {
-		// Only rate limit auth routes
-		return !request.url.includes("/api/v1/auth/");
-	},
+	keyGenerator: (request: FastifyRequest) => request.ip || "unknown",
 });
 
 // ─── Routes ───────────────────────────────────────────────────────────────────

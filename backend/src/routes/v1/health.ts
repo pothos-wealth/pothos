@@ -1,11 +1,13 @@
 import type { FastifyInstance } from "fastify";
-import { db } from "../db/index.js";
+import { db } from "../../db/index.js";
+import { users } from "../../db/schema.js";
+import { count } from "drizzle-orm";
 
 export async function healthRoutes(app: FastifyInstance) {
 	app.get("/health", async (_request, reply) => {
 		try {
-			// Verify database connectivity
-			db.prepare("SELECT 1").get();
+			// Verify database connectivity by querying a table
+			db.select({ total: count() }).from(users);
 
 			return reply.code(200).send({
 				status: "ok",
