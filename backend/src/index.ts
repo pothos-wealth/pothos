@@ -17,6 +17,8 @@ dotenv.config();
 const PORT = parseInt(process.env.PORT ?? "3001", 10);
 const NODE_ENV = process.env.NODE_ENV ?? "development";
 
+const RATE_LIMIT_GLOBAL_MAX = parseInt(process.env.RATE_LIMIT_GLOBAL_MAX ?? "100", 10);
+
 const app = Fastify({
 	logger: {
 		level: NODE_ENV === "development" ? "info" : "warn",
@@ -45,10 +47,10 @@ await app.register(cookie, {
 	secret: sessionSecret,
 });
 
-// Rate limiting for auth routes (brute-force protection)
+// Global rate limit — permissive for normal usage
 await app.register(rateLimit, {
-	max: 1,
-	timeWindow: "10 seconds",
+	max: RATE_LIMIT_GLOBAL_MAX,
+	timeWindow: "1 minute",
 	cache: 10000,
 	keyGenerator: (request: FastifyRequest) => request.ip || "unknown",
 });

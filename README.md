@@ -2,13 +2,17 @@
 
 A self-hostable, open-source budget and expense tracking app for individuals and families.
 
+**Live instance:** [pothos.bryanronad.com](https://pothos.bryanronad.com)
+
 ## Features
 
-- Manual transaction entry
-- Budget management with categories
-- Gmail ingestion (auto-parse expenses from emails)
-- LLM-powered parsing with regex fallback
-- MCP server for agent-based interaction (Claude Desktop, Cline, etc.)
+- Manual transaction entry with decimal precision
+- Multiple accounts with transfer support
+- Monthly budgets per category with progress tracking
+- Dashboard with spending overview and trends
+- Category breakdown charts and reports
+- Gmail ingestion (auto-parse expenses from emails) *(coming soon)*
+- MCP server for agent-based interaction (Claude Desktop, Cline, etc.) *(coming soon)*
 
 ## Stack
 
@@ -75,7 +79,7 @@ Frontend runs on `http://localhost:3000`, backend on `http://localhost:3001`.
 
 ## Production Deployment
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment guide.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the full guide.
 
 ### Quick Start (First Deploy)
 
@@ -101,22 +105,11 @@ git pull
 
 ### Requirements
 
-- AWS t2.micro or larger (1 GB RAM minimum)
+- AWS Lightsail or any Ubuntu/Debian VPS
+- 1 GB RAM minimum (512 MB works with swap)
 - Domain pointed at instance IP
 - Ports 80 and 443 open
 - Docker & Docker Compose installed
-- Ubuntu/Debian OS recommended
-
-### Documentation
-
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** — Full deployment guide
-- **[BACKUPS.md](BACKUPS.md)** — Database backup strategy
-- **[MONITORING.md](MONITORING.md)** — Health checks & troubleshooting
-- **[CLAUDE.md](CLAUDE.md)** — Development guidelines
-
-## MCP Server
-
-The MCP server is independently installable. See [`mcp/README.md`](mcp/README.md) for setup instructions.
 
 ## License
 
