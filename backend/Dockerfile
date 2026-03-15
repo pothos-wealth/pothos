@@ -9,6 +9,7 @@ RUN npm ci
 
 COPY tsconfig.json ./
 COPY src ./src
+COPY drizzle ./drizzle
 
 RUN npm run build
 
@@ -22,6 +23,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
+COPY drizzle ./drizzle
 
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh

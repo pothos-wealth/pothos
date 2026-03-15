@@ -7,7 +7,7 @@ export async function healthRoutes(app: FastifyInstance) {
 	app.get("/health", async (_request, reply) => {
 		try {
 			// Verify database connectivity by querying a table
-			db.select({ total: count() }).from(users);
+			db.select({ total: count() }).from(users).all();
 
 			return reply.code(200).send({
 				status: "ok",

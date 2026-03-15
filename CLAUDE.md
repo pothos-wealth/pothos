@@ -14,4 +14,4 @@ For additional information and context, check out these files. Update them whene
 @.claude/knowledge/CONVENTIONS.md
 @.claude/knowledge/DATABASE.md - Schema of the entities
 @.claude/knowledge/DECISIONS.md - Decision log while interacting with Claude
-@.claude/knowledge/PLANS.md - Plan to build the project
+@.claude/knowledge/PLAN.md - Plan to build the project

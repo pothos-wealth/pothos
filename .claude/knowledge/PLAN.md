@@ -6,7 +6,9 @@ Pothos is a self-hostable, open-source budget and expense tracking app for indiv
 
 ## Current Status
 
-**MVP Frontend Complete** — All pages built and fully integrated with the backend. Users can sign up, manage accounts, enter transactions with decimal precision, set budgets, and view reports. Currency is selected at signup and displayed correctly throughout the app.
+**Deployed to production** — Live at [pothos.bryanronad.com](https://pothos.bryanronad.com) on AWS Lightsail via Docker Compose with Nginx + Let's Encrypt SSL.
+
+All pages are built and fully integrated with the backend. Users can sign up, manage accounts, enter transactions with decimal precision, set budgets, and view reports. Currency is selected at signup and displayed correctly throughout the app.
 
 **Next:** Gmail ingestion (WS3) or MCP server (WS5). Recommend starting with Gmail for core product value.
 
@@ -27,6 +29,7 @@ Pothos is a self-hostable, open-source budget and expense tracking app for indiv
 | T11 — Budgets               | ✅ Complete    |
 | T12 — Reports               | ✅ Complete    |
 | WS4 — Frontend              | ✅ Complete    |
+| Deployment — Production     | ✅ Complete    |
 | WS3 — Gmail Ingestion       | ⬜ Not started |
 | WS5 — MCP Server            | ⬜ Not started |
 

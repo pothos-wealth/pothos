@@ -7,9 +7,12 @@ RUN npm ci
 
 COPY tsconfig.json ./
 COPY next.config.* ./
+COPY tailwind.config.* ./
+COPY postcss.config.* ./
 COPY src ./src
 COPY public ./public
 
+ENV NODE_OPTIONS="--max-old-space-size=512"
 RUN npm run build
 
 # ─── Production image ─────────────────────────────────────────────────────────

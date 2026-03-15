@@ -9,6 +9,8 @@ import { authenticate } from "../../middleware/authenticate.js";
 
 const SALT_ROUNDS = 12;
 const SESSION_TTL_DAYS = parseInt(process.env.SESSION_TTL_DAYS ?? "7", 10);
+const RATE_LIMIT_REGISTER_MAX = parseInt(process.env.RATE_LIMIT_REGISTER_MAX ?? "5", 10);
+const RATE_LIMIT_LOGIN_MAX = parseInt(process.env.RATE_LIMIT_LOGIN_MAX ?? "10", 10);
 
 const registerSchema = z.object({
 	email: z.string().email().toLowerCase(),
@@ -49,7 +51,7 @@ function createSessionCookie(sessionId: string, expiresAt: number) {
 export async function authRoutes(app: FastifyInstance) {
 	// ─── Register ─────────────────────────────────────────────────────────────
 
-	app.post("/auth/register", async (request, reply) => {
+	app.post("/auth/register", { config: { rateLimit: { max: RATE_LIMIT_REGISTER_MAX, timeWindow: "1 minute" } } }, async (request, reply) => {
 		const result = registerSchema.safeParse(request.body);
 
 		if (!result.success) {
@@ -119,7 +121,7 @@ export async function authRoutes(app: FastifyInstance) {
 
 	// ─── Login ────────────────────────────────────────────────────────────────
 
-	app.post("/auth/login", async (request, reply) => {
+	app.post("/auth/login", { config: { rateLimit: { max: RATE_LIMIT_LOGIN_MAX, timeWindow: "1 minute" } } }, async (request, reply) => {
 		const result = loginSchema.safeParse(request.body);
 
 		if (!result.success) {
