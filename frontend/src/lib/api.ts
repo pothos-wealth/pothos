@@ -14,7 +14,10 @@ import type {
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
     const res = await fetch(`/api/v1${path}`, {
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json', ...options?.headers },
+        headers: {
+            ...(options?.body ? { 'Content-Type': 'application/json' } : {}),
+            ...options?.headers,
+        },
         ...options,
     })
 
@@ -85,7 +88,7 @@ export const api = {
     budgets: {
         list: (month: number, year: number) =>
             apiFetch<BudgetWithSpent[]>(`/budgets?month=${month}&year=${year}`),
-        upsert: (data: { categoryId: string; amount: number; month: number; year: number }) =>
+        upsert: (data: { categoryId: string; amount: number; month: number; year: number; isRecurring: boolean }) =>
             apiFetch<BudgetWithSpent>('/budgets', { method: 'POST', body: JSON.stringify(data) }),
         delete: (id: string) =>
             apiFetch<void>(`/budgets/${id}`, { method: 'DELETE' }),

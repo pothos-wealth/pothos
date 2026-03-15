@@ -1,0 +1,1 @@
+ALTER TABLE `budgets` ADD `is_recurring` integer DEFAULT true NOT NULL;

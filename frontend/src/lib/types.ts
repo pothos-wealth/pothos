@@ -43,6 +43,7 @@ export interface BudgetWithSpent {
     amount: number
     month: number
     year: number
+    isRecurring: boolean
     spent: number
     remaining: number
 }

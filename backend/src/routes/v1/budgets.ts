@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, or, isNull, lt, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { nanoid } from "nanoid";
 import { db } from "../../db/index.js";
@@ -11,10 +11,7 @@ const createBudgetSchema = z.object({
 	amount: z.number().int().positive("Amount must be positive"),
 	month: z.number().int().min(1).max(12),
 	year: z.number().int().min(2000),
-});
-
-const updateBudgetSchema = z.object({
-	amount: z.number().int().positive("Amount must be positive"),
+	isRecurring: z.boolean().default(true),
 });
 
 const listQuerySchema = z.object({
@@ -46,7 +43,9 @@ export async function budgetRoutes(app: FastifyInstance) {
 		const year = result.data.year ?? now.getFullYear();
 		const { start, end } = getMonthBounds(month, year);
 
-		const rows = db
+		const isCurrentMonth = month === now.getMonth() + 1 && year === now.getFullYear();
+
+		let rows = db
 			.select()
 			.from(budgets)
 			.where(
@@ -57,6 +56,77 @@ export async function budgetRoutes(app: FastifyInstance) {
 				)
 			)
 			.all();
+
+		// Auto-generate recurring budgets for the current month on first view
+		if (isCurrentMonth) {
+			const allExpenseCategories = db
+				.select({ id: categories.id })
+				.from(categories)
+				.where(
+					and(
+						eq(categories.type, "expense"),
+						or(isNull(categories.userId), eq(categories.userId, request.user.id))
+					)
+				)
+				.all();
+
+			const budgetedIds = new Set(rows.map((r) => r.categoryId));
+			const unbudgeted = allExpenseCategories.filter((c) => !budgetedIds.has(c.id));
+
+			if (unbudgeted.length > 0) {
+				const nowTs = Math.floor(Date.now() / 1000);
+
+				for (const cat of unbudgeted) {
+					const source = db
+						.select()
+						.from(budgets)
+						.where(
+							and(
+								eq(budgets.userId, request.user.id),
+								eq(budgets.categoryId, cat.id),
+								eq(budgets.isRecurring, true),
+								or(
+									lt(budgets.year, year),
+									and(eq(budgets.year, year), lt(budgets.month, month))
+								)
+							)
+						)
+						.orderBy(desc(budgets.year), desc(budgets.month))
+						.limit(1)
+						.get();
+
+					if (source) {
+						db.insert(budgets)
+							.values({
+								id: nanoid(),
+								userId: request.user.id,
+								categoryId: cat.id,
+								amount: source.amount,
+								month,
+								year,
+								isRecurring: true,
+								createdAt: nowTs,
+								updatedAt: nowTs,
+							})
+							.onConflictDoNothing()
+							.run();
+					}
+				}
+
+				// Re-fetch to include newly inserted rows
+				rows = db
+					.select()
+					.from(budgets)
+					.where(
+						and(
+							eq(budgets.userId, request.user.id),
+							eq(budgets.month, month),
+							eq(budgets.year, year)
+						)
+					)
+					.all();
+			}
+		}
 
 		// Calculate actual spending per category for the period
 		const result2 = rows.map((budget) => {
@@ -99,7 +169,7 @@ export async function budgetRoutes(app: FastifyInstance) {
 			});
 		}
 
-		const { categoryId, amount, month, year } = result.data;
+		const { categoryId, amount, month, year, isRecurring } = result.data;
 
 		// Verify category exists and belongs to user or is a global default
 		const category = db.select().from(categories).where(eq(categories.id, categoryId)).get();
@@ -132,7 +202,7 @@ export async function budgetRoutes(app: FastifyInstance) {
 			// Update existing budget
 			const updated = db
 				.update(budgets)
-				.set({ amount, updatedAt: now })
+				.set({ amount, isRecurring, updatedAt: now })
 				.where(eq(budgets.id, existing.id))
 				.returning()
 				.get();
@@ -150,6 +220,7 @@ export async function budgetRoutes(app: FastifyInstance) {
 				amount,
 				month,
 				year,
+				isRecurring,
 				createdAt: now,
 				updatedAt: now,
 			})
