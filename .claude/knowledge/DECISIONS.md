@@ -132,7 +132,7 @@
 
 **Session secret generation** — 32-byte random hex string. Generated automatically via `scripts/setup.sh` using Node's crypto module. Non-negotiable for production.
 
-**Rate limiting** — 1 request per 10 seconds on auth routes (`/api/v1/auth/*`). Prevents brute-force attacks on login/signup. IP-based keying via `request.ip`.
+**Rate limiting** — Global limit of 100 req/min on all routes. Auth routes have stricter per-route limits (register: 5/min, login: 10/min). IP-based keying via `request.ip`. All limits configurable via `RATE_LIMIT_GLOBAL_MAX`, `RATE_LIMIT_REGISTER_MAX`, `RATE_LIMIT_LOGIN_MAX` env vars.
 
 **Request size limit** — 1 MB max body size. Prevents accidental/malicious large uploads. Configured in Fastify: `bodyLimit: 1048576`.
 
