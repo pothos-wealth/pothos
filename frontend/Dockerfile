@@ -7,6 +7,7 @@ RUN npm ci
 
 COPY tsconfig.json ./
 COPY next.config.* ./
+COPY tailwind.config.* ./
 COPY src ./src
 COPY public ./public
 
