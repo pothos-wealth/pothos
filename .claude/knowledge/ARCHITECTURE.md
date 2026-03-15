@@ -36,7 +36,7 @@ Any MCP-compatible client — OpenClaw, Cline, Claude Desktop, or others — can
 
 ## Security
 
-- **Rate limiting**: 1 request per 10 seconds on auth routes (`/api/v1/auth/*`) to prevent brute-force attacks.
+- **Rate limiting**: Global limit of 100 req/min on all routes. Auth routes have stricter per-route limits (register: 5/min, login: 10/min). All limits configurable via `RATE_LIMIT_GLOBAL_MAX`, `RATE_LIMIT_REGISTER_MAX`, `RATE_LIMIT_LOGIN_MAX` env vars.
 - **Request limits**: 1 MB max body size to prevent DoS via large uploads.
 - **Health checks**: All services report health. Database connectivity verified on every health check. Nginx waits for backend & frontend to be healthy before starting.
 - **Secrets management**: All secrets (SESSION_SECRET, API keys) externalized via `.env`. Fails fast if secrets are missing.
