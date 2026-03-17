@@ -15,6 +15,8 @@ interface ModalProps {
 export function Modal({ open, onClose, title, children, className }: ModalProps) {
     const dialogRef = useRef<HTMLDivElement>(null)
     const previousFocusRef = useRef<HTMLElement | null>(null)
+    const onCloseRef = useRef(onClose)
+    onCloseRef.current = onClose
 
     // Save and restore focus around modal lifecycle
     useEffect(() => {
@@ -38,7 +40,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
 
         const handleKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
-                onClose()
+                onCloseRef.current()
                 return
             }
             if (e.key === 'Tab' && focusable.length > 0) {
@@ -56,7 +58,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
 
         document.addEventListener('keydown', handleKey)
         return () => document.removeEventListener('keydown', handleKey)
-    }, [open, onClose])
+    }, [open])
 
     useEffect(() => {
         if (open) {
