@@ -10,7 +10,7 @@ const createTransactionSchema = z.object({
 	accountId: z.string().min(1, "Account is required"),
 	categoryId: z.string().nullable().optional(),
 	type: z.enum(["income", "expense"]),
-	amount: z.number().int().positive("Amount must be positive"),
+	amount: z.number().int().positive("Amount must be positive").max(1_000_000_000),
 	date: z.number().int(),
 	description: z.string().min(1, "Description is required"),
 	notes: z.string().optional(),
@@ -19,7 +19,7 @@ const createTransactionSchema = z.object({
 const createTransferSchema = z.object({
 	fromAccountId: z.string().min(1, "Source account is required"),
 	toAccountId: z.string().min(1, "Destination account is required"),
-	amount: z.number().int().positive("Amount must be positive"),
+	amount: z.number().int().positive("Amount must be positive").max(1_000_000_000),
 	date: z.number().int(),
 	description: z.string().min(1, "Description is required"),
 	notes: z.string().optional(),
@@ -120,6 +120,10 @@ export async function transactionRoutes(app: FastifyInstance) {
 			return reply.status(404).send({ error: "Account not found" });
 		}
 
+		if (!account.isActive) {
+			return reply.status(409).send({ error: "Cannot add transactions to a closed account" });
+		}
+
 		const now = Math.floor(Date.now() / 1000);
 		const id = nanoid();
 
@@ -178,6 +182,10 @@ export async function transactionRoutes(app: FastifyInstance) {
 			return reply.status(404).send({ error: "Source account not found" });
 		}
 
+		if (!fromAccount.isActive) {
+			return reply.status(409).send({ error: "Cannot transfer from a closed account" });
+		}
+
 		const toAccount = db
 			.select()
 			.from(accounts)
@@ -186,6 +194,10 @@ export async function transactionRoutes(app: FastifyInstance) {
 
 		if (!toAccount) {
 			return reply.status(404).send({ error: "Destination account not found" });
+		}
+
+		if (!toAccount.isActive) {
+			return reply.status(409).send({ error: "Cannot transfer to a closed account" });
 		}
 
 		const now = Math.floor(Date.now() / 1000);
@@ -233,9 +245,9 @@ export async function transactionRoutes(app: FastifyInstance) {
 				.run();
 		});
 
-		const debit = db.select().from(transactions).where(eq(transactions.id, debitId)).get();
+		const debit = db.select().from(transactions).where(and(eq(transactions.id, debitId), eq(transactions.userId, request.user.id))).get();
 
-		const credit = db.select().from(transactions).where(eq(transactions.id, creditId)).get();
+		const credit = db.select().from(transactions).where(and(eq(transactions.id, creditId), eq(transactions.userId, request.user.id))).get();
 
 		return reply.status(201).send({ debit, credit });
 	});
@@ -336,10 +348,10 @@ export async function transactionRoutes(app: FastifyInstance) {
 		if (transaction.type === "transfer" && transaction.transferTransactionId) {
 			// Delete both sides of the transfer atomically
 			db.transaction((tx) => {
-				tx.delete(transactions).where(eq(transactions.id, id)).run();
+				tx.delete(transactions).where(and(eq(transactions.id, id), eq(transactions.userId, request.user.id))).run();
 
 				tx.delete(transactions)
-					.where(eq(transactions.id, transaction.transferTransactionId!))
+					.where(and(eq(transactions.id, transaction.transferTransactionId!), eq(transactions.userId, request.user.id)))
 					.run();
 			});
 		} else {

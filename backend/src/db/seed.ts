@@ -20,10 +20,10 @@ const defaultCategories = [
 	{ name: "Miscellaneous", icon: "📦", color: "#94a3b8", type: "neutral" },
 ] as const;
 
-async function seed() {
+function seed() {
 	console.log("Seeding default categories...");
 
-	const existing = await db.select().from(categories);
+	const existing = db.select().from(categories).all();
 
 	if (existing.length > 0) {
 		console.log("Categories already seeded, skipping.");
@@ -32,7 +32,7 @@ async function seed() {
 
 	const now = Math.floor(Date.now() / 1000);
 
-	await db.insert(categories).values(
+	db.insert(categories).values(
 		defaultCategories.map((cat) => ({
 			id: nanoid(),
 			userId: null,
@@ -42,12 +42,14 @@ async function seed() {
 			type: cat.type,
 			createdAt: now,
 		}))
-	);
+	).run();
 
 	console.log(`Seeded ${defaultCategories.length} default categories.`);
 }
 
-seed().catch((err) => {
+try {
+	seed();
+} catch (err) {
 	console.error("Seed failed:", err);
 	process.exit(1);
-});
+}

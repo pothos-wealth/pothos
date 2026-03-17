@@ -83,7 +83,7 @@ export const TransactionSchema = z.object({
 	categoryId: z.string().nullable(),
 	transferId: z.string().nullable(),
 	type: TransactionType,
-	amount: z.number().int().positive(),
+	amount: z.number().int().positive().max(1_000_000_000),
 	date: z.number().int(),
 	description: z.string().min(1),
 	notes: z.string().nullable(),
@@ -99,9 +99,9 @@ export const BudgetSchema = z.object({
 	id: z.string(),
 	userId: z.string(),
 	categoryId: z.string(),
-	amount: z.number().int().positive(),
+	amount: z.number().int().positive().max(1_000_000_000),
 	month: z.number().int().min(1).max(12),
-	year: z.number().int().min(2000),
+	year: z.number().int().min(2000).max(2100),
 	createdAt: z.number().int(),
 	updatedAt: z.number().int(),
 });
@@ -135,7 +135,7 @@ export const CreateTransactionSchema = z.object({
 	accountId: z.string(),
 	categoryId: z.string().nullable().optional(),
 	type: TransactionType,
-	amount: z.number().int().positive("Amount must be positive"),
+	amount: z.number().int().positive("Amount must be positive").max(1_000_000_000),
 	date: z.number().int(),
 	description: z.string().min(1, "Description is required"),
 	notes: z.string().optional(),
@@ -144,7 +144,7 @@ export const CreateTransactionSchema = z.object({
 export const CreateTransferSchema = z.object({
 	fromAccountId: z.string(),
 	toAccountId: z.string(),
-	amount: z.number().int().positive("Amount must be positive"),
+	amount: z.number().int().positive("Amount must be positive").max(1_000_000_000),
 	date: z.number().int(),
 	description: z.string().min(1, "Description is required"),
 	notes: z.string().optional(),
@@ -152,15 +152,18 @@ export const CreateTransferSchema = z.object({
 
 export const CreateBudgetSchema = z.object({
 	categoryId: z.string(),
-	amount: z.number().int().positive("Amount must be positive"),
+	amount: z.number().int().positive("Amount must be positive").max(1_000_000_000),
 	month: z.number().int().min(1).max(12),
-	year: z.number().int().min(2000),
+	year: z.number().int().min(2000).max(2100),
 });
 
 export const CreateCategorySchema = z.object({
 	name: z.string().min(1, "Category name is required"),
 	icon: z.string().optional(),
-	color: z.string().optional(),
+	color: z
+		.string()
+		.regex(/^#[0-9a-fA-F]{6}$/, "Color must be a valid hex color (e.g. #ff0000)")
+		.optional(),
 	type: CategoryType,
 });
 

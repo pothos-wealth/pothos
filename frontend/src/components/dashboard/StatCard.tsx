@@ -16,7 +16,7 @@ export function StatCard({ title, value, trend, positive, trendTooltip }: StatCa
 	return (
 		<Card>
 			<p className="text-xs font-medium text-fg-muted mb-1">{title}</p>
-			<p className="text-2xl font-bold text-fg">{value}</p>
+			<p className="text-lg sm:text-2xl font-bold text-fg truncate">{value}</p>
 			{trend && (
 				<div className="flex items-center gap-1 mt-1 relative">
 					<p

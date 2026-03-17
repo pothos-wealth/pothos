@@ -6,17 +6,22 @@ import { db } from "../../db/index.js";
 import { categories, transactions } from "../../db/schema.js";
 import { authenticate } from "../../middleware/authenticate.js";
 
+const hexColorSchema = z
+	.string()
+	.regex(/^#[0-9a-fA-F]{6}$/, "Color must be a valid hex color (e.g. #ff0000)")
+	.optional();
+
 const createCategorySchema = z.object({
 	name: z.string().min(1, "Category name is required"),
 	icon: z.string().optional(),
-	color: z.string().optional(),
+	color: hexColorSchema,
 	type: z.enum(["expense", "income", "neutral"]),
 });
 
 const updateCategorySchema = z.object({
 	name: z.string().min(1, "Category name is required").optional(),
 	icon: z.string().optional(),
-	color: z.string().optional(),
+	color: hexColorSchema,
 	type: z.enum(["expense", "income", "neutral"]).optional(),
 });
 
@@ -79,7 +84,11 @@ export async function categoryRoutes(app: FastifyInstance) {
 			});
 		}
 
-		const category = db.select().from(categories).where(eq(categories.id, id)).get();
+		const category = db
+			.select()
+			.from(categories)
+			.where(and(eq(categories.id, id), or(eq(categories.userId, request.user.id), isNull(categories.userId))))
+			.get();
 
 		if (!category) {
 			return reply.status(404).send({ error: "Category not found" });
@@ -90,11 +99,6 @@ export async function categoryRoutes(app: FastifyInstance) {
 			return reply.status(403).send({
 				error: "Cannot edit global default categories",
 			});
-		}
-
-		// Block editing categories belonging to other users
-		if (category.userId !== request.user.id) {
-			return reply.status(403).send({ error: "Forbidden" });
 		}
 
 		const updated = db
@@ -117,7 +121,11 @@ export async function categoryRoutes(app: FastifyInstance) {
 	app.delete("/categories/:id", { preHandler: authenticate }, async (request, reply) => {
 		const { id } = request.params as { id: string };
 
-		const category = db.select().from(categories).where(eq(categories.id, id)).get();
+		const category = db
+			.select()
+			.from(categories)
+			.where(and(eq(categories.id, id), or(eq(categories.userId, request.user.id), isNull(categories.userId))))
+			.get();
 
 		if (!category) {
 			return reply.status(404).send({ error: "Category not found" });
@@ -128,11 +136,6 @@ export async function categoryRoutes(app: FastifyInstance) {
 			return reply.status(403).send({
 				error: "Cannot delete global default categories",
 			});
-		}
-
-		// Block deleting categories belonging to other users
-		if (category.userId !== request.user.id) {
-			return reply.status(403).send({ error: "Forbidden" });
 		}
 
 		// Block deletion if any transactions reference this category

@@ -64,7 +64,7 @@ export default function ReportsPage() {
 
     return (
         <PageTransition>
-        <div className="p-6 max-w-5xl mx-auto">
+        <div className="px-4 py-6 md:px-6 max-w-5xl mx-auto">
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
                 <div>
@@ -105,7 +105,7 @@ export default function ReportsPage() {
                                 <p className="text-sm text-fg-muted">No data yet</p>
                             </div>
                         ) : (
-                            <div className="h-[200px]">
+                            <div className="h-[200px]" role="img" aria-label="Monthly income and expenses bar chart">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={trendData} barGap={2} barSize={10}>
                                         <XAxis

@@ -12,14 +12,16 @@ const SESSION_TTL_DAYS = parseInt(process.env.SESSION_TTL_DAYS ?? "7", 10);
 const RATE_LIMIT_REGISTER_MAX = parseInt(process.env.RATE_LIMIT_REGISTER_MAX ?? "5", 10);
 const RATE_LIMIT_LOGIN_MAX = parseInt(process.env.RATE_LIMIT_LOGIN_MAX ?? "10", 10);
 
+const passwordSchema = z
+	.string()
+	.min(8, "Password must be at least 8 characters")
+	.regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+	.regex(/[0-9]/, "Password must contain at least one number")
+	.regex(/[^a-zA-Z0-9]/, "Password must contain at least one special character");
+
 const registerSchema = z.object({
 	email: z.string().email().toLowerCase(),
-	password: z
-		.string()
-		.min(8, "Password must be at least 8 characters")
-		.regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-		.regex(/[0-9]/, "Password must contain at least one number")
-		.regex(/[^a-zA-Z0-9]/, "Password must contain at least one special character"),
+	password: passwordSchema,
 	currency: z.string().length(3, "Currency must be a valid ISO 4217 code").toUpperCase().default("INR"),
 });
 
@@ -30,12 +32,7 @@ const loginSchema = z.object({
 
 const changePasswordSchema = z.object({
 	currentPassword: z.string().min(1),
-	newPassword: z
-		.string()
-		.min(8, "Password must be at least 8 characters")
-		.regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-		.regex(/[0-9]/, "Password must contain at least one number")
-		.regex(/[^a-zA-Z0-9]/, "Password must contain at least one special character"),
+	newPassword: passwordSchema,
 });
 
 function createSessionCookie(sessionId: string, expiresAt: number) {
@@ -65,7 +62,7 @@ export async function authRoutes(app: FastifyInstance) {
 		const now = Math.floor(Date.now() / 1000);
 
 		// Check if email already exists
-		const existing = await db
+		const existing = db
 			.select({ id: users.id })
 			.from(users)
 			.where(eq(users.email, email))
@@ -148,12 +145,12 @@ export async function authRoutes(app: FastifyInstance) {
 		const sessionId = nanoid();
 		const expiresAt = now + SESSION_TTL_DAYS * 24 * 60 * 60;
 
-		await db.insert(sessions).values({
+		db.insert(sessions).values({
 			id: sessionId,
 			userId: user.id,
 			expiresAt,
 			createdAt: now,
-		});
+		}).run();
 
 		return reply
 			.setCookie("session_id", sessionId, createSessionCookie(sessionId, expiresAt))
@@ -163,7 +160,7 @@ export async function authRoutes(app: FastifyInstance) {
 	// ─── Logout ───────────────────────────────────────────────────────────────
 
 	app.post("/auth/logout", { preHandler: authenticate }, async (request, reply) => {
-		await db.delete(sessions).where(eq(sessions.id, request.session.id));
+		db.delete(sessions).where(eq(sessions.id, request.session.id)).run();
 
 		return reply
 			.clearCookie("session_id", { path: "/" })

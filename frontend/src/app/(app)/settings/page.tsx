@@ -73,7 +73,7 @@ export default function SettingsPage() {
 
     if (loading) {
         return (
-            <PageTransition><div className="p-6 max-w-2xl mx-auto">
+            <PageTransition><div className="px-4 py-6 md:px-6 max-w-2xl mx-auto">
                 <div className="mb-8">
                     <Skeleton className="h-8 w-28 mb-2" />
                     <Skeleton className="h-4 w-44" />
@@ -109,7 +109,7 @@ export default function SettingsPage() {
 
     return (
         <PageTransition>
-        <div className="p-6 max-w-2xl mx-auto">
+        <div className="px-4 py-6 md:px-6 max-w-2xl mx-auto">
             <div className="mb-8">
                 <h1 className="text-2xl font-bold text-fg">Settings</h1>
                 <p className="text-sm text-fg-muted mt-0.5">Manage your account</p>
@@ -172,8 +172,9 @@ export default function SettingsPage() {
                     )}
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-fg">Current Password</label>
+                        <label htmlFor="current-password" className="text-sm font-medium text-fg">Current Password</label>
                         <input
+                            id="current-password"
                             type="password"
                             required
                             autoComplete="current-password"
@@ -184,8 +185,9 @@ export default function SettingsPage() {
                         />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-fg">New Password</label>
+                        <label htmlFor="new-password" className="text-sm font-medium text-fg">New Password</label>
                         <input
+                            id="new-password"
                             type="password"
                             required
                             autoComplete="new-password"
@@ -197,8 +199,9 @@ export default function SettingsPage() {
                         <p className="text-xs text-fg-muted">Min 8 chars, uppercase, number, special character</p>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-fg">Confirm New Password</label>
+                        <label htmlFor="confirm-password" className="text-sm font-medium text-fg">Confirm New Password</label>
                         <input
+                            id="confirm-password"
                             type="password"
                             required
                             autoComplete="new-password"
@@ -212,7 +215,7 @@ export default function SettingsPage() {
                     <button
                         type="submit"
                         disabled={pwSubmitting}
-                        className="mt-1 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 disabled:opacity-60"
+                        className="mt-1 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                         {pwSubmitting ? 'Updating…' : 'Update Password'}
                     </button>

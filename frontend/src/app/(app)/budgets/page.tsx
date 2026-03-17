@@ -107,7 +107,7 @@ export default function BudgetsPage() {
             setBudgets((prev) => prev.filter((b) => b.id !== pendingDelete.id))
             setPendingDelete(null)
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Delete failed')
+            setError(err instanceof Error ? err.message : 'Delete failed')
         } finally {
             setDeleting(false)
         }
@@ -127,7 +127,7 @@ export default function BudgetsPage() {
 
     if (loading) {
         return (
-            <PageTransition><div className="p-6 max-w-4xl mx-auto">
+            <PageTransition><div className="px-4 py-6 md:px-6 max-w-4xl mx-auto">
                 <div className="flex items-start justify-between mb-8">
                     <div>
                         <Skeleton className="h-8 w-28 mb-2" />
@@ -162,7 +162,7 @@ export default function BudgetsPage() {
 
     return (
         <PageTransition>
-        <div className="p-6 max-w-4xl mx-auto">
+        <div className="px-4 py-6 md:px-6 max-w-4xl mx-auto">
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
                 <div>
@@ -216,12 +216,14 @@ export default function BudgetsPage() {
                                                 <button
                                                     onClick={() => openEdit(budget)}
                                                     className="p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-bg-3 transition-colors duration-150"
+                                                    aria-label="Edit budget"
                                                 >
                                                     <Pencil size={13} />
                                                 </button>
                                                 <button
                                                     onClick={() => setPendingDelete(budget)}
                                                     className="p-1.5 rounded-lg text-fg-muted hover:text-expense hover:bg-expense-light transition-colors duration-150"
+                                                    aria-label="Delete budget"
                                                 >
                                                     <Trash2 size={13} />
                                                 </button>
@@ -303,12 +305,13 @@ export default function BudgetsPage() {
                     )}
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-fg">Category</label>
+                        <label htmlFor="budget-category" className="text-sm font-medium text-fg">Category</label>
                         <select
+                            id="budget-category"
                             value={form.categoryId}
                             onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
                             disabled={!!editing}
-                            className="bg-bg border border-border rounded-xl px-3 py-2.5 text-sm text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-shadow disabled:opacity-60"
+                            className="bg-bg border border-border rounded-xl px-3 py-2.5 text-sm text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-shadow disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                             {expenseCategories.map((c) => (
                                 <option key={c.id} value={c.id}>{c.name}</option>
@@ -317,8 +320,9 @@ export default function BudgetsPage() {
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-fg">Budget Amount</label>
+                        <label htmlFor="budget-amount" className="text-sm font-medium text-fg">Budget Amount</label>
                         <input
+                            id="budget-amount"
                             type="number"
                             min="0.01"
                             step="0.01"
@@ -351,7 +355,7 @@ export default function BudgetsPage() {
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="flex-1 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 disabled:opacity-60"
+                            className="flex-1 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                             {submitting ? 'Saving…' : 'Save Budget'}
                         </button>

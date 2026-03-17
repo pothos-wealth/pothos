@@ -29,7 +29,7 @@ export function ConfirmModal({
                     type="button"
                     onClick={onClose}
                     disabled={loading}
-                    className="flex-1 border border-border text-fg font-semibold rounded-xl px-4 py-2.5 text-sm hover:bg-bg-3 transition-colors duration-150 disabled:opacity-60"
+                    className="flex-1 border border-border text-fg font-semibold rounded-xl px-4 py-2.5 text-sm hover:bg-bg-3 transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     Cancel
                 </button>
@@ -37,7 +37,7 @@ export function ConfirmModal({
                     type="button"
                     onClick={onConfirm}
                     disabled={loading}
-                    className="flex-1 bg-expense hover:bg-expense/90 text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 disabled:opacity-60"
+                    className="flex-1 bg-expense hover:bg-expense/90 text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     {loading ? 'Deleting…' : confirmLabel}
                 </button>

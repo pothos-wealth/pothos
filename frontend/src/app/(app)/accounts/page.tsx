@@ -92,7 +92,7 @@ export default function AccountsPage() {
             setAccounts((prev) => prev.filter((a) => a.id !== pendingDelete.id))
             setPendingDelete(null)
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Delete failed')
+            setError(err instanceof Error ? err.message : 'Delete failed')
         } finally {
             setDeleting(false)
         }
@@ -105,7 +105,7 @@ export default function AccountsPage() {
                 : await api.accounts.reopen(account.id)
             setAccounts((prev) => prev.map((a) => (a.id === updated.id ? updated : a)))
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Failed to update account status')
+            setError(err instanceof Error ? err.message : 'Failed to update account status')
         }
     }
 
@@ -113,7 +113,7 @@ export default function AccountsPage() {
 
     if (loading) {
         return (
-            <PageTransition><div className="p-6 max-w-4xl mx-auto">
+            <PageTransition><div className="px-4 py-6 md:px-6 max-w-4xl mx-auto">
                 <div className="flex items-start justify-between mb-8">
                     <div>
                         <Skeleton className="h-8 w-36 mb-2" />
@@ -145,7 +145,7 @@ export default function AccountsPage() {
 
     return (
         <PageTransition>
-        <div className="p-6 max-w-4xl mx-auto">
+        <div className="px-4 py-6 md:px-6 max-w-4xl mx-auto">
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
                 <div>
@@ -182,7 +182,7 @@ export default function AccountsPage() {
                             <div className="flex items-start justify-between">
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <p className="font-semibold text-fg">{account.name}</p>
+                                        <p className="font-semibold text-fg truncate max-w-[160px]">{account.name}</p>
                                         {!account.isActive && (
                                             <span className="text-xs bg-bg-3 text-fg-muted px-2 py-0.5 rounded-full">
                                                 Closed
@@ -236,8 +236,9 @@ export default function AccountsPage() {
                     )}
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-fg">Account Name</label>
+                        <label htmlFor="account-name" className="text-sm font-medium text-fg">Account Name</label>
                         <input
+                            id="account-name"
                             required
                             value={form.name}
                             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -247,8 +248,9 @@ export default function AccountsPage() {
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-fg">Type</label>
+                        <label htmlFor="account-type" className="text-sm font-medium text-fg">Type</label>
                         <select
+                            id="account-type"
                             value={form.type}
                             onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
                             className="bg-bg border border-border rounded-xl px-3 py-2.5 text-sm text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-shadow"
@@ -261,8 +263,9 @@ export default function AccountsPage() {
 
                     {!editing && (
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-medium text-fg">Initial Balance</label>
+                            <label htmlFor="account-initial-balance" className="text-sm font-medium text-fg">Initial Balance</label>
                             <input
+                                id="account-initial-balance"
                                 type="number"
                                 min="0"
                                 step="0.01"
@@ -286,7 +289,7 @@ export default function AccountsPage() {
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="flex-1 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 disabled:opacity-60"
+                            className="flex-1 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                             {submitting ? 'Saving…' : editing ? 'Save Changes' : 'Add Account'}
                         </button>

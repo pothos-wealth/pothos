@@ -11,6 +11,9 @@ import { categoryRoutes } from "./routes/v1/categories.js";
 import { transactionRoutes } from "./routes/v1/transactions.js";
 import { budgetRoutes } from "./routes/v1/budgets.js";
 import { reportRoutes } from "./routes/v1/reports.js";
+import { db } from "./db/index.js";
+import { sessions } from "./db/schema.js";
+import { lt } from "drizzle-orm";
 
 dotenv.config();
 
@@ -91,6 +94,12 @@ app.setErrorHandler((error: FastifyError, _request, reply) => {
 try {
 	await app.listen({ port: PORT, host: "0.0.0.0" });
 	app.log.info(`Server running in ${NODE_ENV} mode on port ${PORT}`);
+
+	// Clean up expired sessions once per hour
+	setInterval(() => {
+		const now = Math.floor(Date.now() / 1000);
+		db.delete(sessions).where(lt(sessions.expiresAt, now)).run();
+	}, 60 * 60 * 1000);
 } catch (err) {
 	app.log.error(err);
 	process.exit(1);

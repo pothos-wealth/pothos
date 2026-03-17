@@ -28,7 +28,9 @@ COPY drizzle ./drizzle
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 
-RUN mkdir -p /app/data
+RUN mkdir -p /app/data && chown -R node:node /app
+
+USER node
 
 EXPOSE 3001
 

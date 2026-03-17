@@ -49,6 +49,13 @@
         --color-expense-light: #3A1E14;
     }
 
+    /* Prevent iOS Safari auto-zoom on focus — inputs need ≥16px font size on mobile */
+    @media (max-width: 768px) {
+        input, select, textarea {
+            font-size: 16px !important;
+        }
+    }
+
     html,
     body {
         height: 100%;
