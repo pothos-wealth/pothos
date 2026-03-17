@@ -8,8 +8,11 @@ DOMAIN=$(grep "^DOMAIN=" .env | cut -d'=' -f2)
 echo "Pulling latest changes..."
 git pull
 
-echo "Rebuilding and restarting services..."
-docker-compose up -d --build
+echo "Pulling latest images..."
+docker-compose pull backend frontend
+
+echo "Restarting services..."
+docker-compose up -d
 
 echo "Waiting for services to be healthy..."
 sleep 10
