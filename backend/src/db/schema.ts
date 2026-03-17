@@ -13,6 +13,7 @@ export const users = sqliteTable("users", {
 	updatedAt: integer("updated_at")
 		.notNull()
 		.default(sql`(unixepoch())`),
+	isSuperadmin: integer("is_superadmin", { mode: "boolean" }).notNull().default(false),
 });
 
 // ─── User Settings ────────────────────────────────────────────────────────────

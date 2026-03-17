@@ -9,6 +9,9 @@ import type {
     TrendsReport,
     User,
     UserSettings,
+    AdminUser,
+    AdminSession,
+    AdminStats,
 } from './types'
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
@@ -136,5 +139,15 @@ export const api = {
                 method: 'PUT',
                 body: JSON.stringify({ currency }),
             }),
+    },
+    admin: {
+        stats: () => apiFetch<AdminStats>('/admin/stats'),
+        users: () => apiFetch<AdminUser[]>('/admin/users'),
+        deleteUser: (id: string) => apiFetch<void>(`/admin/users/${id}`, { method: 'DELETE' }),
+        getSessions: (userId: string) => apiFetch<AdminSession[]>(`/admin/users/${userId}/sessions`),
+        deleteSession: (userId: string, sessionId: string) =>
+            apiFetch<void>(`/admin/users/${userId}/sessions/${sessionId}`, { method: 'DELETE' }),
+        deleteAllSessions: (userId: string) =>
+            apiFetch<void>(`/admin/users/${userId}/sessions`, { method: 'DELETE' }),
     },
 }
