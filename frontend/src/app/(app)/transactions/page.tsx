@@ -199,7 +199,7 @@ export default function TransactionsPage() {
 
     return (
         <PageTransition>
-        <div className="p-6 max-w-5xl mx-auto">
+        <div className="px-4 py-6 md:px-6 max-w-5xl mx-auto">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <h1 className="text-2xl font-bold text-fg">Transactions</h1>
@@ -269,6 +269,9 @@ export default function TransactionsPage() {
                 <Card className="flex flex-col items-center justify-center py-16 text-center">
                     <ArrowLeftRight size={36} className="text-fg-muted mb-3 opacity-50" />
                     <p className="text-sm text-fg-muted">No transactions found</p>
+                    <button onClick={openAdd} className="mt-4 text-sm font-semibold text-primary hover:underline">
+                        Add one
+                    </button>
                 </Card>
             ) : (
                 <Card className="p-0 overflow-hidden">
@@ -427,7 +430,7 @@ export default function TransactionsPage() {
                         <button type="button" onClick={() => setAddOpen(false)} className="flex-1 border border-border text-fg font-semibold rounded-xl px-4 py-2.5 text-sm hover:bg-bg-3 transition-colors duration-150">
                             Cancel
                         </button>
-                        <button type="submit" disabled={submitting} className="flex-1 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 disabled:opacity-60">
+                        <button type="submit" disabled={submitting} className="flex-1 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed">
                             {submitting ? 'Saving…' : 'Add'}
                         </button>
                     </div>
@@ -455,7 +458,7 @@ export default function TransactionsPage() {
                         <button type="button" onClick={() => setEditTx(null)} className="flex-1 border border-border text-fg font-semibold rounded-xl px-4 py-2.5 text-sm hover:bg-bg-3 transition-colors duration-150">
                             Cancel
                         </button>
-                        <button type="submit" disabled={submitting} className="flex-1 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 disabled:opacity-60">
+                        <button type="submit" disabled={submitting} className="flex-1 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed">
                             {submitting ? 'Saving…' : 'Save Changes'}
                         </button>
                     </div>

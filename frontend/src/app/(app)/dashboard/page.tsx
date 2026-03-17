@@ -37,7 +37,7 @@ interface DashboardData {
 
 function DashboardSkeleton() {
 	return (
-		<div className="p-6 max-w-7xl mx-auto">
+		<div className="px-4 py-6 md:px-6 max-w-7xl mx-auto">
 			<div className="flex items-center justify-between mb-8">
 				<div>
 					<Skeleton className="h-8 w-52 mb-2" />
@@ -146,7 +146,7 @@ export default function DashboardPage() {
 
 	return (
 		<PageTransition>
-			<div className="p-6 max-w-7xl mx-auto">
+			<div className="px-4 py-6 md:px-6 max-w-7xl mx-auto">
 				{/* Header */}
 				<div className="flex items-center justify-between mb-8">
 					<div>

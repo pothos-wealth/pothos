@@ -8,9 +8,9 @@ import { authenticate } from "../../middleware/authenticate.js";
 
 const createBudgetSchema = z.object({
 	categoryId: z.string().min(1, "Category is required"),
-	amount: z.number().int().positive("Amount must be positive"),
+	amount: z.number().int().positive("Amount must be positive").max(1_000_000_000),
 	month: z.number().int().min(1).max(12),
-	year: z.number().int().min(2000),
+	year: z.number().int().min(2000).max(2100),
 	isRecurring: z.boolean().default(true),
 });
 

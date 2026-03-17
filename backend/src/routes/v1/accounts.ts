@@ -9,7 +9,7 @@ import { authenticate } from "../../middleware/authenticate.js";
 const createAccountSchema = z.object({
 	name: z.string().min(1, "Account name is required"),
 	type: z.string().min(1, "Account type is required"),
-	initialBalance: z.number().int().default(0),
+	initialBalance: z.number().int().min(-1_000_000_000).max(1_000_000_000).default(0),
 });
 
 const updateAccountSchema = z.object({
@@ -242,7 +242,10 @@ export async function accountRoutes(app: FastifyInstance) {
 			.returning()
 			.get();
 
-		return reply.send(updated);
+		return reply.send({
+			...updated,
+			balance: getAccountBalance(id, updated!.initialBalance),
+		});
 	});
 
 	// ─── Reopen Account ───────────────────────────────────────────────────────
@@ -273,6 +276,9 @@ export async function accountRoutes(app: FastifyInstance) {
 			.returning()
 			.get();
 
-		return reply.send(updated);
+		return reply.send({
+			...updated,
+			balance: getAccountBalance(id, updated!.initialBalance),
+		});
 	});
 }

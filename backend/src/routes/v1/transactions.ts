@@ -10,7 +10,7 @@ const createTransactionSchema = z.object({
 	accountId: z.string().min(1, "Account is required"),
 	categoryId: z.string().nullable().optional(),
 	type: z.enum(["income", "expense"]),
-	amount: z.number().int().positive("Amount must be positive"),
+	amount: z.number().int().positive("Amount must be positive").max(1_000_000_000),
 	date: z.number().int(),
 	description: z.string().min(1, "Description is required"),
 	notes: z.string().optional(),
@@ -19,7 +19,7 @@ const createTransactionSchema = z.object({
 const createTransferSchema = z.object({
 	fromAccountId: z.string().min(1, "Source account is required"),
 	toAccountId: z.string().min(1, "Destination account is required"),
-	amount: z.number().int().positive("Amount must be positive"),
+	amount: z.number().int().positive("Amount must be positive").max(1_000_000_000),
 	date: z.number().int(),
 	description: z.string().min(1, "Description is required"),
 	notes: z.string().optional(),

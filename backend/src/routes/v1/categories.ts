@@ -6,17 +6,22 @@ import { db } from "../../db/index.js";
 import { categories, transactions } from "../../db/schema.js";
 import { authenticate } from "../../middleware/authenticate.js";
 
+const hexColorSchema = z
+	.string()
+	.regex(/^#[0-9a-fA-F]{6}$/, "Color must be a valid hex color (e.g. #ff0000)")
+	.optional();
+
 const createCategorySchema = z.object({
 	name: z.string().min(1, "Category name is required"),
 	icon: z.string().optional(),
-	color: z.string().optional(),
+	color: hexColorSchema,
 	type: z.enum(["expense", "income", "neutral"]),
 });
 
 const updateCategorySchema = z.object({
 	name: z.string().min(1, "Category name is required").optional(),
 	icon: z.string().optional(),
-	color: z.string().optional(),
+	color: hexColorSchema,
 	type: z.enum(["expense", "income", "neutral"]).optional(),
 });
 

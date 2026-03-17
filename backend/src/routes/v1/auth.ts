@@ -12,14 +12,16 @@ const SESSION_TTL_DAYS = parseInt(process.env.SESSION_TTL_DAYS ?? "7", 10);
 const RATE_LIMIT_REGISTER_MAX = parseInt(process.env.RATE_LIMIT_REGISTER_MAX ?? "5", 10);
 const RATE_LIMIT_LOGIN_MAX = parseInt(process.env.RATE_LIMIT_LOGIN_MAX ?? "10", 10);
 
+const passwordSchema = z
+	.string()
+	.min(8, "Password must be at least 8 characters")
+	.regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+	.regex(/[0-9]/, "Password must contain at least one number")
+	.regex(/[^a-zA-Z0-9]/, "Password must contain at least one special character");
+
 const registerSchema = z.object({
 	email: z.string().email().toLowerCase(),
-	password: z
-		.string()
-		.min(8, "Password must be at least 8 characters")
-		.regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-		.regex(/[0-9]/, "Password must contain at least one number")
-		.regex(/[^a-zA-Z0-9]/, "Password must contain at least one special character"),
+	password: passwordSchema,
 	currency: z.string().length(3, "Currency must be a valid ISO 4217 code").toUpperCase().default("INR"),
 });
 
@@ -30,12 +32,7 @@ const loginSchema = z.object({
 
 const changePasswordSchema = z.object({
 	currentPassword: z.string().min(1),
-	newPassword: z
-		.string()
-		.min(8, "Password must be at least 8 characters")
-		.regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-		.regex(/[0-9]/, "Password must contain at least one number")
-		.regex(/[^a-zA-Z0-9]/, "Password must contain at least one special character"),
+	newPassword: passwordSchema,
 });
 
 function createSessionCookie(sessionId: string, expiresAt: number) {

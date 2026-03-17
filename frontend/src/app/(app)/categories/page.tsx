@@ -109,11 +109,11 @@ export default function CategoriesPage() {
     }
 
     const filtered = categories.filter((c) => c.type === tab)
-    const isGlobal = (cat: Category) => cat.id && !categories.find((c) => c.id === cat.id && (c as any).userId)
+    const isGlobal = (cat: Category) => cat.userId === null
 
     if (loading) {
         return (
-            <PageTransition><div className="p-6 max-w-4xl mx-auto">
+            <PageTransition><div className="px-4 py-6 md:px-6 max-w-4xl mx-auto">
                 <div className="flex items-start justify-between mb-6">
                     <div>
                         <Skeleton className="h-8 w-36 mb-2" />
@@ -142,7 +142,7 @@ export default function CategoriesPage() {
 
     return (
         <PageTransition>
-        <div className="p-6 max-w-4xl mx-auto">
+        <div className="px-4 py-6 md:px-6 max-w-4xl mx-auto">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div>
@@ -185,7 +185,7 @@ export default function CategoriesPage() {
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {filtered.map((cat) => {
-                        const isSystem = cat.id && !(cat as any).userId !== undefined ? (cat as any).userId === null : false
+                        const isSystem = cat.userId === null
                         return (
                             <div
                                 key={cat.id}
@@ -306,7 +306,7 @@ export default function CategoriesPage() {
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="flex-1 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 disabled:opacity-60"
+                            className="flex-1 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                             {submitting ? 'Saving…' : editing ? 'Save Changes' : 'Add Category'}
                         </button>

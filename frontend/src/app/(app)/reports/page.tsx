@@ -64,7 +64,7 @@ export default function ReportsPage() {
 
     return (
         <PageTransition>
-        <div className="p-6 max-w-5xl mx-auto">
+        <div className="px-4 py-6 md:px-6 max-w-5xl mx-auto">
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
                 <div>

@@ -127,7 +127,7 @@ export default function BudgetsPage() {
 
     if (loading) {
         return (
-            <PageTransition><div className="p-6 max-w-4xl mx-auto">
+            <PageTransition><div className="px-4 py-6 md:px-6 max-w-4xl mx-auto">
                 <div className="flex items-start justify-between mb-8">
                     <div>
                         <Skeleton className="h-8 w-28 mb-2" />
@@ -162,7 +162,7 @@ export default function BudgetsPage() {
 
     return (
         <PageTransition>
-        <div className="p-6 max-w-4xl mx-auto">
+        <div className="px-4 py-6 md:px-6 max-w-4xl mx-auto">
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
                 <div>
@@ -311,7 +311,7 @@ export default function BudgetsPage() {
                             value={form.categoryId}
                             onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
                             disabled={!!editing}
-                            className="bg-bg border border-border rounded-xl px-3 py-2.5 text-sm text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-shadow disabled:opacity-60"
+                            className="bg-bg border border-border rounded-xl px-3 py-2.5 text-sm text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-shadow disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                             {expenseCategories.map((c) => (
                                 <option key={c.id} value={c.id}>{c.name}</option>
@@ -355,7 +355,7 @@ export default function BudgetsPage() {
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="flex-1 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 disabled:opacity-60"
+                            className="flex-1 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                             {submitting ? 'Saving…' : 'Save Budget'}
                         </button>
