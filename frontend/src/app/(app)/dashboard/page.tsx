@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { PageTransition } from "@/components/ui/PageTransition";
 import { api } from "@/lib/api";
+import { useCurrency } from "@/lib/currency-context";
 import { useCurrencyFormatter, useCurrencySymbol } from "@/lib/utils";
 import type {
 	Account,
@@ -106,6 +107,7 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardPage() {
+	const { loading: currencyLoading } = useCurrency();
 	const formatCurrency = useCurrencyFormatter();
 	const currencySymbol = useCurrencySymbol();
 	const [month, setMonth] = useState(() => new Date().getMonth() + 1);
@@ -152,12 +154,7 @@ export default function DashboardPage() {
 			.finally(() => setLoading(false));
 	}, [month, year]);
 
-	if (loading)
-		return (
-			<PageTransition>
-				<DashboardSkeleton />
-			</PageTransition>
-		);
+	if (loading || currencyLoading) return <PageTransition><DashboardSkeleton /></PageTransition>;
 
 	if (unauthorized) {
 		return (
@@ -186,7 +183,7 @@ export default function DashboardPage() {
 		<PageTransition>
 			<div className="px-4 py-6 md:px-6 max-w-7xl mx-auto">
 				{/* Header */}
-				<div className="flex items-center justify-between mb-8">
+				<div className="flex flex-col gap-2 mb-8 md:flex-row md:items-center md:justify-between">
 					<div>
 						<h1 className="text-2xl font-bold text-fg">
 							<Suspense fallback="Good morning">
@@ -246,28 +243,11 @@ export default function DashboardPage() {
 							<p className="text-sm text-fg-muted">No data yet</p>
 						</div>
 					) : (
-						<div
-							className="h-[200px]"
-							role="img"
-							aria-label="Monthly income and expenses bar chart"
-						>
+						<div className="h-[200px]" role="img" aria-label="Monthly income and expenses bar chart">
 							<ResponsiveContainer width="100%" height="100%">
 								<BarChart data={trendData} barGap={4} barSize={14}>
-									<XAxis
-										dataKey="name"
-										tick={{ fontSize: 11, fill: "var(--color-fg-muted)" }}
-										axisLine={false}
-										tickLine={false}
-									/>
-									<YAxis
-										tick={{ fontSize: 10, fill: "var(--color-fg-muted)" }}
-										axisLine={false}
-										tickLine={false}
-										tickFormatter={(v) =>
-											`${currencySymbol}${(v / 1000).toFixed(0)}k`
-										}
-										width={44}
-									/>
+									<XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--color-fg-muted)" }} axisLine={false} tickLine={false} />
+									<YAxis tick={{ fontSize: 10, fill: "var(--color-fg-muted)" }} axisLine={false} tickLine={false} tickFormatter={(v) => { const major = v / 100; return major >= 1000 ? `${currencySymbol}${(major / 1000).toFixed(0)}k` : `${currencySymbol}${major.toFixed(0)}`; }} width={44} />
 									<Tooltip
 										contentStyle={{
 											backgroundColor: "var(--color-bg-2)",

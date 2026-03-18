@@ -28,6 +28,7 @@ export function RecentTransactions({ transactions, categories }: RecentTransacti
             ) : (
                 <div className="divide-y divide-border">
                     {transactions.map((tx) => {
+                        const isTransfer = tx.type === 'transfer'
                         const isPositive = tx.amount > 0
                         return (
                             <div key={tx.id} className="py-3 flex items-center justify-between">
@@ -35,7 +36,7 @@ export function RecentTransactions({ transactions, categories }: RecentTransacti
                                     <span
                                         className={cn(
                                             'w-2 h-2 rounded-full shrink-0',
-                                            isPositive ? 'bg-primary' : 'bg-expense'
+                                            isTransfer ? 'bg-fg-muted' : isPositive ? 'bg-primary' : 'bg-expense'
                                         )}
                                     />
                                     <div>
@@ -43,7 +44,7 @@ export function RecentTransactions({ transactions, categories }: RecentTransacti
                                             {tx.description}
                                         </p>
                                         <p className="text-xs text-fg-muted">
-                                            {getCategoryName(tx.categoryId, categories)}
+                                            {isTransfer ? 'Transfer' : getCategoryName(tx.categoryId, categories)}
                                         </p>
                                     </div>
                                 </div>
@@ -51,10 +52,10 @@ export function RecentTransactions({ transactions, categories }: RecentTransacti
                                     <p
                                         className={cn(
                                             'text-sm font-semibold',
-                                            isPositive ? 'text-primary' : 'text-fg'
+                                            isTransfer ? 'text-fg-muted' : isPositive ? 'text-primary' : 'text-fg'
                                         )}
                                     >
-                                        {isPositive ? '+' : ''}
+                                        {isTransfer ? '' : isPositive ? '+' : '-'}
                                         {formatCurrency(Math.abs(tx.amount))}
                                     </p>
                                     <p className="text-xs text-fg-muted">{formatDate(tx.date)}</p>

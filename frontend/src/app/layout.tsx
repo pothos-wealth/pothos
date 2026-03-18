@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { CurrencyProvider } from "@/lib/currency-context";
-import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
+import { TopLoader } from "@/components/ui/TopLoader";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -40,7 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 		<html lang="en" suppressHydrationWarning>
 			<body className={`${jakarta.variable} font-sans antialiased bg-bg text-fg`}>
 				<ThemeProvider>
-					<ServiceWorkerRegistration />
+					<TopLoader />
 					<CurrencyProvider>{children}</CurrencyProvider>
 				</ThemeProvider>
 			</body>

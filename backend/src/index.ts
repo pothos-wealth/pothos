@@ -126,10 +126,13 @@ try {
 	app.log.info(`Server running in ${NODE_ENV} mode on port ${PORT}`);
 
 	// Clean up expired sessions once per hour
-	setInterval(() => {
-		const now = Math.floor(Date.now() / 1000);
-		db.delete(sessions).where(lt(sessions.expiresAt, now)).run();
-	}, 60 * 60 * 1000);
+	setInterval(
+		() => {
+			const now = Math.floor(Date.now() / 1000);
+			db.delete(sessions).where(lt(sessions.expiresAt, now)).run();
+		},
+		60 * 60 * 1000
+	);
 } catch (err) {
 	app.log.error(err);
 	process.exit(1);

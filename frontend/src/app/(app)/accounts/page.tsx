@@ -9,6 +9,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { PageTransition } from '@/components/ui/PageTransition'
 import { api } from '@/lib/api'
+import { useCurrency } from '@/lib/currency-context'
 import { useCurrencyFormatter } from '@/lib/utils'
 import type { Account } from '@/lib/types'
 
@@ -24,6 +25,7 @@ const defaultForm: AccountFormState = { name: '', type: 'Checking', initialBalan
 
 export default function AccountsPage() {
     const router = useRouter()
+    const { loading: currencyLoading } = useCurrency()
     const formatCurrency = useCurrencyFormatter()
     const [accounts, setAccounts] = useState<Account[]>([])
     const [loading, setLoading] = useState(true)
@@ -32,6 +34,7 @@ export default function AccountsPage() {
     const [form, setForm] = useState<AccountFormState>(defaultForm)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
+    const [statusError, setStatusError] = useState('')
     const [pendingDelete, setPendingDelete] = useState<Account | null>(null)
     const [deleting, setDeleting] = useState(false)
 
@@ -63,6 +66,10 @@ export default function AccountsPage() {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         setError('')
+        if (!form.name.trim()) {
+            setError('Account name is required.')
+            return
+        }
         setSubmitting(true)
         try {
             if (editing) {
@@ -99,19 +106,22 @@ export default function AccountsPage() {
     }
 
     async function handleToggleStatus(account: Account) {
+        setStatusError('')
         try {
             const updated = account.isActive
                 ? await api.accounts.close(account.id)
                 : await api.accounts.reopen(account.id)
             setAccounts((prev) => prev.map((a) => (a.id === updated.id ? updated : a)))
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to update account status')
+            const msg = err instanceof Error ? err.message : 'Failed to update account status'
+            setStatusError(msg)
+            setTimeout(() => setStatusError(''), 4000)
         }
     }
 
     const totalBalance = accounts.filter((a) => a.isActive).reduce((s, a) => s + a.balance, 0)
 
-    if (loading) {
+    if (loading || currencyLoading) {
         return (
             <PageTransition><div className="px-4 py-6 md:px-6 max-w-4xl mx-auto">
                 <div className="flex items-start justify-between mb-8">
@@ -163,6 +173,12 @@ export default function AccountsPage() {
                     Add Account
                 </button>
             </div>
+
+            {statusError && (
+                <div className="mb-4 bg-expense-light border border-expense text-expense rounded-xl px-4 py-3 text-sm">
+                    {statusError}
+                </div>
+            )}
 
             {accounts.length === 0 ? (
                 <Card className="flex flex-col items-center justify-center py-16 text-center">
@@ -228,7 +244,7 @@ export default function AccountsPage() {
                 onClose={() => setModalOpen(false)}
                 title={editing ? 'Edit Account' : 'Add Account'}
             >
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
                     {error && (
                         <div className="bg-expense-light border border-expense text-expense rounded-xl px-4 py-3 text-sm">
                             {error}

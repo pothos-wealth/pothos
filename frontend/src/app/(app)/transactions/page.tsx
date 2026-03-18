@@ -9,6 +9,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { PageTransition } from '@/components/ui/PageTransition'
 import { api } from '@/lib/api'
+import { useCurrency } from '@/lib/currency-context'
 import { cn, useCurrencyFormatter, formatDate, getCategoryName } from '@/lib/utils'
 import type { Account, Category, Transaction, TransactionList } from '@/lib/types'
 
@@ -46,6 +47,7 @@ function fromUnix(ts: number) {
 
 export default function TransactionsPage() {
     const router = useRouter()
+    const { loading: currencyLoading } = useCurrency()
     const formatCurrency = useCurrencyFormatter()
     const [list, setList] = useState<TransactionList | null>(null)
     const [accounts, setAccounts] = useState<Account[]>([])
@@ -55,6 +57,7 @@ export default function TransactionsPage() {
 
     // Filters
     const [filterAccount, setFilterAccount] = useState('')
+    const [filterCategory, setFilterCategory] = useState('')
     const [filterType, setFilterType] = useState('')
     const [filterStart, setFilterStart] = useState('')
     const [filterEnd, setFilterEnd] = useState('')
@@ -84,6 +87,7 @@ export default function TransactionsPage() {
         setLoading(true)
         const params: Record<string, string | number> = { page, limit: 20 }
         if (filterAccount) params.accountId = filterAccount
+        if (filterCategory) params.categoryId = filterCategory
         if (filterType) params.type = filterType
         if (filterStart) params.startDate = toUnix(filterStart)
         if (filterEnd) params.endDate = toUnix(filterEnd) + 86399
@@ -96,7 +100,7 @@ export default function TransactionsPage() {
             .then(([txs, accs, cats]) => { setList(txs); setAccounts(accs); setCategories(cats) })
             .catch((err) => { if (err.message === 'UNAUTHORIZED') router.push('/sign-in') })
             .finally(() => setLoading(false))
-    }, [page, filterAccount, filterType, filterStart, filterEnd, router])
+    }, [page, filterAccount, filterCategory, filterType, filterStart, filterEnd, router])
 
     useEffect(() => { load() }, [load])
 
@@ -114,7 +118,7 @@ export default function TransactionsPage() {
         setEditTx(tx)
         setEditForm({
             categoryId: tx.categoryId ?? '',
-            amount: String(Math.abs(tx.amount) / 100),
+            amount: (Math.abs(tx.amount) / 100).toFixed(2),
             date: fromUnix(tx.date),
             description: tx.description,
             notes: tx.notes ?? '',
@@ -125,6 +129,18 @@ export default function TransactionsPage() {
     async function handleAddSubmit(e: React.FormEvent) {
         e.preventDefault()
         setError('')
+        if (!txForm.accountId) {
+            setError('Please select an account.')
+            return
+        }
+        if (!txForm.amount || Number(txForm.amount) <= 0) {
+            setError('Please enter a valid amount.')
+            return
+        }
+        if (!txForm.description.trim()) {
+            setError('Description is required.')
+            return
+        }
         setSubmitting(true)
         try {
             if (addTab === 'transaction') {
@@ -213,7 +229,7 @@ export default function TransactionsPage() {
             </div>
 
             {/* Filters */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
                 <select
                     value={filterAccount}
                     onChange={(e) => { setFilterAccount(e.target.value); setPage(1) }}
@@ -221,6 +237,14 @@ export default function TransactionsPage() {
                 >
                     <option value="">All accounts</option>
                     {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+                <select
+                    value={filterCategory}
+                    onChange={(e) => { setFilterCategory(e.target.value); setPage(1) }}
+                    className={inputCls}
+                >
+                    <option value="">All categories</option>
+                    {categories.map((c) => <option key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ''}{c.name}</option>)}
                 </select>
                 <select
                     value={filterType}
@@ -247,7 +271,7 @@ export default function TransactionsPage() {
             </div>
 
             {/* List */}
-            {loading ? (
+            {(loading || currencyLoading) ? (
                 <Card className="p-0 overflow-hidden">
                     <div className="divide-y divide-border">
                         {[...Array(8)].map((_, i) => (
@@ -305,13 +329,13 @@ export default function TransactionsPage() {
                                             'text-sm font-semibold',
                                             isTransfer ? 'text-fg-muted' : isIncome ? 'text-primary' : 'text-fg'
                                         )}>
-                                            {isIncome ? '+' : ''}{formatCurrency(Math.abs(tx.amount))}
+                                            {isTransfer ? '' : isIncome ? '+' : '-'}{formatCurrency(Math.abs(tx.amount))}
                                         </p>
                                         <p className="text-xs text-fg-muted">{formatDate(tx.date)}</p>
                                     </div>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setPendingDelete(tx) }}
-                                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-fg-muted hover:text-expense hover:bg-expense-light transition-all duration-150 shrink-0"
+                                        className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 rounded-lg text-fg-muted hover:text-expense hover:bg-expense-light transition-all duration-150 shrink-0"
                                         aria-label="Delete transaction"
                                     >
                                         <Trash2 size={14} />
@@ -367,7 +391,7 @@ export default function TransactionsPage() {
                     ))}
                 </div>
 
-                <form onSubmit={handleAddSubmit} className="flex flex-col gap-3">
+                <form onSubmit={handleAddSubmit} noValidate className="flex flex-col gap-3">
                     {error && (
                         <div className="bg-expense-light border border-expense text-expense rounded-xl px-4 py-3 text-sm">
                             {error}
@@ -439,15 +463,24 @@ export default function TransactionsPage() {
 
             {/* Edit Modal */}
             <Modal open={!!editTx} onClose={() => setEditTx(null)} title="Edit Transaction">
-                <form onSubmit={handleEditSubmit} className="flex flex-col gap-3">
+                <form onSubmit={handleEditSubmit} noValidate className="flex flex-col gap-3">
                     {error && (
                         <div className="bg-expense-light border border-expense text-expense rounded-xl px-4 py-3 text-sm">
                             {error}
                         </div>
                     )}
+                    {/* Read-only context row */}
+                    <div className="flex items-center gap-2 bg-bg border border-border rounded-xl px-3 py-2.5">
+                        <span className={cn('w-2 h-2 rounded-full shrink-0', editTx && editTx.amount > 0 ? 'bg-primary' : 'bg-expense')} />
+                        <span className="text-sm text-fg-muted">
+                            {editTx && editTx.amount > 0 ? 'Income' : 'Expense'} · {getAccountName(editTx?.accountId ?? '')}
+                        </span>
+                    </div>
                     <select value={editForm.categoryId ?? ''} onChange={(e) => setEditForm((f) => ({ ...f, categoryId: e.target.value }))} className={inputCls}>
                         <option value="">No category</option>
-                        {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        {categories
+                            .filter((c) => c.type === editTx?.type || c.type === 'neutral')
+                            .map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                     <input type="number" min="0.01" step="0.01" required placeholder="Amount" value={editForm.amount ?? ''} onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))} className={inputCls} />
                     <input type="date" required value={editForm.date ?? ''} onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))} className={inputCls} />

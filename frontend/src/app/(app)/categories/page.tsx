@@ -71,6 +71,10 @@ export default function CategoriesPage() {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         setError('')
+        if (!form.name.trim()) {
+            setError('Category name is required.')
+            return
+        }
         setSubmitting(true)
         try {
             const payload = {
@@ -159,7 +163,7 @@ export default function CategoriesPage() {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 bg-bg-2 border border-border rounded-xl p-1 w-fit mb-6">
+            <div className="flex gap-1 bg-bg-2 border border-border rounded-xl p-1 w-full mb-6">
                 {(['expense', 'income', 'neutral'] as TabType[]).map((t) => (
                     <button
                         key={t}
@@ -239,7 +243,7 @@ export default function CategoriesPage() {
                 onClose={() => setModalOpen(false)}
                 title={editing ? 'Edit Category' : 'Add Category'}
             >
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
                     {error && (
                         <div className="bg-expense-light border border-expense text-expense rounded-xl px-4 py-3 text-sm">
                             {error}

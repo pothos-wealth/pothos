@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Eye, EyeOff } from 'lucide-react'
 import { api } from '@/lib/api'
 
 export default function SignInPage() {
@@ -11,10 +12,15 @@ export default function SignInPage() {
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+    const [showPassword, setShowPassword] = useState(false)
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         setError('')
+        if (!email || !password) {
+            setError('Email and password are required.')
+            return
+        }
         setLoading(true)
         try {
             await api.auth.login(email, password)
@@ -33,7 +39,7 @@ export default function SignInPage() {
                 <p className="text-sm text-fg-muted mt-1">Sign in to your Pothos account</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
                 {error && (
                     <div className="bg-expense-light border border-expense text-expense rounded-xl px-4 py-3 text-sm">
                         {error}
@@ -60,16 +66,26 @@ export default function SignInPage() {
                     <label htmlFor="password" className="text-sm font-medium text-fg">
                         Password
                     </label>
-                    <input
-                        id="password"
-                        type="password"
-                        required
-                        autoComplete="current-password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="bg-bg-2 border border-border rounded-xl px-3 py-2.5 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-shadow"
-                        placeholder="••••••••"
-                    />
+                    <div className="relative">
+                        <input
+                            id="password"
+                            type={showPassword ? 'text' : 'password'}
+                            required
+                            autoComplete="current-password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="bg-bg-2 border border-border rounded-xl px-3 py-2.5 pr-10 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-shadow w-full"
+                            placeholder="••••••••"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword((v) => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-fg-muted hover:text-fg transition-colors"
+                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                    </div>
                 </div>
 
                 <button

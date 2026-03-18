@@ -10,6 +10,7 @@ import { MonthPicker } from '@/components/dashboard/MonthPicker'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { PageTransition } from '@/components/ui/PageTransition'
 import { api } from '@/lib/api'
+import { useCurrency } from '@/lib/currency-context'
 import { useCurrencyFormatter } from '@/lib/utils'
 import type { BudgetWithSpent, Category } from '@/lib/types'
 
@@ -21,6 +22,7 @@ interface BudgetForm {
 
 export default function BudgetsPage() {
     const router = useRouter()
+    const { loading: currencyLoading } = useCurrency()
     const formatCurrency = useCurrencyFormatter()
     const [month, setMonth] = useState(() => new Date().getMonth() + 1)
     const [year, setYear] = useState(() => new Date().getFullYear())
@@ -70,28 +72,21 @@ export default function BudgetsPage() {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         setError('')
+        if (!form.amount || Number(form.amount) <= 0) {
+            setError('Please enter a valid budget amount.')
+            return
+        }
         setSubmitting(true)
         try {
-            const updated = await api.budgets.upsert({
+            await api.budgets.upsert({
                 categoryId: form.categoryId,
                 amount: Math.round(Number(form.amount) * 100),
                 month,
                 year,
                 isRecurring: form.isRecurring,
             })
-            setBudgets((prev) => {
-                const existing = prev.find((b) => b.id === updated.id)
-                if (existing) {
-                    // Preserve spent — it's not returned by the upsert endpoint
-                    return prev.map((b) =>
-                        b.id === updated.id
-                            ? { ...updated, spent: b.spent, remaining: updated.amount - b.spent }
-                            : b
-                    )
-                }
-                return [...prev, { ...updated, spent: 0, remaining: updated.amount }]
-            })
             setModalOpen(false)
+            load()
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Something went wrong')
         } finally {
@@ -125,7 +120,7 @@ export default function BudgetsPage() {
     const budgetedCategoryIds = new Set(budgets.map((b) => b.categoryId))
     const unbudgetedCategories = expenseCategories.filter((c) => !budgetedCategoryIds.has(c.id))
 
-    if (loading) {
+    if (loading || currencyLoading) {
         return (
             <PageTransition><div className="px-4 py-6 md:px-6 max-w-4xl mx-auto">
                 <div className="flex items-start justify-between mb-8">
@@ -167,7 +162,7 @@ export default function BudgetsPage() {
             <div className="flex items-center justify-between mb-8">
                 <div>
                     <h1 className="text-2xl font-bold text-fg">Budgets</h1>
-                    <p className="text-sm text-fg-muted mt-0.5">Set spending limits by category</p>
+                    <p className="text-sm text-fg-muted mt-0.5">Monthly spending limits</p>
                 </div>
                 <MonthPicker month={month} year={year} onChange={(m, y) => { setMonth(m); setYear(y) }} />
             </div>
@@ -297,7 +292,7 @@ export default function BudgetsPage() {
                 onClose={() => setModalOpen(false)}
                 title={editing ? 'Edit Budget' : 'Set Budget'}
             >
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
                     {error && (
                         <div className="bg-expense-light border border-expense text-expense rounded-xl px-4 py-3 text-sm">
                             {error}

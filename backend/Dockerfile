@@ -25,6 +25,8 @@ RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
 COPY drizzle ./drizzle
 
+RUN apk add --no-cache su-exec
+
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 
