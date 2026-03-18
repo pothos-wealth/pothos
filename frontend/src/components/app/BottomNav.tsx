@@ -26,7 +26,7 @@ export function BottomNav() {
     return (
         <>
             <nav className="fixed bottom-0 inset-x-0 md:hidden bg-bg-2 border-t border-border z-40">
-                <div className="grid grid-cols-5 px-2 py-2">
+                <div className="grid grid-cols-5 px-2 py-2 pb-[max(8px,env(safe-area-inset-bottom))]">
                     {mainNavItems.map(({ label, href, icon: Icon }) => {
                         const isActive = pathname === href
                         return (
