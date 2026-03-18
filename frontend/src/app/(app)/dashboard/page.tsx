@@ -142,8 +142,8 @@ export default function DashboardPage() {
 
 	const trendData = data?.trends.data.map((d) => ({
 		name: `${MONTH_SHORT[d.month - 1]} '${String(d.year).slice(2)}`,
-		Income: d.income / 100,
-		Expenses: d.expenses / 100,
+		Income: d.income,
+		Expenses: d.expenses,
 	})) ?? [];
 
 	return (
@@ -199,10 +199,10 @@ export default function DashboardPage() {
 							<ResponsiveContainer width="100%" height="100%">
 								<BarChart data={trendData} barGap={4} barSize={14}>
 									<XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--color-fg-muted)" }} axisLine={false} tickLine={false} />
-									<YAxis tick={{ fontSize: 10, fill: "var(--color-fg-muted)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${currencySymbol}${(v / 1000).toFixed(0)}k`} width={44} />
+									<YAxis tick={{ fontSize: 10, fill: "var(--color-fg-muted)" }} axisLine={false} tickLine={false} tickFormatter={(v) => { const major = v / 100; return major >= 1000 ? `${currencySymbol}${(major / 1000).toFixed(0)}k` : `${currencySymbol}${major.toFixed(0)}`; }} width={44} />
 									<Tooltip
 										contentStyle={{ backgroundColor: "var(--color-bg-2)", border: "1px solid var(--color-border)", borderRadius: "12px", fontSize: "12px", color: "var(--color-fg)" }}
-										formatter={(value) => formatCurrency(Number(value) * 100)}
+										formatter={(value) => formatCurrency(Number(value))}
 										cursor={false}
 									/>
 									<Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "12px" }} />

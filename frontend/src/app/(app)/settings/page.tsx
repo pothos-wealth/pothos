@@ -10,6 +10,13 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { api } from '@/lib/api'
 import type { User, UserSettings } from '@/lib/types'
 
+const PASSWORD_RULES = [
+    { label: 'At least 8 characters', test: (pw: string) => pw.length >= 8 },
+    { label: 'One uppercase letter', test: (pw: string) => /[A-Z]/.test(pw) },
+    { label: 'One number', test: (pw: string) => /[0-9]/.test(pw) },
+    { label: 'One special character', test: (pw: string) => /[^A-Za-z0-9]/.test(pw) },
+]
+
 export default function SettingsPage() {
     const router = useRouter()
     const [user, setUser] = useState<User | null>(null)
@@ -57,8 +64,9 @@ export default function SettingsPage() {
             setPwError('New passwords do not match')
             return
         }
-        if (newPassword.length < 8) {
-            setPwError('Password must be at least 8 characters')
+        const failedRule = PASSWORD_RULES.find((r) => !r.test(newPassword))
+        if (failedRule) {
+            setPwError(failedRule.label)
             return
         }
 
