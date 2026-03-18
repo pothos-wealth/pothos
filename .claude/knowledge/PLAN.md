@@ -231,7 +231,6 @@ pothos/
 - `/transactions` — Paginated list with filters (account, type, date range). Inline add/edit modals. Supports transfers. Decimal amounts (0.01 precision).
 - `/budgets` — Month picker. Progress bars per category (spent vs limit). Upsert modal. Shows when over budget.
 - `/categories` — Tabbed by type (expense/income/neutral). Custom categories with color/icon. System defaults locked (no edit/delete).
-- `/reports` — Stat cards (income, expenses, net). Pie chart by category. 6-month bar chart trends.
 - `/settings` — User email display. Change password. Currency shown as read-only. Sign out.
 
 #### Key Features Implemented
