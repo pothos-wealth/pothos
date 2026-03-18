@@ -12,8 +12,9 @@ import { transactionRoutes } from "./routes/v1/transactions.js";
 import { budgetRoutes } from "./routes/v1/budgets.js";
 import { reportRoutes } from "./routes/v1/reports.js";
 import { db } from "./db/index.js";
-import { sessions } from "./db/schema.js";
-import { lt } from "drizzle-orm";
+import { sessions, users } from "./db/schema.js";
+import { lt, eq, ne, and } from "drizzle-orm";
+import { adminRoutes } from "./routes/v1/admin.js";
 
 dotenv.config();
 
@@ -68,6 +69,7 @@ await app.register(categoryRoutes, { prefix: "/api/v1" });
 await app.register(transactionRoutes, { prefix: "/api/v1" });
 await app.register(budgetRoutes, { prefix: "/api/v1" });
 await app.register(reportRoutes, { prefix: "/api/v1" });
+await app.register(adminRoutes, { prefix: "/api/v1" });
 
 // ─── Global Error Handler ─────────────────────────────────────────────────────
 
@@ -92,14 +94,45 @@ app.setErrorHandler((error: FastifyError, _request, reply) => {
 // ─── Start ────────────────────────────────────────────────────────────────────
 
 try {
+	// Enforce exactly one superadmin based on SUPERADMIN_EMAIL (idempotent)
+	const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL?.toLowerCase().trim();
+	if (SUPERADMIN_EMAIL) {
+		const now = Math.floor(Date.now() / 1000);
+
+		// Demote anyone who is currently superadmin but isn't the target
+		db.update(users)
+			.set({ isSuperadmin: false, updatedAt: now })
+			.where(and(eq(users.isSuperadmin, true), ne(users.email, SUPERADMIN_EMAIL)))
+			.run();
+
+		const target = db
+			.select({ id: users.id, isSuperadmin: users.isSuperadmin })
+			.from(users)
+			.where(eq(users.email, SUPERADMIN_EMAIL))
+			.get();
+
+		if (target && !target.isSuperadmin) {
+			db.update(users)
+				.set({ isSuperadmin: true, updatedAt: now })
+				.where(eq(users.email, SUPERADMIN_EMAIL))
+				.run();
+			app.log.info(`Promoted ${SUPERADMIN_EMAIL} to superadmin`);
+		} else if (!target) {
+			app.log.warn(`SUPERADMIN_EMAIL set but no matching user found: ${SUPERADMIN_EMAIL}`);
+		}
+	}
+
 	await app.listen({ port: PORT, host: "0.0.0.0" });
 	app.log.info(`Server running in ${NODE_ENV} mode on port ${PORT}`);
 
 	// Clean up expired sessions once per hour
-	setInterval(() => {
-		const now = Math.floor(Date.now() / 1000);
-		db.delete(sessions).where(lt(sessions.expiresAt, now)).run();
-	}, 60 * 60 * 1000);
+	setInterval(
+		() => {
+			const now = Math.floor(Date.now() / 1000);
+			db.delete(sessions).where(lt(sessions.expiresAt, now)).run();
+		},
+		60 * 60 * 1000
+	);
 } catch (err) {
 	app.log.error(err);
 	process.exit(1);

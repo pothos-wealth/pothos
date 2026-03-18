@@ -1,11 +1,14 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Settings } from 'lucide-react'
+import { Settings, ShieldCheck } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { PlantIcon } from '@/components/ui/PlantIcon'
 import { navItems } from '@/lib/nav'
+import { api } from '@/lib/api'
+import type { User } from '@/lib/types'
 
 interface NavItemProps {
     label: string
@@ -32,6 +35,8 @@ function NavItem({ label, href, icon: Icon, isActive }: NavItemProps) {
 
 export function Sidebar() {
     const pathname = usePathname()
+    const [user, setUser] = useState<User | null>(null)
+    useEffect(() => { api.user.me().then(setUser).catch(() => {}) }, [])
 
     return (
         <aside className="hidden md:flex flex-col w-56 shrink-0 h-screen sticky top-0 border-r border-border bg-bg-2">
@@ -52,21 +57,24 @@ export function Sidebar() {
                         isActive={pathname === item.href}
                     />
                 ))}
+                {user?.isSuperadmin && (
+                    <NavItem
+                        label="Admin"
+                        href="/admin"
+                        icon={ShieldCheck}
+                        isActive={pathname.startsWith('/admin')}
+                    />
+                )}
             </nav>
 
             {/* Bottom */}
             <div className="border-t border-border p-3 flex justify-between items-center">
-                <Link
+                <NavItem
+                    label="Settings"
                     href="/settings"
-                    className={`px-3 py-2 rounded-xl text-sm flex items-center gap-3 transition-colors duration-150 ${
-                        pathname === '/settings'
-                            ? 'bg-accent-light text-primary font-semibold'
-                            : 'text-fg-muted hover:bg-bg-3 hover:text-fg'
-                    }`}
-                >
-                    <Settings size={18} strokeWidth={pathname === '/settings' ? 2.5 : 2} />
-                    Settings
-                </Link>
+                    icon={Settings}
+                    isActive={pathname === '/settings'}
+                />
                 <ThemeToggle />
             </div>
         </aside>
