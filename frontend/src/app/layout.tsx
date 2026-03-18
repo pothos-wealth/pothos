@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { CurrencyProvider } from "@/lib/currency-context";
@@ -13,8 +13,26 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-	title: "Pothos – A calm place for your money",
-	description: "Simple, beautiful budget and expense tracking.",
+	title: "Pothos – Your money plant, growing.",
+	description: "Watch your money plant grow. Track expenses, plan budgets, and understand your money — without the overwhelm.",
+	appleWebApp: {
+		capable: true,
+		statusBarStyle: "black-translucent",
+		title: "Pothos",
+	},
+	icons: {
+		apple: "/apple-touch-icon.png",
+	},
+};
+
+export const viewport: Viewport = {
+	width: "device-width",
+	initialScale: 1,
+	viewportFit: "cover",
+	themeColor: [
+		{ media: "(prefers-color-scheme: light)", color: "#3D4F2C" },
+		{ media: "(prefers-color-scheme: dark)", color: "#192214" },
+	],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

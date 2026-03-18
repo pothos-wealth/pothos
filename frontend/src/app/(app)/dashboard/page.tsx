@@ -24,7 +24,20 @@ import type {
 	TrendsReport,
 } from "@/lib/types";
 
-const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTH_SHORT = [
+	"Jan",
+	"Feb",
+	"Mar",
+	"Apr",
+	"May",
+	"Jun",
+	"Jul",
+	"Aug",
+	"Sep",
+	"Oct",
+	"Nov",
+	"Dec",
+];
 
 interface DashboardData {
 	accounts: Account[];
@@ -90,7 +103,7 @@ function DashboardSkeleton() {
 				))}
 			</Card>
 		</div>
-	)
+	);
 }
 
 export default function DashboardPage() {
@@ -114,9 +127,27 @@ export default function DashboardPage() {
 			api.categories.list(),
 			api.reports.trends(6),
 		])
-			.then(([accounts, overview, categoryReport, budgets, transactions, categories, trends]) => {
-				setData({ accounts, overview, categoryReport, budgets, transactions, categories, trends });
-			})
+			.then(
+				([
+					accounts,
+					overview,
+					categoryReport,
+					budgets,
+					transactions,
+					categories,
+					trends,
+				]) => {
+					setData({
+						accounts,
+						overview,
+						categoryReport,
+						budgets,
+						transactions,
+						categories,
+						trends,
+					});
+				}
+			)
 			.catch((err) => {
 				if (err.message === "UNAUTHORIZED") setUnauthorized(true);
 			})
@@ -129,22 +160,24 @@ export default function DashboardPage() {
 		return (
 			<div className="flex flex-col items-center justify-center h-full text-center p-6 gap-3">
 				<p className="text-fg-muted">You need to be signed in to view this page.</p>
-				<a href="/sign-in" className="text-sm font-semibold text-primary hover:underline">Sign in →</a>
+				<a href="/sign-in" className="text-sm font-semibold text-primary hover:underline">
+					Sign in →
+				</a>
 			</div>
 		);
 	}
 
 	const totalBalance = data?.accounts.reduce((sum, a) => sum + a.balance, 0) ?? 0;
 	const overview = data?.overview;
-	const savingsRate = overview && overview.income > 0
-		? Math.round((overview.net / overview.income) * 100)
-		: null;
+	const savingsRate =
+		overview && overview.income > 0 ? Math.round((overview.net / overview.income) * 100) : null;
 
-	const trendData = data?.trends.data.map((d) => ({
-		name: `${MONTH_SHORT[d.month - 1]} '${String(d.year).slice(2)}`,
-		Income: d.income,
-		Expenses: d.expenses,
-	})) ?? [];
+	const trendData =
+		data?.trends.data.map((d) => ({
+			name: `${MONTH_SHORT[d.month - 1]} '${String(d.year).slice(2)}`,
+			Income: d.income,
+			Expenses: d.expenses,
+		})) ?? [];
 
 	return (
 		<PageTransition>
@@ -155,19 +188,31 @@ export default function DashboardPage() {
 						<h1 className="text-2xl font-bold text-fg">
 							<Suspense fallback="Good morning">
 								<Greeting />
-							</Suspense>{" "}
-							👋
+							</Suspense>
 						</h1>
 						<p className="text-sm text-fg-muted mt-0.5">Here&apos;s your overview</p>
 					</div>
-					<MonthPicker month={month} year={year} onChange={(m, y) => { setMonth(m); setYear(y); }} />
+					<MonthPicker
+						month={month}
+						year={year}
+						onChange={(m, y) => {
+							setMonth(m);
+							setYear(y);
+						}}
+					/>
 				</div>
 
 				{/* Stat cards */}
 				<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 					<StatCard title="Total Balance" value={formatCurrency(totalBalance)} />
-					<StatCard title="Monthly Income" value={formatCurrency(overview?.income ?? 0)} />
-					<StatCard title="Monthly Expenses" value={formatCurrency(overview?.expenses ?? 0)} />
+					<StatCard
+						title="Monthly Income"
+						value={formatCurrency(overview?.income ?? 0)}
+					/>
+					<StatCard
+						title="Monthly Expenses"
+						value={formatCurrency(overview?.expenses ?? 0)}
+					/>
 					<StatCard
 						title="Saved"
 						value={formatCurrency(overview?.net ?? 0)}
@@ -183,7 +228,10 @@ export default function DashboardPage() {
 						<SpendingChart data={data?.categoryReport.data ?? []} />
 					</div>
 					<div className="lg:col-span-2">
-						<BudgetProgress budgets={data?.budgets ?? []} categories={data?.categories ?? []} />
+						<BudgetProgress
+							budgets={data?.budgets ?? []}
+							categories={data?.categories ?? []}
+						/>
 					</div>
 				</div>
 
@@ -201,13 +249,31 @@ export default function DashboardPage() {
 									<XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--color-fg-muted)" }} axisLine={false} tickLine={false} />
 									<YAxis tick={{ fontSize: 10, fill: "var(--color-fg-muted)" }} axisLine={false} tickLine={false} tickFormatter={(v) => { const major = v / 100; return major >= 1000 ? `${currencySymbol}${(major / 1000).toFixed(0)}k` : `${currencySymbol}${major.toFixed(0)}`; }} width={44} />
 									<Tooltip
-										contentStyle={{ backgroundColor: "var(--color-bg-2)", border: "1px solid var(--color-border)", borderRadius: "12px", fontSize: "12px", color: "var(--color-fg)" }}
+										contentStyle={{
+											backgroundColor: "var(--color-bg-2)",
+											border: "1px solid var(--color-border)",
+											borderRadius: "12px",
+											fontSize: "12px",
+											color: "var(--color-fg)",
+										}}
 										formatter={(value) => formatCurrency(Number(value))}
 										cursor={false}
 									/>
-									<Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "12px" }} />
-									<Bar dataKey="Income" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
-									<Bar dataKey="Expenses" fill="var(--color-expense)" radius={[4, 4, 0, 0]} />
+									<Legend
+										iconType="circle"
+										iconSize={8}
+										wrapperStyle={{ fontSize: "12px" }}
+									/>
+									<Bar
+										dataKey="Income"
+										fill="var(--color-primary)"
+										radius={[4, 4, 0, 0]}
+									/>
+									<Bar
+										dataKey="Expenses"
+										fill="var(--color-expense)"
+										radius={[4, 4, 0, 0]}
+									/>
 								</BarChart>
 							</ResponsiveContainer>
 						</div>
@@ -215,7 +281,10 @@ export default function DashboardPage() {
 				</Card>
 
 				{/* Recent transactions */}
-				<RecentTransactions transactions={data?.transactions.data ?? []} categories={data?.categories ?? []} />
+				<RecentTransactions
+					transactions={data?.transactions.data ?? []}
+					categories={data?.categories ?? []}
+				/>
 			</div>
 		</PageTransition>
 	);
