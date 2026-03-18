@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { PageTransition } from "@/components/ui/PageTransition";
 import { api } from "@/lib/api";
+import { useCurrency } from "@/lib/currency-context";
 import { useCurrencyFormatter, useCurrencySymbol } from "@/lib/utils";
 import type {
 	Account,
@@ -93,6 +94,7 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardPage() {
+	const { loading: currencyLoading } = useCurrency();
 	const formatCurrency = useCurrencyFormatter();
 	const currencySymbol = useCurrencySymbol();
 	const [month, setMonth] = useState(() => new Date().getMonth() + 1);
@@ -121,7 +123,7 @@ export default function DashboardPage() {
 			.finally(() => setLoading(false));
 	}, [month, year]);
 
-	if (loading) return <PageTransition><DashboardSkeleton /></PageTransition>;
+	if (loading || currencyLoading) return <PageTransition><DashboardSkeleton /></PageTransition>;
 
 	if (unauthorized) {
 		return (
@@ -140,15 +142,15 @@ export default function DashboardPage() {
 
 	const trendData = data?.trends.data.map((d) => ({
 		name: `${MONTH_SHORT[d.month - 1]} '${String(d.year).slice(2)}`,
-		Income: d.income,
-		Expenses: d.expenses,
+		Income: d.income / 100,
+		Expenses: d.expenses / 100,
 	})) ?? [];
 
 	return (
 		<PageTransition>
 			<div className="px-4 py-6 md:px-6 max-w-7xl mx-auto">
 				{/* Header */}
-				<div className="flex items-center justify-between mb-8">
+				<div className="flex flex-col gap-2 mb-8 md:flex-row md:items-center md:justify-between">
 					<div>
 						<h1 className="text-2xl font-bold text-fg">
 							<Suspense fallback="Good morning">
@@ -200,7 +202,7 @@ export default function DashboardPage() {
 									<YAxis tick={{ fontSize: 10, fill: "var(--color-fg-muted)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${currencySymbol}${(v / 1000).toFixed(0)}k`} width={44} />
 									<Tooltip
 										contentStyle={{ backgroundColor: "var(--color-bg-2)", border: "1px solid var(--color-border)", borderRadius: "12px", fontSize: "12px", color: "var(--color-fg)" }}
-										formatter={(value) => formatCurrency(Number(value))}
+										formatter={(value) => formatCurrency(Number(value) * 100)}
 										cursor={false}
 									/>
 									<Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "12px" }} />

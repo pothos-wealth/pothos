@@ -34,7 +34,7 @@ export function LandingNav() {
                 <div className="flex items-center gap-4">
                     <ThemeToggle />
                     {user === 'loading' ? null : user ? (
-                        <Link href="/dashboard" className="w-8 h-8 rounded-full bg-accent-light text-primary font-semibold text-sm flex items-center justify-center uppercase hover:bg-accent transition-colors duration-200">
+                        <Link href="/settings" className="w-8 h-8 rounded-full bg-accent-light text-primary font-semibold text-sm flex items-center justify-center uppercase hover:bg-accent transition-colors duration-200">
                             {user.email[0]}
                         </Link>
                     ) : (
