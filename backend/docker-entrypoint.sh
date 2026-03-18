@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+echo "Ensuring data directory is writable..."
+chmod 755 /app/data
+
 echo "Running migrations..."
 node dist/db/migrate.js
 
