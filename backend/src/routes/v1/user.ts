@@ -13,10 +13,11 @@ export async function userRoutes(app: FastifyInstance) {
 	// ─── Get Current User ─────────────────────────────────────────────────────
 
 	app.get("/user/me", { preHandler: authenticate }, async (request, reply) => {
-		const user = await db
+		const user = db
 			.select({
 				id: users.id,
 				email: users.email,
+				isSuperadmin: users.isSuperadmin,
 				createdAt: users.createdAt,
 				updatedAt: users.updatedAt,
 			})
@@ -34,7 +35,7 @@ export async function userRoutes(app: FastifyInstance) {
 	// ─── Get User Settings ────────────────────────────────────────────────────
 
 	app.get("/user/settings", { preHandler: authenticate }, async (request, reply) => {
-		const settings = await db
+		const settings = db
 			.select()
 			.from(userSettings)
 			.where(eq(userSettings.userId, request.user.id))

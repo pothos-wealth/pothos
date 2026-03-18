@@ -17,13 +17,14 @@ Enums are implemented as Drizzle `text` columns with an `enum` option. SQLite st
 
 ### `users`
 
-| Column        | Type    | Notes             |
-| ------------- | ------- | ----------------- |
-| id            | text    | nanoid, PK        |
-| email         | text    | unique, lowercase |
-| password_hash | text    | bcrypt            |
-| created_at    | integer | Unix timestamp    |
-| updated_at    | integer | Unix timestamp    |
+| Column         | Type    | Notes                                        |
+| -------------- | ------- | -------------------------------------------- |
+| id             | text    | nanoid, PK                                   |
+| email          | text    | unique, lowercase                            |
+| password_hash  | text    | bcrypt                                       |
+| is_superadmin  | integer | boolean, default false. Set via SUPERADMIN_EMAIL env var on startup |
+| created_at     | integer | Unix timestamp                               |
+| updated_at     | integer | Unix timestamp                               |
 
 ### `user_settings`
 

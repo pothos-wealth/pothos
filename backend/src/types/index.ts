@@ -17,11 +17,33 @@ export type PendingMessageSource = z.infer<typeof PendingMessageSource>;
 export const UserSchema = z.object({
 	id: z.string(),
 	email: z.string().email(),
+	isSuperadmin: z.boolean(),
 	createdAt: z.number().int(),
 	updatedAt: z.number().int(),
 });
 
 export type UserSchema = z.infer<typeof UserSchema>;
+
+// ─── Admin ────────────────────────────────────────────────────────────────────
+
+export const AdminUserSchema = z.object({
+	id: z.string(),
+	email: z.string(),
+	createdAt: z.number().int(),
+	isSuperadmin: z.boolean(),
+	currency: z.string().nullable(),
+	accountCount: z.number().int(),
+	transactionCount: z.number().int(),
+	activeSessionCount: z.number().int(),
+});
+export type AdminUser = z.infer<typeof AdminUserSchema>;
+
+export const AdminStatsSchema = z.object({
+	dbSizeBytes: z.number().int(),
+	totalUsers: z.number().int(),
+	totalTransactions: z.number().int(),
+});
+export type AdminStats = z.infer<typeof AdminStatsSchema>;
 
 // ─── User Settings ────────────────────────────────────────────────────────────
 

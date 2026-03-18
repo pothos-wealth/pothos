@@ -86,8 +86,33 @@ export interface TrendsReport {
 export interface User {
     id: string
     email: string
+    isSuperadmin: boolean
     createdAt: number
     updatedAt: number
+}
+
+export interface AdminUser {
+    id: string
+    email: string
+    createdAt: number
+    isSuperadmin: boolean
+    currency: string | null
+    accountCount: number
+    transactionCount: number
+    activeSessionCount: number
+}
+
+export interface AdminSession {
+    id: string
+    userId: string
+    expiresAt: number
+    createdAt: number
+}
+
+export interface AdminStats {
+    dbSizeBytes: number
+    totalUsers: number
+    totalTransactions: number
 }
 
 export interface UserSettings {
