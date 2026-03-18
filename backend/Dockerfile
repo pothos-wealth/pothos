@@ -25,12 +25,12 @@ RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
 COPY drizzle ./drizzle
 
+RUN apk add --no-cache su-exec
+
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 
-RUN mkdir -p /app/data && chown -R node:node /app
-
-USER node
+RUN mkdir -p /app/data
 
 EXPOSE 3001
 
