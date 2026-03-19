@@ -33,16 +33,29 @@ interface TransferForm {
     description: string
 }
 
+function localDateISO(d: Date): string {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+}
+
 function todayISO() {
-    return new Date().toISOString().slice(0, 10)
+    return localDateISO(new Date())
+}
+
+function firstOfMonthISO() {
+    const d = new Date()
+    return localDateISO(new Date(d.getFullYear(), d.getMonth(), 1))
 }
 
 function toUnix(dateStr: string) {
-    return Math.floor(new Date(dateStr).getTime() / 1000)
+    // No timezone suffix → parsed as local midnight, not UTC midnight
+    return Math.floor(new Date(`${dateStr}T00:00:00`).getTime() / 1000)
 }
 
 function fromUnix(ts: number) {
-    return new Date(ts * 1000).toISOString().slice(0, 10)
+    return localDateISO(new Date(ts * 1000))
 }
 
 export default function TransactionsPage() {
@@ -59,8 +72,8 @@ export default function TransactionsPage() {
     const [filterAccount, setFilterAccount] = useState('')
     const [filterCategory, setFilterCategory] = useState('')
     const [filterType, setFilterType] = useState('')
-    const [filterStart, setFilterStart] = useState('')
-    const [filterEnd, setFilterEnd] = useState('')
+    const [filterStart, setFilterStart] = useState(firstOfMonthISO)
+    const [filterEnd, setFilterEnd] = useState(todayISO)
 
     // Add modal
     const [addOpen, setAddOpen] = useState(false)
