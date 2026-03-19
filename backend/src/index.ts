@@ -15,6 +15,11 @@ import { db } from "./db/index.js";
 import { sessions, users } from "./db/schema.js";
 import { lt, eq, ne, and } from "drizzle-orm";
 import { adminRoutes } from "./routes/v1/admin.js";
+import { emailRoutes } from "./routes/v1/email.js";
+import { llmRoutes } from "./routes/v1/llm.js";
+import { parsedTransactionRoutes } from "./routes/v1/parsedTransactions.js";
+import { parseQueueRoutes } from "./routes/v1/parseQueue.js";
+import { validateEncryptionKey } from "./services/crypto.js";
 
 dotenv.config();
 
@@ -47,6 +52,8 @@ if (!sessionSecret) {
 	throw new Error("SESSION_SECRET environment variable is required");
 }
 
+validateEncryptionKey();
+
 await app.register(cookie, {
 	secret: sessionSecret,
 });
@@ -70,6 +77,10 @@ await app.register(transactionRoutes, { prefix: "/api/v1" });
 await app.register(budgetRoutes, { prefix: "/api/v1" });
 await app.register(reportRoutes, { prefix: "/api/v1" });
 await app.register(adminRoutes, { prefix: "/api/v1" });
+await app.register(emailRoutes, { prefix: "/api/v1" });
+await app.register(llmRoutes, { prefix: "/api/v1" });
+await app.register(parsedTransactionRoutes, { prefix: "/api/v1" });
+await app.register(parseQueueRoutes, { prefix: "/api/v1" });
 
 // ─── Global Error Handler ─────────────────────────────────────────────────────
 

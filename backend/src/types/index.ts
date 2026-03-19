@@ -5,7 +5,7 @@ import { z } from "zod";
 export const TransactionType = z.enum(["income", "expense", "transfer"]);
 export const CategoryType = z.enum(["expense", "income", "neutral"]);
 export const PendingMessageStatus = z.enum(["pending", "processed", "failed"]);
-export const PendingMessageSource = z.enum(["gmail"]);
+export const PendingMessageSource = z.enum(["imap"]);
 
 export type TransactionType = z.infer<typeof TransactionType>;
 export type CategoryType = z.infer<typeof CategoryType>;
@@ -103,7 +103,8 @@ export const TransactionSchema = z.object({
 	userId: z.string(),
 	accountId: z.string(),
 	categoryId: z.string().nullable(),
-	transferId: z.string().nullable(),
+	transferAccountId: z.string().nullable(),
+	transferTransactionId: z.string().nullable(),
 	type: TransactionType,
 	amount: z.number().int().positive().max(1_000_000_000),
 	date: z.number().int(),

@@ -122,3 +122,75 @@ export interface UserSettings {
     createdAt: number
     updatedAt: number
 }
+
+export interface ImapSettings {
+    id: string
+    userId: string
+    email: string
+    host: string
+    port: number
+    mailbox: string
+    isActive: boolean
+    lastPolledAt: number | null
+    createdAt: number
+    updatedAt: number
+}
+
+export interface EmailStatus {
+    isConfigured: boolean
+    isActive: boolean
+    lastPolledAt: number | null
+    pendingCount: number
+    pendingReviewCount: number
+}
+
+export interface PendingMessage {
+    id: string
+    userId: string
+    rawContent: string
+    subject: string | null
+    source: 'imap'
+    status: 'pending' | 'processed' | 'failed'
+    error: string | null
+    createdAt: number
+    updatedAt: number
+}
+
+export interface LlmSettings {
+    id: string
+    userId: string
+    provider: 'openai' | 'anthropic' | 'local'
+    apiKey: string | null
+    model: string
+    createdAt: number
+    updatedAt: number
+}
+
+export interface ParsedTransaction {
+    id: string
+    userId: string
+    pendingMessageId: string | null
+    accountId: string | null
+    categoryId: string | null
+    type: 'income' | 'expense'
+    amount: number
+    date: number
+    description: string
+    notes: string | null
+    status: 'pending_review' | 'approved' | 'rejected'
+    accountName: string | null
+    categoryName: string | null
+    emailSubject: string | null
+    createdAt: number
+    updatedAt: number
+}
+
+export interface ParsedTransactionList {
+    data: ParsedTransaction[]
+    pagination: {
+        page: number
+        limit: number
+        total: number
+        totalPages: number
+    }
+}

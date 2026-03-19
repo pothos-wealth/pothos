@@ -15,21 +15,22 @@ if [ ! -f ".env" ]; then
     read -p "Email for SSL (e.g., admin@example.com): " EMAIL
 
     SESSION_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+    ENCRYPTION_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
 
     cat > .env <<EOF
 SESSION_SECRET=$SESSION_SECRET
+ENCRYPTION_KEY=$ENCRYPTION_KEY
 SESSION_TTL_DAYS=7
 PORT=3001
 NODE_ENV=production
 DATABASE_URL=/app/data/pothos.db
-LLM_PROVIDER=openai
-LLM_API_KEY=
 NEXT_PUBLIC_API_URL=https://$DOMAIN
 DOMAIN=$DOMAIN
 EMAIL=$EMAIL
 RATE_LIMIT_GLOBAL_MAX=100
 RATE_LIMIT_REGISTER_MAX=5
 RATE_LIMIT_LOGIN_MAX=10
+IMAP_POLL_INTERVAL_MINUTES=15
 EOF
     echo "✓ .env created"
 else

@@ -3,25 +3,27 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { MoreHorizontal, Settings, Tag, ShieldCheck, X } from 'lucide-react'
+import { MoreHorizontal, Settings, Tag, ShieldCheck, X, Inbox } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { navItems } from '@/lib/nav'
 import { api } from '@/lib/api'
+import { useInboxCount } from '@/lib/inbox-count-context'
 import type { User } from '@/lib/types'
 
-// First 4 items only — Categories moves into the More sheet
+// First 4 items only — Categories and Inbox move into the More sheet
 const mainNavItems = navItems.slice(0, 4)
 
 export function BottomNav() {
     const pathname = usePathname()
     const [user, setUser] = useState<User | null>(null)
     const [moreOpen, setMoreOpen] = useState(false)
+    const { inboxCount: pendingCount } = useInboxCount()
 
     useEffect(() => {
         api.user.me().then(setUser).catch(() => {})
     }, [])
 
-    const isMoreActive = pathname === '/categories' || pathname === '/settings' || pathname.startsWith('/admin')
+    const isMoreActive = pathname === '/categories' || pathname === '/settings' || pathname.startsWith('/admin') || pathname === '/inbox'
 
     return (
         <>
@@ -44,11 +46,19 @@ export function BottomNav() {
                     })}
                     <button
                         onClick={() => setMoreOpen(true)}
-                        className={`flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg text-xs font-medium transition-colors duration-150 ${
+                        className={`relative flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg text-xs font-medium transition-colors duration-150 ${
                             isMoreActive ? 'text-primary' : 'text-fg-muted'
                         }`}
                     >
-                        <MoreHorizontal size={20} strokeWidth={isMoreActive ? 2.5 : 2} />
+                        <div className="relative">
+                            <MoreHorizontal size={20} strokeWidth={isMoreActive ? 2.5 : 2} />
+                            {pendingCount > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
+                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
+                                </span>
+                            )}
+                        </div>
                         More
                     </button>
                 </div>
@@ -73,6 +83,26 @@ export function BottomNav() {
                             </button>
                         </div>
                         <div className="px-4 py-3 flex flex-col gap-1 pb-8">
+                            <Link
+                                href="/inbox"
+                                onClick={() => setMoreOpen(false)}
+                                className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors duration-150 ${
+                                    pathname === '/inbox' ? 'bg-accent-light text-primary' : 'text-fg hover:bg-bg-3'
+                                }`}
+                            >
+                                <div className="relative">
+                                    <Inbox size={18} strokeWidth={pathname === '/inbox' ? 2.5 : 2} />
+                                    {pendingCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
+                                    )}
+                                </div>
+                                <span className="flex-1">Inbox</span>
+                                {pendingCount > 0 && (
+                                    <span className="bg-primary text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none">
+                                        {pendingCount > 99 ? '99+' : pendingCount}
+                                    </span>
+                                )}
+                            </Link>
                             <Link
                                 href="/categories"
                                 onClick={() => setMoreOpen(false)}
