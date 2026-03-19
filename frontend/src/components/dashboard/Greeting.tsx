@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 const GREETINGS: Record<string, string[]> = {
     lateNight: [
         "You're up late 🦉",
@@ -63,5 +65,6 @@ function getGreeting() {
 }
 
 export function Greeting() {
-    return <span suppressHydrationWarning>{getGreeting()}</span>
+    const [greeting] = useState(getGreeting)
+    return <span>{greeting}</span>
 }

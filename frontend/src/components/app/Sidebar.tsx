@@ -23,6 +23,7 @@ function NavItem({ label, href, icon: Icon, isActive, badge }: NavItemProps) {
     return (
         <Link
             href={href}
+            onClick={isActive ? (e) => e.preventDefault() : undefined}
             className={`px-3 py-2 rounded-xl text-sm flex items-center gap-3 transition-colors duration-150 ${
                 isActive
                     ? 'bg-accent-light text-primary font-semibold'

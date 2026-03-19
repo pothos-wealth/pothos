@@ -35,6 +35,7 @@ export function BottomNav() {
                             <Link
                                 key={href}
                                 href={href}
+                                onClick={isActive ? (e) => e.preventDefault() : undefined}
                                 className={`flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg text-xs font-medium transition-colors duration-150 ${
                                     isActive ? 'text-primary' : 'text-fg-muted'
                                 }`}

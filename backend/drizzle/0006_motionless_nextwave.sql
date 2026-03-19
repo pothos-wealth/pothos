@@ -1,0 +1,1 @@
+ALTER TABLE `imap_settings` ADD `consecutive_auth_failures` integer DEFAULT 0 NOT NULL;

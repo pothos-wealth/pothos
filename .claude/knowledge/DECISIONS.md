@@ -128,7 +128,7 @@
 
 **Review queue** — All parsed transactions land in `parsed_transactions` with `status="pending_review"`. Users approve/edit/reject before the transaction is created. Non-negotiable: avoids phantom transactions from marketing emails or misparsed amounts.
 
-**Poller isolation** — Each user polled independently via `node-cron`. One user's IMAP failure is logged and swallowed — never affects others. Auto-disables after 3 consecutive auth failures (`is_active = false`). Interval configurable via `IMAP_POLL_INTERVAL_MINUTES` (default 15).
+**Poller isolation** — Each user polled independently via `node-cron`. One user's IMAP failure is logged and swallowed — never affects others. Auto-disables after 3 consecutive auth failures (`is_active = false`). Schedule configurable via `IMAP_POLL_CRON` (default `*/15 * * * *`). `pollAllUsers` uses a `p-limit` bounded concurrency pool (`IMAP_POLL_CONCURRENCY`, default 10) — at most 10 simultaneous IMAP connections; no thundering herd, no sleep-based stagger.
 
 **Pending queue** — DB-backed via SQLite + `node-cron` poller. No Redis or BullMQ needed at this scale.
 
@@ -168,9 +168,9 @@
 
 **Pending message retention** — `failed` status rows (dismissed emails, non-transactions, parse failures) accumulate indefinitely. A scheduled cleanup job to delete `failed` `pending_messages` older than 30 days would keep the DB lean. Deferred — acceptable at current scale.
 
-**Worker heartbeat** — If the worker crashes, `docker-compose` restarts it but `GET /health` still returns 200 in the gap — no visibility for the self-hoster. Planned fix: worker writes a `data/worker.heartbeat` file every poll cycle; health endpoint flags it stale if older than `2 × IMAP_POLL_INTERVAL_MINUTES`. Deferred to v2.
+**Worker heartbeat** — If the worker crashes, `docker-compose` restarts it but `GET /health` still returns 200 in the gap — no visibility for the self-hoster. Planned fix: worker writes a `data/worker.heartbeat` file every poll cycle; health endpoint flags it stale if older than 2× the configured poll interval. Deferred to v2.
 
-**`authFailures` counter is in-memory only** — The 3-strike auto-disable counter in `poller.ts` resets to zero if the worker process restarts, meaning a flaky IMAP connection could take more than 3 real failures to trigger `is_active = false`. Fix: persist a `consecutive_auth_failures` column on `imap_settings`. Deferred to v2.
+**`authFailures` counter is persisted in DB** — The 3-strike auto-disable counter is stored as `consecutive_auth_failures` on `imap_settings` (migration 0006). Incremented via `sql\`consecutive_auth_failures + 1\`` on each IMAP auth failure; reset to 0 on success. Survives worker restarts — a flaky connection will correctly accumulate failures across restarts until `is_active` flips to false.
 
 
 

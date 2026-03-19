@@ -1,16 +1,15 @@
 import cron from "node-cron";
+import pLimit from "p-limit";
 import { db } from "../db/index.js";
 import { imapSettings, llmSettings, accounts, categories, pendingMessages } from "../db/schema.js";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { fetchNewEmails } from "./imap.js";
 import { parseEmail } from "./parser.js";
 import { decrypt } from "./crypto.js";
 
-const POLL_INTERVAL = parseInt(process.env.IMAP_POLL_INTERVAL_MINUTES ?? "15", 10);
-
-// Track consecutive auth failures per user
-const authFailures: Record<string, number> = {};
+const POLL_CRON = process.env.IMAP_POLL_CRON ?? "*/15 * * * *";
 const MAX_AUTH_FAILURES = 3;
+const POLL_CONCURRENCY = parseInt(process.env.IMAP_POLL_CONCURRENCY ?? "10", 10);
 
 export async function pollUser(userId: string): Promise<{ fetched: number; parsed: number }> {
     const settings = db
@@ -43,14 +42,30 @@ export async function pollUser(userId: string): Promise<{ fetched: number; parse
     try {
         const result = await fetchNewEmails(userId, config, settings.lastUid ?? null);
         fetched = result.fetched;
-        authFailures[userId] = 0; // reset on success
+
+        // Reset consecutive failures and update lastPolledAt on success
+        const now = Math.floor(Date.now() / 1000);
+        db.update(imapSettings)
+            .set({ lastPolledAt: now, consecutiveAuthFailures: 0, updatedAt: now })
+            .where(eq(imapSettings.userId, userId))
+            .run();
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`[poller] IMAP error for user ${userId}: ${msg}`);
 
-        authFailures[userId] = (authFailures[userId] ?? 0) + 1;
-        if (authFailures[userId] >= MAX_AUTH_FAILURES) {
-            const now = Math.floor(Date.now() / 1000);
+        const now = Math.floor(Date.now() / 1000);
+        db.update(imapSettings)
+            .set({ consecutiveAuthFailures: sql`consecutive_auth_failures + 1`, updatedAt: now })
+            .where(eq(imapSettings.userId, userId))
+            .run();
+
+        const refreshed = db
+            .select({ failures: imapSettings.consecutiveAuthFailures })
+            .from(imapSettings)
+            .where(eq(imapSettings.userId, userId))
+            .get();
+
+        if ((refreshed?.failures ?? 0) >= MAX_AUTH_FAILURES) {
             db.update(imapSettings)
                 .set({ isActive: false, updatedAt: now })
                 .where(eq(imapSettings.userId, userId))
@@ -59,15 +74,9 @@ export async function pollUser(userId: string): Promise<{ fetched: number; parse
                 `[poller] Disabled IMAP for user ${userId} after ${MAX_AUTH_FAILURES} consecutive failures`
             );
         }
+
         return { fetched: 0, parsed: 0 };
     }
-
-    // Update lastPolledAt
-    const now = Math.floor(Date.now() / 1000);
-    db.update(imapSettings)
-        .set({ lastPolledAt: now, updatedAt: now })
-        .where(eq(imapSettings.userId, userId))
-        .run();
 
     if (fetched === 0) return { fetched: 0, parsed: 0 };
 
@@ -126,26 +135,31 @@ export async function pollAllUsers(): Promise<void> {
         .where(eq(imapSettings.isActive, true))
         .all();
 
-    for (const { userId } of activeSettings) {
-        try {
-            const result = await pollUser(userId);
-            if (result.fetched > 0) {
-                console.info(
-                    `[poller] User ${userId}: fetched=${result.fetched} parsed=${result.parsed}`
-                );
-            }
-        } catch (err) {
-            console.error(
-                `[poller] Unexpected error for user ${userId}: ${err instanceof Error ? err.message : String(err)}`
-            );
-        }
-    }
+    const limit = pLimit(POLL_CONCURRENCY);
+
+    await Promise.all(
+        activeSettings.map(({ userId }) =>
+            limit(async () => {
+                try {
+                    const result = await pollUser(userId);
+                    if (result.fetched > 0) {
+                        console.info(
+                            `[poller] User ${userId}: fetched=${result.fetched} parsed=${result.parsed}`
+                        );
+                    }
+                } catch (err) {
+                    console.error(
+                        `[poller] Unexpected error for user ${userId}: ${err instanceof Error ? err.message : String(err)}`
+                    );
+                }
+            })
+        )
+    );
 }
 
 export function startPoller(): void {
-    const schedule = `*/${POLL_INTERVAL} * * * *`;
-    console.info(`[poller] Starting email poller (every ${POLL_INTERVAL} minutes)`);
-    cron.schedule(schedule, () => {
+    console.info(`[poller] Starting email poller (cron: ${POLL_CRON})`);
+    cron.schedule(POLL_CRON, () => {
         pollAllUsers().catch((err) => {
             console.error("[poller] Poll error:", err);
         });

@@ -180,6 +180,7 @@ export const imapSettings = sqliteTable("imap_settings", {
 	isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
 	lastPolledAt: integer("last_polled_at"),
 	lastUid: text("last_uid"), // cursor: last processed UID, null on first run
+	consecutiveAuthFailures: integer("consecutive_auth_failures").notNull().default(0),
 	createdAt: integer("created_at")
 		.notNull()
 		.default(sql`(unixepoch())`),

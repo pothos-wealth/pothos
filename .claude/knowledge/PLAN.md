@@ -295,7 +295,7 @@ See `FRONTEND.md` for detailed architecture, component structure, and patterns.
 - `backend/src/services/crypto.ts` — AES-256-GCM encrypt/decrypt for IMAP passwords and LLM API keys. `validateEncryptionKey()` called at startup.
 - `backend/src/services/imap.ts` — `testConnection()` and `fetchNewEmails()`. IMAP-agnostic: host/port/mailbox configurable. Uses `imapflow` + `mailparser`. Updates `imap_settings.last_uid` directly after fetch (no separate cursor table).
 - `backend/src/services/parser.ts` — `parseEmail()`: LLM (OpenAI → Anthropic) → regex fallback → mark as `"failed"`. Creates `parsed_transactions` row on success.
-- `backend/src/services/poller.ts` — `node-cron` scheduler, `IMAP_POLL_INTERVAL_MINUTES` configurable. Per-user isolation. Auto-disables after 3 consecutive IMAP auth failures.
+- `backend/src/services/poller.ts` — `node-cron` scheduler, `IMAP_POLL_CRON` configurable (default `*/15 * * * *`). Per-user isolation via `p-limit` bounded concurrency pool (`IMAP_POLL_CONCURRENCY`, default 10). Auth failure counter persisted in DB (`consecutive_auth_failures`). Auto-disables after 3 consecutive IMAP auth failures.
 - `backend/src/routes/v1/email.ts` — `GET/PUT/DELETE /email/settings`, `GET /email/status`, `POST /email/poll`.
 - `backend/src/routes/v1/llm.ts` — `GET/PUT /llm/settings`. API key masked on GET.
 - `backend/src/routes/v1/parsedTransactions.ts` — `GET /parsed-transactions`, `PUT /:id`, `POST /:id/approve`, `POST /:id/reject`.
