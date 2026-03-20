@@ -18,6 +18,8 @@ const config: Config = {
                 border: 'var(--color-border)',
                 expense: 'var(--color-expense)',
                 'expense-light': 'var(--color-expense-light)',
+                income: 'var(--color-income)',
+                'income-light': 'var(--color-income-light)',
             },
             fontFamily: {
                 sans: ['var(--font-jakarta)', 'Plus Jakarta Sans', 'sans-serif'],

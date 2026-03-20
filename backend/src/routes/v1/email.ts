@@ -57,11 +57,15 @@ export async function emailRoutes(app: FastifyInstance) {
         const { email, password, host, port, mailbox, isActive } = result.data;
 
         // Test connection before saving
+        let latestUid: string | null = null;
         try {
-            await testConnection({ host, port, email, password });
+            latestUid = await testConnection({ host, port, email, password, mailbox });
         } catch (err) {
+            request.log.error({ err }, "IMAP connection test failed");
+            const msg = err instanceof Error ? err.message : String(err);
+            const isImapError = /auth|login|credential|connect|refused|timeout|certificate|tls|ssl/i.test(msg);
             return reply.status(400).send({
-                error: `Connection failed: ${err instanceof Error ? err.message : String(err)}`,
+                error: isImapError ? `Connection failed: ${msg}` : "Connection failed. Please check your settings.",
             });
         }
 
@@ -96,6 +100,7 @@ export async function emailRoutes(app: FastifyInstance) {
                     port,
                     mailbox,
                     isActive,
+                    lastUid: latestUid,
                     createdAt: now,
                     updatedAt: now,
                 })

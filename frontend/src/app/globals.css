@@ -42,6 +42,8 @@
         --color-border: #D8D2C4;
         --color-expense: #B85C3E;
         --color-expense-light: #F5EAE6;
+        --color-income: #4A7C3F;
+        --color-income-light: #DDE9CC;
     }
 
     .dark {
@@ -57,6 +59,8 @@
         --color-border: #2A3A1E;
         --color-expense: #D4765A;
         --color-expense-light: #3A1E14;
+        --color-income: #6AA84F;
+        --color-income-light: #263818;
     }
 
     /* Prevent iOS Safari auto-zoom on focus — inputs need ≥16px font size on mobile */

@@ -197,7 +197,7 @@ export default function SettingsPage() {
             if (emailSettings) {
                 setEmailSettings({ ...emailSettings, lastPolledAt: status.lastPolledAt })
             }
-            setInboxCount(status.pendingReviewCount)
+            setInboxCount(status.pendingReviewCount + status.pendingCount)
         } catch (err) {
             setEmailError(err instanceof Error ? err.message : 'Poll failed')
         } finally {
@@ -365,7 +365,12 @@ export default function SettingsPage() {
                             </div>
                         </div>
                         <div className="flex items-center gap-2 pt-1">
-                            <span className={`w-2 h-2 rounded-full ${emailSettings.isActive ? 'bg-income' : 'bg-fg-muted'}`} />
+                            <span className="relative flex h-2 w-2">
+                                {emailSettings.isActive && (
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-income opacity-75" />
+                                )}
+                                <span className={`relative inline-flex rounded-full h-2 w-2 ${emailSettings.isActive ? 'bg-income' : 'bg-fg-muted'}`} />
+                            </span>
                             <span className="text-xs text-fg-muted">{emailSettings.isActive ? 'Active' : 'Disabled'}</span>
                             {emailStatus && (
                                 <span className="ml-auto text-xs text-fg-muted">{emailStatus.pendingCount} pending in queue</span>
