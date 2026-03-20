@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, ArrowLeftRight, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Trash2, ArrowLeftRight, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
@@ -74,6 +74,9 @@ export default function TransactionsPage() {
     const [filterType, setFilterType] = useState('')
     const [filterStart, setFilterStart] = useState(firstOfMonthISO)
     const [filterEnd, setFilterEnd] = useState(todayISO)
+    const [searchInput, setSearchInput] = useState('')
+    const [filterSearch, setFilterSearch] = useState('')
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     // Add modal
     const [addOpen, setAddOpen] = useState(false)
@@ -104,6 +107,7 @@ export default function TransactionsPage() {
         if (filterType) params.type = filterType
         if (filterStart) params.startDate = toUnix(filterStart)
         if (filterEnd) params.endDate = toUnix(filterEnd) + 86399
+        if (filterSearch) params.search = filterSearch
 
         Promise.all([
             api.transactions.list(params),
@@ -113,9 +117,18 @@ export default function TransactionsPage() {
             .then(([txs, accs, cats]) => { setList(txs); setAccounts(accs); setCategories(cats) })
             .catch((err) => { if (err.message === 'UNAUTHORIZED') router.push('/sign-in') })
             .finally(() => setLoading(false))
-    }, [page, filterAccount, filterCategory, filterType, filterStart, filterEnd, router])
+    }, [page, filterAccount, filterCategory, filterType, filterStart, filterEnd, filterSearch, router])
 
     useEffect(() => { load() }, [load])
+
+    useEffect(() => {
+        if (debounceRef.current) clearTimeout(debounceRef.current)
+        debounceRef.current = setTimeout(() => {
+            setFilterSearch(searchInput.trim())
+            setPage(1)
+        }, 300)
+        return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+    }, [searchInput])
 
     function openAdd() {
         const firstAccount = activeAccounts[0]?.id ?? ''
@@ -242,7 +255,18 @@ export default function TransactionsPage() {
             </div>
 
             {/* Filters */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+            <div className="flex flex-col gap-3 mb-6">
+            <div className="relative">
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted pointer-events-none" />
+                <input
+                    type="text"
+                    placeholder="Search by description…"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    className={cn(inputCls, 'w-full pl-8')}
+                />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 <select
                     value={filterAccount}
                     onChange={(e) => { setFilterAccount(e.target.value); setPage(1) }}
@@ -281,6 +305,7 @@ export default function TransactionsPage() {
                     onChange={(e) => { setFilterEnd(e.target.value); setPage(1) }}
                     className={inputCls}
                 />
+            </div>
             </div>
 
             {/* List */}

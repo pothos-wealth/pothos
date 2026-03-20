@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, like } from "drizzle-orm";
 import { z } from "zod";
 import { nanoid } from "nanoid";
 import { db } from "../../db/index.js";
@@ -39,6 +39,7 @@ const listQuerySchema = z.object({
 	type: z.enum(["income", "expense", "transfer"]).optional(),
 	startDate: z.coerce.number().int().optional(),
 	endDate: z.coerce.number().int().optional(),
+	search: z.string().max(100).optional(),
 	page: z.coerce.number().int().min(1).default(1),
 	limit: z.coerce.number().int().min(1).max(100).default(20),
 });
@@ -56,7 +57,7 @@ export async function transactionRoutes(app: FastifyInstance) {
 			});
 		}
 
-		const { accountId, categoryId, type, startDate, endDate, page, limit } = result.data;
+		const { accountId, categoryId, type, startDate, endDate, search, page, limit } = result.data;
 		const offset = (page - 1) * limit;
 
 		const conditions = [eq(transactions.userId, request.user.id)];
@@ -66,6 +67,7 @@ export async function transactionRoutes(app: FastifyInstance) {
 		if (type) conditions.push(eq(transactions.type, type));
 		if (startDate) conditions.push(gte(transactions.date, startDate));
 		if (endDate) conditions.push(lte(transactions.date, endDate));
+		if (search) conditions.push(like(transactions.description, `%${search.trim()}%`));
 
 		const rows = db
 			.select()

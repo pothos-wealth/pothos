@@ -57,8 +57,9 @@ export async function emailRoutes(app: FastifyInstance) {
         const { email, password, host, port, mailbox, isActive } = result.data;
 
         // Test connection before saving
+        let latestUid: string | null = null;
         try {
-            await testConnection({ host, port, email, password });
+            latestUid = await testConnection({ host, port, email, password, mailbox });
         } catch (err) {
             return reply.status(400).send({
                 error: `Connection failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -96,6 +97,7 @@ export async function emailRoutes(app: FastifyInstance) {
                     port,
                     mailbox,
                     isActive,
+                    lastUid: latestUid,
                     createdAt: now,
                     updatedAt: now,
                 })

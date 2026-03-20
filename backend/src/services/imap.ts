@@ -47,10 +47,13 @@ function createClient(config: ImapConfig): ImapFlow {
     });
 }
 
-export async function testConnection(config: Omit<ImapConfig, "mailbox">): Promise<void> {
-    const client = createClient({ ...config, mailbox: "INBOX" });
+export async function testConnection(config: ImapConfig): Promise<string | null> {
+    const client = createClient(config);
     try {
         await client.connect();
+        const status = await client.mailboxStatus(config.mailbox, ["UIDNEXT"]);
+        const uidNext = status.uidNext;
+        return uidNext && uidNext > 1 ? String(uidNext - 1) : null;
     } finally {
         await client.logout().catch(() => {});
     }
