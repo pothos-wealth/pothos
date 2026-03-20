@@ -1,6 +1,7 @@
 'use client'
 
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
+import { api } from '@/lib/api'
 
 interface InboxCountContextType {
     inboxCount: number
@@ -11,6 +12,17 @@ const InboxCountContext = createContext<InboxCountContextType | undefined>(undef
 
 export function InboxCountProvider({ children }: { children: React.ReactNode }) {
     const [inboxCount, setInboxCount] = useState(0)
+
+    useEffect(() => {
+        Promise.all([
+            api.parsedTransactions.list({ status: 'pending_review', page: 1, limit: 1 }),
+            api.parseQueue.list(),
+        ])
+            .then(([ptResult, rawResult]) => {
+                setInboxCount(ptResult.pagination.total + rawResult.length)
+            })
+            .catch(() => {})
+    }, [])
 
     return (
         <InboxCountContext.Provider value={{ inboxCount, setInboxCount }}>
