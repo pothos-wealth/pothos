@@ -62,7 +62,7 @@ Rules:
 - If this is not a bank transaction notification, return {"not_transaction": true}
 
 Email:
-${rawContent.slice(0, 4000)}`;
+${rawContent.slice(0, 10000)}`;
 }
 
 async function parseViaLlm(
