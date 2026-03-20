@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import pLimit from "p-limit";
 import { db } from "../db/index.js";
-import { imapSettings, llmSettings, accounts, categories, pendingMessages } from "../db/schema.js";
+import { imapSettings, llmSettings, accounts, categories, pendingMessages, userSettings } from "../db/schema.js";
 import { eq, and, sql } from "drizzle-orm";
 import { fetchNewEmails } from "./imap.js";
 import { parseEmail } from "./parser.js";
@@ -99,6 +99,13 @@ export async function pollUser(userId: string): Promise<{ fetched: number; parse
         .where(eq(categories.userId, userId))
         .all();
 
+    const userCurrencyRow = db
+        .select({ currency: userSettings.currency })
+        .from(userSettings)
+        .where(eq(userSettings.userId, userId))
+        .get();
+    const currency = userCurrencyRow?.currency ?? "INR";
+
     const llmConfig = {
         provider: llm?.provider ?? "openai",
         apiKey: llm?.apiKey
@@ -116,7 +123,7 @@ export async function pollUser(userId: string): Promise<{ fetched: number; parse
     let parsed = 0;
     for (const msg of pending) {
         try {
-            const didParse = await parseEmail(msg.id, msg.rawContent, userId, userAccounts, userCategories, llmConfig);
+            const didParse = await parseEmail(msg.id, msg.rawContent, userId, userAccounts, userCategories, llmConfig, currency);
             if (didParse) parsed++;
         } catch (err) {
             console.error(

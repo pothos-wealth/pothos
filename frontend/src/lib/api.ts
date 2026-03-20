@@ -179,6 +179,7 @@ export const api = {
             accountId?: string | null
             categoryId?: string | null
             notes?: string | null
+            bypassReview?: boolean
         }) => apiFetch<ParsedTransaction>(`/parse-queue/${id}/submit`, { method: 'POST', body: JSON.stringify(data) }),
         dismiss: (id: string) => apiFetch<void>(`/parse-queue/${id}/dismiss`, { method: 'POST' }),
     },

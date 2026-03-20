@@ -3,7 +3,7 @@ import { z } from "zod";
 import { nanoid } from "nanoid";
 import { eq, and } from "drizzle-orm";
 import { db } from "../../db/index.js";
-import { pendingMessages, parsedTransactions } from "../../db/schema.js";
+import { pendingMessages, parsedTransactions, transactions, accounts } from "../../db/schema.js";
 import { authenticate } from "../../middleware/authenticate.js";
 
 const submitSchema = z.object({
@@ -14,6 +14,7 @@ const submitSchema = z.object({
     accountId: z.string().nullable().optional(),
     categoryId: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
+    bypassReview: z.boolean().optional().default(false),
 });
 
 export async function parseQueueRoutes(app: FastifyInstance) {
@@ -67,9 +68,58 @@ export async function parseQueueRoutes(app: FastifyInstance) {
             return reply.status(409).send({ error: "Message has already been processed" });
         }
 
-        const { type, amount, date, description, accountId, categoryId, notes } = result.data;
+        const { type, amount, date, description, accountId, categoryId, notes, bypassReview } = result.data;
         const now = Math.floor(Date.now() / 1000);
 
+        if (bypassReview) {
+            // Manual parse: user has already verified the data, create transaction directly
+            if (!accountId) {
+                return reply.status(400).send({ error: "An account must be selected" });
+            }
+
+            const account = db
+                .select()
+                .from(accounts)
+                .where(and(eq(accounts.id, accountId), eq(accounts.userId, request.user.id)))
+                .get();
+
+            if (!account) {
+                return reply.status(404).send({ error: "Account not found" });
+            }
+
+            if (!account.isActive) {
+                return reply.status(409).send({ error: "Cannot add transactions to a closed account" });
+            }
+
+            const signedAmount = type === "income" ? amount : -amount;
+
+            const transaction = db
+                .insert(transactions)
+                .values({
+                    id: nanoid(),
+                    userId: request.user.id,
+                    accountId,
+                    categoryId: categoryId ?? null,
+                    type,
+                    amount: signedAmount,
+                    date,
+                    description,
+                    notes: notes ?? null,
+                    createdAt: now,
+                    updatedAt: now,
+                })
+                .returning()
+                .get();
+
+            db.update(pendingMessages)
+                .set({ status: "processed", updatedAt: now })
+                .where(eq(pendingMessages.id, id))
+                .run();
+
+            return reply.status(201).send(transaction);
+        }
+
+        // Automated parse (e.g. MCP): send to review queue
         const pt = db
             .insert(parsedTransactions)
             .values({
@@ -90,7 +140,6 @@ export async function parseQueueRoutes(app: FastifyInstance) {
             .returning()
             .get();
 
-        // Mark pending message as processed
         db.update(pendingMessages)
             .set({ status: "processed", updatedAt: now })
             .where(eq(pendingMessages.id, id))

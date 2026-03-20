@@ -220,7 +220,7 @@ export default function InboxPage() {
         setParseSubmitting(true)
         setParseError('')
         try {
-            const pt = await api.parseQueue.submit(parseItem.id, {
+            await api.parseQueue.submit(parseItem.id, {
                 type: parseForm.type,
                 amount: Math.round(parseFloat(parseForm.amount) * 100),
                 date: toUnix(parseForm.date),
@@ -228,8 +228,8 @@ export default function InboxPage() {
                 accountId: parseForm.accountId || null,
                 categoryId: parseForm.categoryId || null,
                 notes: parseForm.notes || null,
+                bypassReview: true,
             })
-            await api.parsedTransactions.approve(pt.id)
             setParseItem(null)
             fetchData()
             fetchCounts()
@@ -593,7 +593,7 @@ export default function InboxPage() {
                                     disabled={parseSubmitting}
                                     className="ml-auto bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl px-5 py-2.5 text-sm transition-colors duration-150 disabled:opacity-60"
                                 >
-                                    {parseSubmitting ? 'Saving…' : 'Create Transaction →'}
+                                    {parseSubmitting ? 'Saving…' : 'Save Transaction'}
                                 </button>
                             </div>
                         </form>

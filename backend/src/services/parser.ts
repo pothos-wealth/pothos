@@ -36,9 +36,10 @@ interface LlmConfig {
 function buildPrompt(
     rawContent: string,
     userAccounts: UserAccount[],
-    userCategories: UserCategory[]
+    userCategories: UserCategory[],
+    currency: string
 ): string {
-    return `You are a financial transaction parser for an Indian user.
+    return `You are a financial transaction parser. The user's currency is ${currency}.
 User's bank accounts: ${JSON.stringify(userAccounts)}
 Available categories: ${JSON.stringify(userCategories)}
 
@@ -68,9 +69,10 @@ async function parseViaLlm(
     rawContent: string,
     userAccounts: UserAccount[],
     userCategories: UserCategory[],
-    llmConfig: LlmConfig
+    llmConfig: LlmConfig,
+    currency: string
 ): Promise<z.infer<typeof parsedResultSchema> | null> {
-    const prompt = buildPrompt(rawContent, userAccounts, userCategories);
+    const prompt = buildPrompt(rawContent, userAccounts, userCategories, currency);
     let responseText = "";
 
     if (llmConfig.provider === "openai" && llmConfig.apiKey) {
@@ -121,7 +123,8 @@ export async function parseEmail(
     userId: string,
     userAccounts: UserAccount[],
     userCategories: UserCategory[],
-    llmConfig: LlmConfig
+    llmConfig: LlmConfig,
+    currency: string
 ): Promise<boolean> {
     const now = Math.floor(Date.now() / 1000);
 
@@ -131,7 +134,7 @@ export async function parseEmail(
 
     if (cloudLlmConfigured) {
         try {
-            result = await parseViaLlm(rawContent, userAccounts, userCategories, llmConfig);
+            result = await parseViaLlm(rawContent, userAccounts, userCategories, llmConfig, currency);
         } catch {
             // LLM call failed
         }

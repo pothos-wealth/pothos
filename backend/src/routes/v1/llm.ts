@@ -60,8 +60,6 @@ export async function llmRoutes(app: FastifyInstance) {
         const { provider, apiKey, model } = result.data;
         const now = Math.floor(Date.now() / 1000);
 
-        const encryptedKey = apiKey ? encrypt(apiKey) : null;
-
         const existing = db
             .select({ id: llmSettings.id })
             .from(llmSettings)
@@ -69,9 +67,16 @@ export async function llmRoutes(app: FastifyInstance) {
             .get();
 
         if (existing) {
+            // Only update apiKey if explicitly provided; undefined means "keep existing"
+            const updateFields: { provider: string; model: string; updatedAt: number; apiKey?: string | null } =
+                { provider, model, updatedAt: now };
+            if (apiKey !== undefined) {
+                updateFields.apiKey = apiKey ? encrypt(apiKey) : null;
+            }
+
             const updated = db
                 .update(llmSettings)
-                .set({ provider, apiKey: encryptedKey, model, updatedAt: now })
+                .set(updateFields)
                 .where(eq(llmSettings.userId, request.user.id))
                 .returning()
                 .get();
@@ -87,7 +92,7 @@ export async function llmRoutes(app: FastifyInstance) {
                     id: nanoid(),
                     userId: request.user.id,
                     provider,
-                    apiKey: encryptedKey,
+                    apiKey: apiKey ? encrypt(apiKey) : null,
                     model,
                     createdAt: now,
                     updatedAt: now,

@@ -207,7 +207,7 @@ export default function SettingsPage() {
         try {
             const saved = await api.llm.saveSettings({
                 provider: llmProvider,
-                apiKey: llmProvider === 'local' ? null : (llmApiKey || null),
+                apiKey: llmProvider === 'local' ? null : (llmApiKey || undefined),
                 model: llmProvider === 'local' ? 'local' : llmModel,
             })
             setLlmSettings(saved)
