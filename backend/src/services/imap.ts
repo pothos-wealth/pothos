@@ -51,8 +51,8 @@ export async function testConnection(config: ImapConfig): Promise<string | null>
     const client = createClient(config);
     try {
         await client.connect();
-        const status = await client.mailboxStatus(config.mailbox, ["UIDNEXT"]);
-        const uidNext = status.uidNext;
+        const mailbox = await client.mailboxOpen(config.mailbox, { readOnly: true });
+        const uidNext = mailbox.uidNext;
         return uidNext && uidNext > 1 ? String(uidNext - 1) : null;
     } finally {
         await client.logout().catch(() => {});
