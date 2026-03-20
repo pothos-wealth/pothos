@@ -6,15 +6,13 @@ import { pendingMessages, imapSettings } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 
 function htmlToText(html: string): string {
-    return html
-        // Remove <style> and <script> blocks entirely
+    const match = html.match(/<html[^>]*>([\s\S]*?)<\/html>/i);
+    if (!match) return html;
+
+    const inner = match[1]
         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
-        // Block elements → newline
-        .replace(/<\/?(p|div|br|tr|li|h[1-6]|blockquote)[^>]*>/gi, "\n")
-        // Strip remaining tags (preserve <html> and </html> as content-type markers)
-        .replace(/<(?!\/?html\b)[^>]+>/g, " ")
-        // Decode common HTML entities
+        .replace(/<[^>]+>/g, " ")
         .replace(/&amp;/gi, "&")
         .replace(/&lt;/gi, "<")
         .replace(/&gt;/gi, ">")
@@ -22,10 +20,10 @@ function htmlToText(html: string): string {
         .replace(/&#39;/gi, "'")
         .replace(/&nbsp;/gi, " ")
         .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
-        // Collapse whitespace
-        .replace(/[ \t]+/g, " ")
-        .replace(/\n{3,}/g, "\n\n")
+        .replace(/\s+/g, " ")
         .trim();
+
+    return `<html>\n${inner}\n</html>`;
 }
 
 interface ImapConfig {
