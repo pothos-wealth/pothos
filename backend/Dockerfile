@@ -30,6 +30,9 @@ RUN apk add --no-cache su-exec
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 
+COPY docker-worker-entrypoint.sh ./
+RUN chmod +x docker-worker-entrypoint.sh
+
 RUN mkdir -p /app/data && chown -R node:node /app
 
 USER node

@@ -114,11 +114,23 @@
 
 ## Email & Integrations
 
-**Email ingestion** — Gmail only in v1 via IMAP + App Password. No OAuth complexity.
+**Email ingestion** — IMAP-agnostic in v1. Users configure host/port/mailbox directly. Frontend provides presets for Gmail, Outlook, Yahoo, and iCloud, plus a Custom option for any IMAP provider. No OAuth complexity — App Passwords only.
 
-**LLM provider** — Adapter pattern, OpenAI default, user-configurable via env vars. Bring-your-own key.
+**Why IMAP-agnostic** — Binding to Gmail would limit adoption. IMAP is a universal standard; every major email provider supports it. The same polling and parsing logic works for any provider at zero extra cost.
 
-**Pending queue** — DB-backed via SQLite table + poller. No Redis or BullMQ needed at this scale.
+**Cursor per user** — `last_uid` stored directly on `imap_settings` (no separate `imap_cursors` table). Updated after each successful poll to avoid re-parsing already processed emails.
+
+**Credential encryption** — IMAP passwords and LLM API keys are encrypted at rest using AES-256-GCM with a 32-byte `ENCRYPTION_KEY` env var. Key validated at startup — fails fast if missing or wrong length.
+
+**LLM provider** — Per-user adapter pattern. Users bring their own OpenAI or Anthropic API key (stored encrypted). Provider `"local"` skips LLM — emails are left as `"failed"` for the MCP `parse_pending` tool (WS5).
+
+**Parsing** — LLM only (OpenAI or Anthropic). If no API key is configured, LLM fails, or provider is `"local"`, the email is marked `"failed"` — available for manual review in the Inbox or local MCP/Ollama processing. No regex fallback — avoids unreliable auto-entries that the user still has to verify anyway.
+
+**Review queue** — All parsed transactions land in `parsed_transactions` with `status="pending_review"`. Users approve/edit/reject before the transaction is created. Non-negotiable: avoids phantom transactions from marketing emails or misparsed amounts.
+
+**Poller isolation** — Each user polled independently via `node-cron`. One user's IMAP failure is logged and swallowed — never affects others. Auto-disables after 3 consecutive auth failures (`is_active = false`). Schedule configurable via `IMAP_POLL_CRON` (default `*/15 * * * *`). `pollAllUsers` uses a `p-limit` bounded concurrency pool (`IMAP_POLL_CONCURRENCY`, default 10) — at most 10 simultaneous IMAP connections; no thundering herd, no sleep-based stagger.
+
+**Pending queue** — DB-backed via SQLite + `node-cron` poller. No Redis or BullMQ needed at this scale.
 
 **MCP balance query** — Returns per-account breakdown + net worth total. Full context in one query.
 
@@ -148,14 +160,24 @@
 
 **Docker health ordering** — Nginx `depends_on` uses `condition: service_healthy` to wait for backend & frontend before starting. Prevents startup race conditions.
 
+**Worker process isolation** — Email poller runs as a separate `worker` Docker service (same image as `backend`, different entrypoint: `docker-worker-entrypoint.sh` → `dist/worker.js`). Rationale: IMAP connections and LLM calls should not share heap or event loop with HTTP request handling on a 1 vCPU / 1 GB instance. A poller crash no longer takes down the API. Worker `depends_on: backend: service_healthy` so migrations always run before the worker connects to the DB. No health check on the worker (no HTTP port to probe) — `restart: unless-stopped` handles recovery. In dev, run `npm run dev:worker` in a second terminal alongside `npm run dev`; manual poll via `POST /email/poll` still works without the worker running.
+
 ---
 
 ## Deferred to v2
 
+**Pending message retention** — `failed` status rows (dismissed emails, non-transactions, parse failures) accumulate indefinitely. A scheduled cleanup job to delete `failed` `pending_messages` older than 30 days would keep the DB lean. Deferred — acceptable at current scale.
+
+**Worker heartbeat** — If the worker crashes, `docker-compose` restarts it but `GET /health` still returns 200 in the gap — no visibility for the self-hoster. Planned fix: worker writes a `data/worker.heartbeat` file every poll cycle; health endpoint flags it stale if older than 2× the configured poll interval. Deferred to v2.
+
+**`authFailures` counter is persisted in DB** — The 3-strike auto-disable counter is stored as `consecutive_auth_failures` on `imap_settings` (migration 0006). Incremented via `sql\`consecutive_auth_failures + 1\`` on each IMAP auth failure; reset to 0 on success. Survives worker restarts — a flaky connection will correctly accumulate failures across restarts until `is_active` flips to false.
+
+
+
 - CSV import/export
 - Credit card accounts (inverse balance logic adds complexity)
 - Subcategories (flat categories sufficient for v1)
-- Recurring transactions (Gmail parsing covers most recurring expenses)
+- Recurring transactions (email parsing covers most recurring expenses)
 - Budget rollover
 - Budget alerts
 - Multi-user / family
@@ -169,6 +191,6 @@
 
 ## Workstream Order
 
-WS1 → WS2 → WS4 → WS3 → WS5. Frontend before Gmail/MCP — core product usability first.
+WS1 → WS2 → WS4 → WS3 → WS5. Frontend before email ingestion/MCP — core product usability first.
 
-Post-v1: Security hardening (Helmet, advanced monitoring), MCP refinement, Gmail integration, deployment to production.
+Post-v1: Security hardening (Helmet, advanced monitoring), MCP refinement, deployment to production.

@@ -1,0 +1,1898 @@
+openapi: 3.1.0
+info:
+  title: Pothos API
+  description: Self-hostable budget and expense tracking application API.
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session_id
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        details:
+          description: Additional validation details
+
+    Pagination:
+      type: object
+      required: [page, limit, total, totalPages]
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    User:
+      type: object
+      required: [id, email, isSuperadmin, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          description: nanoid
+        email:
+          type: string
+        isSuperadmin:
+          type: boolean
+        createdAt:
+          type: integer
+          description: Unix timestamp (seconds)
+        updatedAt:
+          type: integer
+
+    UserSettings:
+      type: object
+      required: [id, userId, currency, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        currency:
+          type: string
+          description: ISO 4217 code (e.g. "INR", "USD")
+          minLength: 3
+          maxLength: 3
+        createdAt:
+          type: integer
+        updatedAt:
+          type: integer
+
+    Account:
+      type: object
+      required: [id, userId, name, type, initialBalance, isActive, balance, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          description: Free-form (e.g. "checking", "savings", "cash")
+        initialBalance:
+          type: integer
+          description: Minor units (paise/cents)
+        isActive:
+          type: boolean
+        balance:
+          type: integer
+          description: Derived — initialBalance + SUM(transactions)
+        createdAt:
+          type: integer
+        updatedAt:
+          type: integer
+
+    Category:
+      type: object
+      required: [id, name, type, createdAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: [string, "null"]
+          description: null for global default categories
+        name:
+          type: string
+        icon:
+          type: [string, "null"]
+          description: Emoji
+        color:
+          type: [string, "null"]
+          description: Hex color (#RRGGBB)
+        type:
+          type: string
+          enum: [expense, income, neutral]
+        createdAt:
+          type: integer
+
+    Transaction:
+      type: object
+      required: [id, userId, accountId, type, amount, date, description, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        accountId:
+          type: string
+        categoryId:
+          type: [string, "null"]
+        transferAccountId:
+          type: [string, "null"]
+        transferTransactionId:
+          type: [string, "null"]
+        type:
+          type: string
+          enum: [income, expense, transfer]
+        amount:
+          type: integer
+          description: Signed minor units. Positive = inflow, negative = outflow.
+        date:
+          type: integer
+          description: Unix timestamp (seconds)
+        description:
+          type: string
+        notes:
+          type: [string, "null"]
+        createdAt:
+          type: integer
+        updatedAt:
+          type: integer
+
+    Budget:
+      type: object
+      required: [id, userId, categoryId, amount, month, year, isRecurring, spent, remaining, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        categoryId:
+          type: string
+        amount:
+          type: integer
+          description: Budget limit in minor units (always positive)
+        month:
+          type: integer
+          minimum: 1
+          maximum: 12
+        year:
+          type: integer
+        isRecurring:
+          type: boolean
+        spent:
+          type: integer
+          description: Calculated from expense transactions in the month (positive)
+        remaining:
+          type: integer
+          description: amount - spent
+        createdAt:
+          type: integer
+        updatedAt:
+          type: integer
+
+    ImapSettings:
+      type: object
+      required: [id, userId, email, host, port, mailbox, isActive, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        email:
+          type: string
+        host:
+          type: string
+        port:
+          type: integer
+        mailbox:
+          type: string
+        isActive:
+          type: boolean
+        lastPolledAt:
+          type: [integer, "null"]
+        createdAt:
+          type: integer
+        updatedAt:
+          type: integer
+
+    LlmSettings:
+      type: object
+      required: [id, userId, provider, model, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        provider:
+          type: string
+          enum: [openai, anthropic, local]
+        apiKey:
+          type: [string, "null"]
+          description: Masked as "••••LAST4", never plaintext
+        model:
+          type: string
+        createdAt:
+          type: integer
+        updatedAt:
+          type: integer
+
+    ParsedTransaction:
+      type: object
+      required: [id, userId, type, amount, date, description, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        pendingMessageId:
+          type: [string, "null"]
+        accountId:
+          type: [string, "null"]
+        categoryId:
+          type: [string, "null"]
+        type:
+          type: string
+          enum: [income, expense]
+        amount:
+          type: integer
+          description: Positive integer. Sign applied when approved.
+        date:
+          type: integer
+        description:
+          type: string
+        notes:
+          type: [string, "null"]
+        status:
+          type: string
+          enum: [pending_review, approved, rejected]
+        accountName:
+          type: [string, "null"]
+        categoryName:
+          type: [string, "null"]
+        emailSubject:
+          type: [string, "null"]
+        createdAt:
+          type: integer
+        updatedAt:
+          type: integer
+
+    PendingMessage:
+      type: object
+      required: [id, userId, rawContent, source, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        rawContent:
+          type: string
+        subject:
+          type: [string, "null"]
+        source:
+          type: string
+          enum: [imap]
+        status:
+          type: string
+          enum: [pending, processed, failed]
+        error:
+          type: [string, "null"]
+        createdAt:
+          type: integer
+        updatedAt:
+          type: integer
+
+security:
+  - sessionCookie: []
+
+paths:
+  # ── Health ────────────────────────────────────────────────────────────────
+
+  /health:
+    get:
+      summary: Health check
+      security: []
+      tags: [Health]
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, timestamp, database]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  timestamp:
+                    type: integer
+                  database:
+                    type: string
+                    enum: [connected]
+        "503":
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [error]
+                  timestamp:
+                    type: integer
+                  database:
+                    type: string
+                    enum: [disconnected]
+                  message:
+                    type: string
+
+  # ── Auth ──────────────────────────────────────────────────────────────────
+
+  /auth/register:
+    post:
+      summary: Register a new account
+      security: []
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                  description: Min 8 chars, 1+ uppercase, 1+ number, 1+ special character
+                currency:
+                  type: string
+                  minLength: 3
+                  maxLength: 3
+                  default: INR
+                  description: ISO 4217 code. Immutable after registration.
+      responses:
+        "201":
+          description: Account created. Sets session_id HttpOnly cookie.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Account created successfully
+        "409":
+          description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/login:
+    post:
+      summary: Log in
+      security: []
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Logged in. Sets session_id HttpOnly cookie.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged in successfully
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/logout:
+    post:
+      summary: Log out
+      tags: [Auth]
+      responses:
+        "200":
+          description: Logged out. Clears session_id cookie.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged out successfully
+
+  /auth/change-password:
+    post:
+      summary: Change password (invalidates all sessions)
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 8
+                  description: Min 8 chars, 1+ uppercase, 1+ number, 1+ special character
+      responses:
+        "200":
+          description: Password changed. All sessions invalidated, clears cookie.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password changed successfully
+        "401":
+          description: Incorrect current password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ── User ──────────────────────────────────────────────────────────────────
+
+  /user/me:
+    get:
+      summary: Get current user
+      tags: [User]
+      responses:
+        "200":
+          description: Current authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /user/settings:
+    get:
+      summary: Get user settings
+      tags: [User]
+      responses:
+        "200":
+          description: User settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettings"
+
+    put:
+      summary: Update user settings
+      tags: [User]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currency]
+              properties:
+                currency:
+                  type: string
+                  minLength: 3
+                  maxLength: 3
+                  description: ISO 4217. Returns 400 if attempting to change existing currency.
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettings"
+        "400":
+          description: Currency is immutable after initial set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ── Accounts ──────────────────────────────────────────────────────────────
+
+  /accounts:
+    get:
+      summary: List accounts
+      tags: [Accounts]
+      parameters:
+        - name: includeInactive
+          in: query
+          schema:
+            type: string
+            enum: ["true", "false"]
+          description: Include closed accounts
+      responses:
+        "200":
+          description: List of accounts with derived balances
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Account"
+
+    post:
+      summary: Create account
+      tags: [Accounts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                type:
+                  type: string
+                  minLength: 1
+                initialBalance:
+                  type: integer
+                  default: 0
+                  minimum: -1000000000
+                  maximum: 1000000000
+      responses:
+        "201":
+          description: Created account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+
+  /accounts/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      summary: Get account
+      tags: [Accounts]
+      responses:
+        "200":
+          description: Account with derived balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      summary: Update account
+      tags: [Accounts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                type:
+                  type: string
+                  minLength: 1
+      responses:
+        "200":
+          description: Updated account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      summary: Delete account (only if zero transactions)
+      tags: [Accounts]
+      responses:
+        "204":
+          description: Deleted
+        "409":
+          description: Account has transactions — close instead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /accounts/{id}/close:
+    post:
+      summary: Close account (soft delete, balance must be 0)
+      tags: [Accounts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Closed account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "409":
+          description: Balance is not 0
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /accounts/{id}/reopen:
+    post:
+      summary: Reopen a closed account
+      tags: [Accounts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Reopened account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "409":
+          description: Account is already active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ── Categories ────────────────────────────────────────────────────────────
+
+  /categories:
+    get:
+      summary: List categories (global defaults + user custom)
+      tags: [Categories]
+      responses:
+        "200":
+          description: Categories list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+
+    post:
+      summary: Create custom category
+      tags: [Categories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                icon:
+                  type: string
+                  description: Emoji
+                color:
+                  type: string
+                  pattern: "^#[0-9A-Fa-f]{6}$"
+                  description: Hex color (#RRGGBB)
+                type:
+                  type: string
+                  enum: [expense, income, neutral]
+      responses:
+        "201":
+          description: Created category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+
+  /categories/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    put:
+      summary: Update custom category
+      tags: [Categories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                icon:
+                  type: string
+                color:
+                  type: string
+                  pattern: "^#[0-9A-Fa-f]{6}$"
+                type:
+                  type: string
+                  enum: [expense, income, neutral]
+      responses:
+        "200":
+          description: Updated category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+        "403":
+          description: Cannot edit global default category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      summary: Delete custom category
+      tags: [Categories]
+      responses:
+        "204":
+          description: Deleted
+        "403":
+          description: Cannot delete global default category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Category is referenced by transactions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ── Transactions ──────────────────────────────────────────────────────────
+
+  /transactions:
+    get:
+      summary: List transactions (paginated)
+      tags: [Transactions]
+      parameters:
+        - name: accountId
+          in: query
+          schema:
+            type: string
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [income, expense, transfer]
+        - name: startDate
+          in: query
+          schema:
+            type: integer
+          description: Unix timestamp (seconds)
+        - name: endDate
+          in: query
+          schema:
+            type: integer
+          description: Unix timestamp (seconds)
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Paginated transactions ordered by date descending
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Transaction"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+
+    post:
+      summary: Create income or expense transaction
+      tags: [Transactions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accountId, type, amount, date, description]
+              properties:
+                accountId:
+                  type: string
+                categoryId:
+                  type: [string, "null"]
+                type:
+                  type: string
+                  enum: [income, expense]
+                amount:
+                  type: integer
+                  minimum: 1
+                  maximum: 1000000000
+                  description: Positive integer. Sign applied server-side based on type.
+                date:
+                  type: integer
+                  description: Unix timestamp (seconds)
+                description:
+                  type: string
+                  minLength: 1
+                notes:
+                  type: string
+      responses:
+        "201":
+          description: Created transaction (amount is signed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "404":
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Account is closed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /transactions/transfer:
+    post:
+      summary: Create a transfer between two accounts
+      tags: [Transactions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fromAccountId, toAccountId, amount, date, description]
+              properties:
+                fromAccountId:
+                  type: string
+                toAccountId:
+                  type: string
+                amount:
+                  type: integer
+                  minimum: 1
+                  maximum: 1000000000
+                date:
+                  type: integer
+                description:
+                  type: string
+                  minLength: 1
+                notes:
+                  type: string
+      responses:
+        "201":
+          description: Two linked transaction records (debit + credit)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  debit:
+                    $ref: "#/components/schemas/Transaction"
+                  credit:
+                    $ref: "#/components/schemas/Transaction"
+        "400":
+          description: fromAccountId equals toAccountId
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: One or both accounts not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /transactions/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      summary: Get transaction
+      tags: [Transactions]
+      responses:
+        "200":
+          description: Transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      summary: Update transaction (transfers cannot be edited)
+      tags: [Transactions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                categoryId:
+                  type: [string, "null"]
+                amount:
+                  type: integer
+                  minimum: 1
+                date:
+                  type: integer
+                description:
+                  type: string
+                  minLength: 1
+                notes:
+                  type: [string, "null"]
+      responses:
+        "200":
+          description: Updated transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "409":
+          description: Transfer transactions cannot be edited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      summary: Delete transaction (deletes both sides if transfer)
+      tags: [Transactions]
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ── Budgets ───────────────────────────────────────────────────────────────
+
+  /budgets:
+    get:
+      summary: List budgets with spent/remaining for a month
+      tags: [Budgets]
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+          description: Defaults to current month
+        - name: year
+          in: query
+          schema:
+            type: integer
+          description: Defaults to current year
+      responses:
+        "200":
+          description: Budgets with calculated spent and remaining amounts. Auto-generates recurring budgets for the current month on first view.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Budget"
+
+    post:
+      summary: Create or update (upsert) a budget
+      tags: [Budgets]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [categoryId, amount, month, year]
+              properties:
+                categoryId:
+                  type: string
+                amount:
+                  type: integer
+                  minimum: 1
+                  maximum: 1000000000
+                month:
+                  type: integer
+                  minimum: 1
+                  maximum: 12
+                year:
+                  type: integer
+                  minimum: 2000
+                  maximum: 2100
+                isRecurring:
+                  type: boolean
+                  default: true
+      responses:
+        "201":
+          description: Created budget
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Budget"
+        "200":
+          description: Updated existing budget
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Budget"
+
+  /budgets/{id}:
+    delete:
+      summary: Delete budget
+      tags: [Budgets]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ── Reports ───────────────────────────────────────────────────────────────
+
+  /reports/overview:
+    get:
+      summary: Monthly income, expenses, and net
+      tags: [Reports]
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+          description: Defaults to current month
+        - name: year
+          in: query
+          schema:
+            type: integer
+          description: Defaults to current year
+      responses:
+        "200":
+          description: Monthly overview. Transfers excluded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [month, year, income, expenses, net]
+                properties:
+                  month:
+                    type: integer
+                  year:
+                    type: integer
+                  income:
+                    type: integer
+                    description: Sum of income transactions (positive)
+                  expenses:
+                    type: integer
+                    description: Absolute value of expense transactions
+                  net:
+                    type: integer
+                    description: income - expenses (signed)
+
+  /reports/categories:
+    get:
+      summary: Expense breakdown by category for a month
+      tags: [Reports]
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+        - name: year
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Expenses grouped by category. Transfers excluded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [month, year, data]
+                properties:
+                  month:
+                    type: integer
+                  year:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        categoryId:
+                          type: [string, "null"]
+                        categoryName:
+                          type: string
+                          description: '"Uncategorised" if null'
+                        categoryIcon:
+                          type: [string, "null"]
+                        categoryColor:
+                          type: [string, "null"]
+                        total:
+                          type: integer
+                          description: Absolute value (positive)
+
+  /reports/trends:
+    get:
+      summary: Monthly trends over the last N months
+      tags: [Reports]
+      parameters:
+        - name: months
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 24
+            default: 12
+      responses:
+        "200":
+          description: Monthly income/expense/net going backwards from current month. Zero-transaction months included. Transfers excluded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [months, data]
+                properties:
+                  months:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        month:
+                          type: integer
+                        year:
+                          type: integer
+                        income:
+                          type: integer
+                        expenses:
+                          type: integer
+                        net:
+                          type: integer
+
+  # ── Email Integration ─────────────────────────────────────────────────────
+
+  /email/settings:
+    get:
+      summary: Get IMAP settings
+      tags: [Email]
+      responses:
+        "200":
+          description: IMAP configuration (password not returned)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImapSettings"
+        "404":
+          description: Not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      summary: Create or update IMAP settings
+      tags: [Email]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, host]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 1
+                  description: IMAP app password, encrypted at rest
+                host:
+                  type: string
+                  minLength: 1
+                port:
+                  type: integer
+                  minimum: 1
+                  maximum: 65535
+                  default: 993
+                mailbox:
+                  type: string
+                  default: INBOX
+                isActive:
+                  type: boolean
+                  default: true
+      responses:
+        "201":
+          description: Created IMAP settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImapSettings"
+        "200":
+          description: Updated IMAP settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImapSettings"
+        "400":
+          description: IMAP connection test failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      summary: Delete IMAP settings
+      tags: [Email]
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /email/status:
+    get:
+      summary: Get email integration status and queue counts
+      tags: [Email]
+      responses:
+        "200":
+          description: Status summary
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [isConfigured, isActive, pendingCount, pendingReviewCount]
+                properties:
+                  isConfigured:
+                    type: boolean
+                  isActive:
+                    type: boolean
+                  lastPolledAt:
+                    type: [integer, "null"]
+                  pendingCount:
+                    type: integer
+                    description: pending_messages with status=pending
+                  pendingReviewCount:
+                    type: integer
+                    description: parsed_transactions with status=pending_review
+
+  /email/poll:
+    post:
+      summary: Manually trigger an IMAP poll
+      tags: [Email]
+      responses:
+        "200":
+          description: Poll results
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [fetched, parsed, failed]
+                properties:
+                  fetched:
+                    type: integer
+                  parsed:
+                    type: integer
+                  failed:
+                    type: integer
+        "400":
+          description: Email integration not configured or disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ── LLM Settings ──────────────────────────────────────────────────────────
+
+  /llm/settings:
+    get:
+      summary: Get LLM settings
+      tags: [LLM]
+      responses:
+        "200":
+          description: LLM configuration (API key masked)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LlmSettings"
+        "404":
+          description: Not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      summary: Create or update LLM settings
+      tags: [LLM]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider, model]
+              properties:
+                provider:
+                  type: string
+                  enum: [openai, anthropic, local]
+                apiKey:
+                  type: [string, "null"]
+                  description: Not required for provider=local. Encrypted at rest.
+                model:
+                  type: string
+                  minLength: 1
+      responses:
+        "201":
+          description: Created LLM settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LlmSettings"
+        "200":
+          description: Updated LLM settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LlmSettings"
+
+  # ── Parsed Transactions (Review Queue) ────────────────────────────────────
+
+  /parsed-transactions:
+    get:
+      summary: List parsed transactions (review queue)
+      tags: [ParsedTransactions]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending_review, approved, rejected]
+            default: pending_review
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Paginated parsed transactions with joined account/category/email names
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ParsedTransaction"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+
+  /parsed-transactions/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    put:
+      summary: Update a pending parsed transaction
+      tags: [ParsedTransactions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [income, expense]
+                amount:
+                  type: integer
+                  minimum: 1
+                date:
+                  type: integer
+                description:
+                  type: string
+                  minLength: 1
+                accountId:
+                  type: [string, "null"]
+                categoryId:
+                  type: [string, "null"]
+                notes:
+                  type: [string, "null"]
+      responses:
+        "200":
+          description: Updated parsed transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParsedTransaction"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Not in pending_review status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /parsed-transactions/{id}/approve:
+    post:
+      summary: Approve parsed transaction (creates actual transaction)
+      tags: [ParsedTransactions]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Created transaction. accountId must be set before approving.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: accountId not set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found or account not found/active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Already approved or rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /parsed-transactions/{id}/reject:
+    post:
+      summary: Reject parsed transaction
+      tags: [ParsedTransactions]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Rejected
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Already approved or rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ── Parse Queue (MCP / Local LLM) ─────────────────────────────────────────
+
+  /parse-queue:
+    get:
+      summary: List raw pending emails for local LLM processing
+      tags: [ParseQueue]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, processed, failed]
+            default: pending
+      responses:
+        "200":
+          description: Pending messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PendingMessage"
+
+  /parse-queue/{id}/submit:
+    post:
+      summary: Submit a locally parsed result to the review queue
+      tags: [ParseQueue]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: pending_message id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, amount, date, description]
+              properties:
+                type:
+                  type: string
+                  enum: [income, expense]
+                amount:
+                  type: integer
+                  minimum: 1
+                date:
+                  type: integer
+                description:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                accountId:
+                  type: [string, "null"]
+                categoryId:
+                  type: [string, "null"]
+                notes:
+                  type: [string, "null"]
+      responses:
+        "201":
+          description: Parsed transaction created in review queue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParsedTransaction"
+        "404":
+          description: Pending message not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Message already processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /parse-queue/{id}/dismiss:
+    post:
+      summary: Dismiss a pending message (marks as failed)
+      tags: [ParseQueue]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Dismissed
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ── Admin ─────────────────────────────────────────────────────────────────
+
+  /admin/stats:
+    get:
+      summary: Instance statistics (superadmin only)
+      tags: [Admin]
+      responses:
+        "200":
+          description: Instance stats
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [dbSizeBytes, totalUsers, totalTransactions]
+                properties:
+                  dbSizeBytes:
+                    type: integer
+                  totalUsers:
+                    type: integer
+                  totalTransactions:
+                    type: integer
+        "403":
+          description: Not superadmin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /admin/users:
+    get:
+      summary: List all users (superadmin only)
+      tags: [Admin]
+      responses:
+        "200":
+          description: Users with account/transaction counts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    email:
+                      type: string
+                    createdAt:
+                      type: integer
+                    isSuperadmin:
+                      type: boolean
+                    currency:
+                      type: [string, "null"]
+                    accountCount:
+                      type: integer
+                    transactionCount:
+                      type: integer
+                    activeSessionCount:
+                      type: integer
+
+  /admin/users/{id}:
+    delete:
+      summary: Delete a user (superadmin only)
+      tags: [Admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+        "403":
+          description: Cannot delete own account or another superadmin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /admin/users/{id}/sessions:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      summary: List active sessions for a user (superadmin only)
+      tags: [Admin]
+      responses:
+        "200":
+          description: Non-expired sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    userId:
+                      type: string
+                    expiresAt:
+                      type: integer
+                    createdAt:
+                      type: integer
+
+    delete:
+      summary: Revoke all sessions for a user (superadmin only)
+      tags: [Admin]
+      responses:
+        "204":
+          description: All sessions revoked
+
+  /admin/users/{id}/sessions/{sessionId}:
+    delete:
+      summary: Revoke a specific session (superadmin only)
+      tags: [Admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Session revoked
+        "400":
+          description: Session does not belong to this user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+tags:
+  - name: Health
+    description: Service health check
+  - name: Auth
+    description: Registration, login, logout, password management
+  - name: User
+    description: Current user profile and settings
+  - name: Accounts
+    description: Bank/wallet accounts
+  - name: Categories
+    description: Transaction categories
+  - name: Transactions
+    description: Income, expense, and transfer transactions
+  - name: Budgets
+    description: Monthly budgets per category
+  - name: Reports
+    description: Spending overview, category breakdown, and trends
+  - name: Email
+    description: IMAP email integration for automatic transaction parsing
+  - name: LLM
+    description: LLM provider configuration for email parsing
+  - name: ParsedTransactions
+    description: Review queue for LLM-parsed transactions
+  - name: ParseQueue
+    description: Raw pending message queue for local LLM / MCP processing
+  - name: Admin
+    description: Superadmin-only instance management

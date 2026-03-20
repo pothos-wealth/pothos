@@ -8,6 +8,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { PlantIcon } from '@/components/ui/PlantIcon'
 import { navItems } from '@/lib/nav'
 import { api } from '@/lib/api'
+import { useInboxCount } from '@/lib/inbox-count-context'
 import type { User } from '@/lib/types'
 
 interface NavItemProps {
@@ -15,12 +16,14 @@ interface NavItemProps {
     href: string
     icon: React.ElementType
     isActive: boolean
+    badge?: number
 }
 
-function NavItem({ label, href, icon: Icon, isActive }: NavItemProps) {
+function NavItem({ label, href, icon: Icon, isActive, badge }: NavItemProps) {
     return (
         <Link
             href={href}
+            onClick={isActive ? (e) => e.preventDefault() : undefined}
             className={`px-3 py-2 rounded-xl text-sm flex items-center gap-3 transition-colors duration-150 ${
                 isActive
                     ? 'bg-accent-light text-primary font-semibold'
@@ -28,7 +31,13 @@ function NavItem({ label, href, icon: Icon, isActive }: NavItemProps) {
             }`}
         >
             <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-            {label}
+            <span className="flex-1">{label}</span>
+            {badge != null && badge > 0 && (
+                <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
+                </span>
+            )}
         </Link>
     )
 }
@@ -36,7 +45,11 @@ function NavItem({ label, href, icon: Icon, isActive }: NavItemProps) {
 export function Sidebar() {
     const pathname = usePathname()
     const [user, setUser] = useState<User | null>(null)
-    useEffect(() => { api.user.me().then(setUser).catch(() => {}) }, [])
+    const { inboxCount } = useInboxCount()
+
+    useEffect(() => {
+        api.user.me().then(setUser).catch(() => {})
+    }, [])
 
     return (
         <aside className="hidden md:flex flex-col w-56 shrink-0 h-screen sticky top-0 border-r border-border bg-bg-2">
@@ -55,6 +68,7 @@ export function Sidebar() {
                         href={item.href}
                         icon={item.icon}
                         isActive={pathname === item.href}
+                        badge={item.href === '/inbox' ? inboxCount : undefined}
                     />
                 ))}
                 {user?.isSuperadmin && (

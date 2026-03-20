@@ -150,7 +150,8 @@ export const pendingMessages = sqliteTable("pending_messages", {
 		.notNull()
 		.references(() => users.id, { onDelete: "cascade" }),
 	rawContent: text("raw_content").notNull(),
-	source: text("source", { enum: ["gmail"] }).notNull(),
+	subject: text("subject"),
+	source: text("source", { enum: ["imap"] }).notNull(),
 	status: text("status", { enum: ["pending", "processed", "failed"] })
 		.notNull()
 		.default("pending"),
@@ -163,15 +164,75 @@ export const pendingMessages = sqliteTable("pending_messages", {
 		.default(sql`(unixepoch())`),
 });
 
-// ─── Gmail Cursors ────────────────────────────────────────────────────────────
+// ─── IMAP Settings ────────────────────────────────────────────────────────────
 
-export const gmailCursors = sqliteTable("gmail_cursors", {
+export const imapSettings = sqliteTable("imap_settings", {
 	id: text("id").primaryKey(),
 	userId: text("user_id")
 		.notNull()
 		.unique()
 		.references(() => users.id, { onDelete: "cascade" }),
-	lastUid: text("last_uid").notNull(),
+	email: text("email").notNull(),
+	password: text("password").notNull(), // AES-256-GCM encrypted: "iv:authTag:ciphertext"
+	host: text("host").notNull(),
+	port: integer("port").notNull().default(993),
+	mailbox: text("mailbox").notNull().default("INBOX"),
+	isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+	lastPolledAt: integer("last_polled_at"),
+	lastUid: text("last_uid"), // cursor: last processed UID, null on first run
+	consecutiveAuthFailures: integer("consecutive_auth_failures").notNull().default(0),
+	createdAt: integer("created_at")
+		.notNull()
+		.default(sql`(unixepoch())`),
+	updatedAt: integer("updated_at")
+		.notNull()
+		.default(sql`(unixepoch())`),
+});
+
+// ─── LLM Settings ─────────────────────────────────────────────────────────────
+
+export const llmSettings = sqliteTable("llm_settings", {
+	id: text("id").primaryKey(),
+	userId: text("user_id")
+		.notNull()
+		.unique()
+		.references(() => users.id, { onDelete: "cascade" }),
+	provider: text("provider", { enum: ["openai", "anthropic", "local"] })
+		.notNull()
+		.default("openai"),
+	apiKey: text("api_key"), // AES-256-GCM encrypted, nullable for "local"
+	model: text("model").notNull().default("gpt-4o-mini"),
+	createdAt: integer("created_at")
+		.notNull()
+		.default(sql`(unixepoch())`),
+	updatedAt: integer("updated_at")
+		.notNull()
+		.default(sql`(unixepoch())`),
+});
+
+// ─── Parsed Transactions ──────────────────────────────────────────────────────
+
+export const parsedTransactions = sqliteTable("parsed_transactions", {
+	id: text("id").primaryKey(),
+	userId: text("user_id")
+		.notNull()
+		.references(() => users.id, { onDelete: "cascade" }),
+	pendingMessageId: text("pending_message_id").references(() => pendingMessages.id, {
+		onDelete: "set null",
+	}),
+	accountId: text("account_id").references(() => accounts.id, { onDelete: "set null" }),
+	categoryId: text("category_id").references(() => categories.id, { onDelete: "set null" }),
+	type: text("type", { enum: ["income", "expense"] }).notNull(),
+	amount: integer("amount").notNull(), // always positive, minor units
+	date: integer("date").notNull(),
+	description: text("description").notNull(),
+	notes: text("notes"),
+	status: text("status", { enum: ["pending_review", "approved", "rejected"] })
+		.notNull()
+		.default("pending_review"),
+	createdAt: integer("created_at")
+		.notNull()
+		.default(sql`(unixepoch())`),
 	updatedAt: integer("updated_at")
 		.notNull()
 		.default(sql`(unixepoch())`),
@@ -203,5 +264,11 @@ export type NewBudget = typeof budgets.$inferInsert;
 export type PendingMessage = typeof pendingMessages.$inferSelect;
 export type NewPendingMessage = typeof pendingMessages.$inferInsert;
 
-export type GmailCursor = typeof gmailCursors.$inferSelect;
-export type NewGmailCursor = typeof gmailCursors.$inferInsert;
+export type ImapSettings = typeof imapSettings.$inferSelect;
+export type NewImapSettings = typeof imapSettings.$inferInsert;
+
+export type LlmSettings = typeof llmSettings.$inferSelect;
+export type NewLlmSettings = typeof llmSettings.$inferInsert;
+
+export type ParsedTransaction = typeof parsedTransactions.$inferSelect;
+export type NewParsedTransaction = typeof parsedTransactions.$inferInsert;

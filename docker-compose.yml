@@ -50,6 +50,30 @@ services:
             retries: 3
             start_period: 10s
 
+    worker:
+        image: ghcr.io/pothos-wealth/pothos/backend:latest
+        build:
+            context: ./backend
+            target: production
+        entrypoint: ["./docker-worker-entrypoint.sh"]
+        restart: unless-stopped
+        logging:
+            driver: json-file
+            options:
+                max-size: "10m"
+                max-file: "3"
+        env_file: .env
+        environment:
+            NODE_ENV: production
+            DATABASE_URL: /app/data/pothos.db
+        volumes:
+            - sqlite_data:/app/data
+        networks:
+            - internal
+        depends_on:
+            backend:
+                condition: service_healthy
+
     nginx:
         image: nginx:alpine
         restart: unless-stopped

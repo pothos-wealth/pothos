@@ -10,7 +10,7 @@ Pothos is a self-hostable, open-source budget and expense tracking app for indiv
 
 All pages are built and fully integrated with the backend. Users can sign up, manage accounts, enter transactions with decimal precision, set budgets, and view reports. Currency is selected at signup and displayed correctly throughout the app.
 
-**Next:** Gmail ingestion (WS3) or MCP server (WS5). Recommend starting with Gmail for core product value.
+**Next:** MCP server (WS5) — IMAP email ingestion (WS3) is now complete. Email poller extracted into a dedicated `worker` service (fault isolation from the API process).
 
 ## Progress
 
@@ -30,7 +30,8 @@ All pages are built and fully integrated with the backend. Users can sign up, ma
 | T12 — Reports               | ✅ Complete    |
 | WS4 — Frontend              | ✅ Complete    |
 | Deployment — Production     | ✅ Complete    |
-| WS3 — Gmail Ingestion       | ⬜ Not started |
+| WS3 — Email Ingestion       | ✅ Complete    |
+| Worker extraction           | ✅ Complete    |
 | WS5 — MCP Server            | ⬜ Not started |
 
 ## V1 Feature Scope
@@ -38,7 +39,7 @@ All pages are built and fully integrated with the backend. Users can sign up, ma
 | Feature                              | v1  | Later |
 | ------------------------------------ | --- | ----- |
 | Manual transaction entry             | ✅  |       |
-| Gmail email parsing                  | ✅  |       |
+| IMAP email parsing (any provider)    | ✅  |       |
 | Categories (default + custom)        | ✅  |       |
 | Multiple accounts (free-form type)   | ✅  |       |
 | Account initial balance              | ✅  |       |
@@ -69,7 +70,7 @@ All pages are built and fully integrated with the backend. Users can sign up, ma
 
 ```
 pothos/
-├── backend/            ← Fastify API, SQLite, auth, Gmail ingestion, LLM adapter
+├── backend/            ← Fastify API, SQLite, auth, IMAP email ingestion, LLM adapter
 ├── frontend/           ← Next.js, Tailwind, shadcn/ui
 ├── mcp/                ← MCP server, Ollama integration, parse_pending tool
 ├── docs/               ← Architecture decisions, schema, conventions
@@ -98,7 +99,7 @@ pothos/
 **T2 — DB schema + migrations** `✅ complete`
 
 - Drizzle ORM with better-sqlite3 driver
-- Schema: `users`, `user_settings`, `sessions`, `accounts`, `categories`, `transactions`, `budgets`, `pending_messages`, `gmail_cursors`
+- Schema: `users`, `user_settings`, `sessions`, `accounts`, `categories`, `transactions`, `budgets`, `pending_messages`, `imap_settings`, `llm_settings`, `parsed_transactions`
 - Enums: `transaction_type`, `category_type`, `pending_message_status`, `pending_message_source`
 - First migration + seed script with default categories
 - Auto-creates `data/` directory if it doesn't exist
@@ -283,13 +284,25 @@ See `FRONTEND.md` for detailed architecture, component structure, and patterns.
 
 ---
 
-### WS3 — Gmail Ingestion `⬜ not started`
+### WS3 — Email Ingestion `✅ complete`
 
-**Goal:** IMAP connection, email polling with cursor per user, LLM adapter, pending queue, fallback chain (LLM → regex → pending).
-
-> Tasks TBD — to be planned at start of WS3.
+**Goal:** IMAP connection, email polling with cursor per user, LLM adapter, review queue, fallback chain (LLM → regex → pending).
 
 **Dependencies:** WS2 complete, WS4 complete
+
+#### What was built
+
+- `backend/src/services/crypto.ts` — AES-256-GCM encrypt/decrypt for IMAP passwords and LLM API keys. `validateEncryptionKey()` called at startup.
+- `backend/src/services/imap.ts` — `testConnection()` and `fetchNewEmails()`. IMAP-agnostic: host/port/mailbox configurable. Uses `imapflow` + `mailparser`. Updates `imap_settings.last_uid` directly after fetch (no separate cursor table).
+- `backend/src/services/parser.ts` — `parseEmail()`: LLM (OpenAI → Anthropic) → regex fallback → mark as `"failed"`. Creates `parsed_transactions` row on success.
+- `backend/src/services/poller.ts` — `node-cron` scheduler, `IMAP_POLL_CRON` configurable (default `*/15 * * * *`). Per-user isolation via `p-limit` bounded concurrency pool (`IMAP_POLL_CONCURRENCY`, default 10). Auth failure counter persisted in DB (`consecutive_auth_failures`). Auto-disables after 3 consecutive IMAP auth failures.
+- `backend/src/routes/v1/email.ts` — `GET/PUT/DELETE /email/settings`, `GET /email/status`, `POST /email/poll`.
+- `backend/src/routes/v1/llm.ts` — `GET/PUT /llm/settings`. API key masked on GET.
+- `backend/src/routes/v1/parsedTransactions.ts` — `GET /parsed-transactions`, `PUT /:id`, `POST /:id/approve`, `POST /:id/reject`.
+- `backend/src/routes/v1/parseQueue.ts` — `GET /parse-queue`, `POST /parse-queue/:id/submit` (MCP path for WS5).
+- Frontend `/inbox` page — tabbed review queue (Pending Review / Approved / Rejected). Edit modal, approve (blocked without accountId), reject with confirm dialog.
+- Frontend `/settings` page additions — Email Integration card (provider presets: Gmail, Outlook, Yahoo, iCloud, Custom) and LLM Settings card.
+- Sidebar and BottomNav — pending badge on Inbox nav item showing count of `pending_review` items.
 
 ---
 
@@ -305,31 +318,24 @@ See `FRONTEND.md` for detailed architecture, component structure, and patterns.
 
 ## Recommendations for Next Steps
 
-### WS3 — Gmail Ingestion (Recommended Next)
+### WS5 — MCP Server (Recommended Next)
 
-**Why:** Adds core product value. Manual entry alone limits user adoption. Gmail parsing enables the "set and forget" UX YNAB offers.
+**Why:** WS3 is complete. MCP multiplies the value — natural language queries on top of parsed + manual transactions. The `parse_pending` tool enables local Ollama users to process emails that failed the cloud LLM path.
 
 **Key Design Points:**
-- IMAP connection with App Password (no OAuth in v1)
-- Cursor per user per provider (don't re-parse old emails)
-- Fallback chain: LLM first, regex fallback, pending queue for edge cases
-- Parse results flow back to manual transaction list for review
-- Users control which emails are parsed (avoid over-automation)
+- Thin tool-exposure layer — no business logic, calls backend for everything
+- `parse_pending` tool: polls `GET /api/v1/parse-queue?status=pending`, runs through local Ollama, submits via `POST /api/v1/parse-queue/:id/submit`
+- Balance query: returns per-account breakdown + net worth total
+- No inbound connections required — home PC makes outbound HTTPS calls only
 
-**Estimated scope:** Email polling loop, LLM adapter (OpenAI default, configurable), pending queue processor, Zod schemas for parsed transactions.
+### WS4.1 — Polish & Quality (Optional)
 
-### WS4.1 — Polish & Quality (Optional, Parallel with WS3)
-
-If implementing WS3, consider these low-effort high-value improvements:
+Consider these low-effort high-value improvements:
 - Add toast notifications for action feedback (transaction saved, budget added, etc.)
 - Keyboard shortcuts for common flows (Ctrl+T to add transaction, Ctrl+K for search)
 - Search bar on transactions/categories pages
 - Export current month as PDF (for user records)
 - Undo for destructive actions (delete transaction)
-
-### WS5 — MCP Server (After WS3)
-
-Once Gmail parsing is working, MCP multiplies the value. Natural language queries on top of parsed + manual transactions.
 
 ---
 
@@ -338,7 +344,7 @@ Once Gmail parsing is working, MCP multiplies the value. Natural language querie
 - **Multi-currency per account** — Decided against to avoid transfer complexity. YNAB recommends separate budgets for different currencies anyway.
 - **Credit card accounts** — Requires inverse balance logic (credit limit - balance). Deferred to v2.
 - **Budget rollover** — UI placeholder exists, backend logic deferred.
-- **Recurring transactions** — Gmail parsing covers most recurring expenses. Native support deferred to v2.
-- **CSV import/export** — Deferred to v2 (manual entry + Gmail parsing sufficient for MVP).
+- **Recurring transactions** — Email parsing covers most recurring expenses. Native support deferred to v2.
+- **CSV import/export** — Deferred to v2 (manual entry + email parsing sufficient for MVP).
 - **Bank sync (Plaid)** — Nice-to-have, deferred to v2.
 - **Multi-user / family** — Significant scope increase, deferred to v2.

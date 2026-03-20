@@ -36,6 +36,20 @@
 			"when": 1773760723422,
 			"tag": "0004_add_is_superadmin",
 			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "6",
+			"when": 1773905114096,
+			"tag": "0005_email_ingestion",
+			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "6",
+			"when": 1773929398239,
+			"tag": "0006_add_consecutive_auth_failures",
+			"breakpoints": true
 		}
 	]
 }

@@ -12,6 +12,12 @@ import type {
     AdminUser,
     AdminSession,
     AdminStats,
+    ImapSettings,
+    EmailStatus,
+    LlmSettings,
+    ParsedTransaction,
+    ParsedTransactionList,
+    PendingMessage,
 } from './types'
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
@@ -149,5 +155,48 @@ export const api = {
             apiFetch<void>(`/admin/users/${userId}/sessions/${sessionId}`, { method: 'DELETE' }),
         deleteAllSessions: (userId: string) =>
             apiFetch<void>(`/admin/users/${userId}/sessions`, { method: 'DELETE' }),
+    },
+    email: {
+        getSettings: () => apiFetch<ImapSettings>('/email/settings'),
+        saveSettings: (data: { email: string; password: string; host: string; port: number; mailbox: string; isActive?: boolean }) =>
+            apiFetch<ImapSettings>('/email/settings', { method: 'PUT', body: JSON.stringify(data) }),
+        deleteSettings: () => apiFetch<void>('/email/settings', { method: 'DELETE' }),
+        getStatus: () => apiFetch<EmailStatus>('/email/status'),
+        poll: () => apiFetch<{ fetched: number; parsed: number }>('/email/poll', { method: 'POST' }),
+    },
+    llm: {
+        getSettings: () => apiFetch<LlmSettings>('/llm/settings'),
+        saveSettings: (data: { provider: string; apiKey?: string | null; model: string }) =>
+            apiFetch<LlmSettings>('/llm/settings', { method: 'PUT', body: JSON.stringify(data) }),
+    },
+    parseQueue: {
+        list: () => apiFetch<PendingMessage[]>('/parse-queue'),
+        submit: (id: string, data: {
+            type: 'income' | 'expense'
+            amount: number
+            date: number
+            description: string
+            accountId?: string | null
+            categoryId?: string | null
+            notes?: string | null
+            bypassReview?: boolean
+        }) => apiFetch<ParsedTransaction>(`/parse-queue/${id}/submit`, { method: 'POST', body: JSON.stringify(data) }),
+        dismiss: (id: string) => apiFetch<void>(`/parse-queue/${id}/dismiss`, { method: 'POST' }),
+    },
+    parsedTransactions: {
+        list: (params: { status?: string; page?: number; limit?: number }) => {
+            const qs = new URLSearchParams(
+                Object.entries(params)
+                    .filter(([, v]) => v !== undefined)
+                    .map(([k, v]) => [k, String(v)])
+            ).toString()
+            return apiFetch<ParsedTransactionList>(`/parsed-transactions?${qs}`)
+        },
+        update: (id: string, data: Partial<Pick<ParsedTransaction, 'type' | 'amount' | 'date' | 'description' | 'accountId' | 'categoryId' | 'notes'>>) =>
+            apiFetch<ParsedTransaction>(`/parsed-transactions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+        approve: (id: string) =>
+            apiFetch<Transaction>(`/parsed-transactions/${id}/approve`, { method: 'POST' }),
+        reject: (id: string) =>
+            apiFetch<void>(`/parsed-transactions/${id}/reject`, { method: 'POST' }),
     },
 }
