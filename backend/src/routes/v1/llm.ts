@@ -68,8 +68,7 @@ export async function llmRoutes(app: FastifyInstance) {
 
         if (existing) {
             // Only update apiKey if explicitly provided; undefined means "keep existing"
-            const updateFields: { provider: string; model: string; updatedAt: number; apiKey?: string | null } =
-                { provider, model, updatedAt: now };
+            const updateFields: Partial<typeof llmSettings.$inferInsert> = { provider, model, updatedAt: now };
             if (apiKey !== undefined) {
                 updateFields.apiKey = apiKey ? encrypt(apiKey) : null;
             }
