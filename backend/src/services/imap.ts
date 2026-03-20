@@ -5,6 +5,29 @@ import { db } from "../db/index.js";
 import { pendingMessages, imapSettings } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 
+function htmlToText(html: string): string {
+    return html
+        // Remove <style> and <script> blocks entirely
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+        // Block elements → newline
+        .replace(/<\/?(p|div|br|tr|li|h[1-6]|blockquote)[^>]*>/gi, "\n")
+        // Strip remaining tags (preserve <html> and </html> as content-type markers)
+        .replace(/<(?!\/?html\b)[^>]+>/g, " ")
+        // Decode common HTML entities
+        .replace(/&amp;/gi, "&")
+        .replace(/&lt;/gi, "<")
+        .replace(/&gt;/gi, ">")
+        .replace(/&quot;/gi, "\"")
+        .replace(/&#39;/gi, "'")
+        .replace(/&nbsp;/gi, " ")
+        .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+        // Collapse whitespace
+        .replace(/[ \t]+/g, " ")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+}
+
 interface ImapConfig {
     host: string;
     port: number;
@@ -76,7 +99,11 @@ export async function fetchNewEmails(
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const parsed = await (simpleParser as any)(message.source) as { subject?: string; text?: string; html?: string };
                 const subject = parsed.subject ?? null;
-                const rawContent = parsed.text ?? parsed.html ?? "";
+                const rawContent = parsed.text
+                    ? parsed.text
+                    : parsed.html
+                        ? htmlToText(parsed.html)
+                        : "";
 
                 if (!rawContent.trim()) continue;
 

@@ -453,8 +453,8 @@ export default function InboxPage() {
                             </div>
                             <div className="px-4 py-3 max-h-44 overflow-y-auto">
                                 <p className="text-xs text-fg-muted whitespace-pre-wrap leading-relaxed font-mono">
-                                    {parseItem.rawContent.slice(0, 2000)}
-                                    {parseItem.rawContent.length > 2000 && '\n\n[truncated…]'}
+                                    {parseItem.rawContent.slice(0, 5000)}
+                                    {parseItem.rawContent.length > 5000 && '\n\n[truncated…]'}
                                 </p>
                             </div>
                         </div>

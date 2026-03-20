@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { PageTransition } from '@/components/ui/PageTransition'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { api } from '@/lib/api'
+import { useInboxCount } from '@/lib/inbox-count-context'
 import type { User, UserSettings, ImapSettings, EmailStatus, LlmSettings } from '@/lib/types'
 
 const PASSWORD_RULES = [
@@ -25,6 +26,7 @@ const LLM_MODELS: Record<string, string> = {
 
 export default function SettingsPage() {
     const router = useRouter()
+    const { setInboxCount } = useInboxCount()
     const [user, setUser] = useState<User | null>(null)
     const [settings, setSettings] = useState<UserSettings | null>(null)
     const [loading, setLoading] = useState(true)
@@ -192,6 +194,10 @@ export default function SettingsPage() {
             setEmailSuccess(`Poll complete: ${result.fetched} fetched, ${result.parsed} parsed`)
             const status = await api.email.getStatus()
             setEmailStatus(status)
+            if (emailSettings) {
+                setEmailSettings({ ...emailSettings, lastPolledAt: status.lastPolledAt })
+            }
+            setInboxCount(status.pendingReviewCount)
         } catch (err) {
             setEmailError(err instanceof Error ? err.message : 'Poll failed')
         } finally {
