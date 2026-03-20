@@ -12,8 +12,8 @@ function htmlToText(html: string): string {
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
         // Block elements → newline
         .replace(/<\/?(p|div|br|tr|li|h[1-6]|blockquote)[^>]*>/gi, "\n")
-        // Strip remaining tags
-        .replace(/<[^>]+>/g, " ")
+        // Strip remaining tags (preserve <html> and </html> as content-type markers)
+        .replace(/<(?!\/?html\b)[^>]+>/g, " ")
         // Decode common HTML entities
         .replace(/&amp;/gi, "&")
         .replace(/&lt;/gi, "<")
