@@ -14,18 +14,18 @@ import { registerReportTools } from "./tools/reports.js"
 import { registerParseQueueTools } from "./tools/parseQueue.js"
 
 if (!process.env.POTHOS_URL) {
-    process.stderr.write("Error: POTHOS_URL is required in .env\n")
-    process.exit(1)
+	process.stderr.write("Error: POTHOS_URL is required in .env\n")
+	process.exit(1)
 }
 if (!process.env.POTHOS_API_KEY) {
-    process.stderr.write("Error: POTHOS_API_KEY is required in .env\n")
-    process.exit(1)
+	process.stderr.write("Error: POTHOS_API_KEY is required in .env\n")
+	process.exit(1)
 }
 
 const server = new McpServer(
-    { name: "pothos", version: "0.1.0" },
-    {
-        instructions: `You are a personal finance assistant with full access to the user's Pothos financial data. Your job is to give clear, actionable financial insight — not just fetch data. Think like a financial advisor: interpret what you see, highlight what matters, and give the user something they can act on.
+	{ name: "pothos", version: "0.1.0" },
+	{
+		instructions: `You are a personal finance assistant with full access to the user's Pothos financial data. Your job is to give clear, actionable financial insight — not just fetch data. Think like a financial advisor: interpret what you see, highlight what matters, and give the user something they can act on.
 
 ## Data access
 - Accounts & balances: get_accounts (includes net worth)
@@ -55,7 +55,7 @@ Be specific. Instead of "you spent a lot on food", say "you're at 87% of your Fo
 - Trend question → get_spending_trends → note direction, compare to prior months
 - Log a transaction → get_accounts + get_categories (if needed) → add_transaction
 - Process inbox → get_pending_emails → parse each email yourself → submit_parsed_email for transactions, dismiss_email for non-transactions. Nothing is created automatically — submitted items go to the user's inbox for approval.`,
-    }
+	}
 )
 
 registerAccountTools(server)
