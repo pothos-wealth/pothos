@@ -12,6 +12,7 @@ const createBudgetSchema = z.object({
 	month: z.number().int().min(1).max(12),
 	year: z.number().int().min(2000).max(2100),
 	isRecurring: z.boolean().default(true),
+	isCommitted: z.boolean().default(false),
 });
 
 const listQuerySchema = z.object({
@@ -105,6 +106,7 @@ export async function budgetRoutes(app: FastifyInstance) {
 								month,
 								year,
 								isRecurring: true,
+								isCommitted: source.isCommitted,
 								createdAt: nowTs,
 								updatedAt: nowTs,
 							})
@@ -183,7 +185,7 @@ export async function budgetRoutes(app: FastifyInstance) {
 			});
 		}
 
-		const { categoryId, amount, month, year, isRecurring } = result.data;
+		const { categoryId, amount, month, year, isRecurring, isCommitted } = result.data;
 
 		// Verify category exists and belongs to user or is a global default
 		const category = db
@@ -216,7 +218,7 @@ export async function budgetRoutes(app: FastifyInstance) {
 			// Update existing budget
 			const updated = db
 				.update(budgets)
-				.set({ amount, isRecurring, updatedAt: now })
+				.set({ amount, isRecurring, isCommitted, updatedAt: now })
 				.where(eq(budgets.id, existing.id))
 				.returning()
 				.get();
@@ -235,6 +237,7 @@ export async function budgetRoutes(app: FastifyInstance) {
 				month,
 				year,
 				isRecurring,
+				isCommitted,
 				createdAt: now,
 				updatedAt: now,
 			})

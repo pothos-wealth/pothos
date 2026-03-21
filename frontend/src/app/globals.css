@@ -3,6 +3,12 @@
 @tailwind utilities;
 
 @layer utilities {
+    /* SVGs and their children are never keyboard-navigable — remove focus ring */
+    svg, svg * {
+        outline: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
     .scrollbar-hide {
         scrollbar-width: none;
         -ms-overflow-style: none;
@@ -61,6 +67,21 @@
         --color-expense-light: #3A1E14;
         --color-income: #6AA84F;
         --color-income-light: #263818;
+    }
+
+    /* Custom select arrow — replaces native OS arrow with a consistent chevron */
+    select {
+        -webkit-appearance: none;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7160' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.625rem center;
+        background-size: 0.875rem;
+        padding-right: 1.75rem !important;
+    }
+
+    .dark select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23AABB9A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
     }
 
     /* Prevent iOS Safari auto-zoom on focus — inputs need ≥16px font size on mobile */

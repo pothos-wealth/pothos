@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, Target } from 'lucide-react'
+import { Plus, Pencil, Trash2, Target, Lock } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
@@ -12,12 +12,13 @@ import { PageTransition } from '@/components/ui/PageTransition'
 import { api } from '@/lib/api'
 import { useCurrency } from '@/lib/currency-context'
 import { useCurrencyFormatter } from '@/lib/utils'
-import type { BudgetWithSpent, Category } from '@/lib/types'
+import type { BudgetWithSpent, Category, Account } from '@/lib/types'
 
 interface BudgetForm {
     categoryId: string
     amount: string
     isRecurring: boolean
+    isCommitted: boolean
 }
 
 export default function BudgetsPage() {
@@ -28,10 +29,11 @@ export default function BudgetsPage() {
     const [year, setYear] = useState(() => new Date().getFullYear())
     const [budgets, setBudgets] = useState<BudgetWithSpent[]>([])
     const [categories, setCategories] = useState<Category[]>([])
+    const [accounts, setAccounts] = useState<Account[]>([])
     const [loading, setLoading] = useState(true)
     const [modalOpen, setModalOpen] = useState(false)
     const [editing, setEditing] = useState<BudgetWithSpent | null>(null)
-    const [form, setForm] = useState<BudgetForm>({ categoryId: '', amount: '', isRecurring: true })
+    const [form, setForm] = useState<BudgetForm>({ categoryId: '', amount: '', isRecurring: true, isCommitted: false })
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
     const [pendingDelete, setPendingDelete] = useState<BudgetWithSpent | null>(null)
@@ -41,8 +43,8 @@ export default function BudgetsPage() {
 
     const load = useCallback(() => {
         setLoading(true)
-        Promise.all([api.budgets.list(month, year), api.categories.list()])
-            .then(([b, c]) => { setBudgets(b); setCategories(c) })
+        Promise.all([api.budgets.list(month, year), api.categories.list(), api.accounts.list()])
+            .then(([b, c, a]) => { setBudgets(b); setCategories(c); setAccounts(a) })
             .catch((err) => {
                 if (err.message === 'UNAUTHORIZED') router.push('/sign-in')
             })
@@ -57,6 +59,7 @@ export default function BudgetsPage() {
             categoryId: categoryId ?? (expenseCategories[0]?.id ?? ''),
             amount: '',
             isRecurring: true,
+            isCommitted: false,
         })
         setError('')
         setModalOpen(true)
@@ -64,7 +67,7 @@ export default function BudgetsPage() {
 
     function openEdit(budget: BudgetWithSpent) {
         setEditing(budget)
-        setForm({ categoryId: budget.categoryId, amount: String(budget.amount / 100), isRecurring: budget.isRecurring })
+        setForm({ categoryId: budget.categoryId, amount: String(budget.amount / 100), isRecurring: budget.isRecurring, isCommitted: budget.isCommitted })
         setError('')
         setModalOpen(true)
     }
@@ -84,6 +87,7 @@ export default function BudgetsPage() {
                 month,
                 year,
                 isRecurring: form.isRecurring,
+                isCommitted: form.isCommitted,
             })
             setModalOpen(false)
             load()
@@ -119,6 +123,11 @@ export default function BudgetsPage() {
     // Categories without a budget this month
     const budgetedCategoryIds = new Set(budgets.map((b) => b.categoryId))
     const unbudgetedCategories = expenseCategories.filter((c) => !budgetedCategoryIds.has(c.id))
+
+    // Free to spend summary
+    const totalBalance = accounts.reduce((sum, a) => sum + (a.balance ?? 0), 0)
+    const totalCommitted = budgets.filter((b) => b.isCommitted).reduce((sum, b) => sum + b.amount, 0)
+    const freeToSpend = totalBalance - totalCommitted
 
     if (loading || currencyLoading) {
         return (
@@ -167,6 +176,26 @@ export default function BudgetsPage() {
                 <MonthPicker month={month} year={year} onChange={(m, y) => { setMonth(m); setYear(y) }} />
             </div>
 
+            {/* Free to Spend summary */}
+            {accounts.length > 0 && (
+                <div className="grid grid-cols-3 gap-3 mb-6">
+                    <div className="bg-bg-2 border border-border rounded-xl px-4 py-3">
+                        <p className="text-xs text-fg-muted mb-1">Total Balance</p>
+                        <p className="text-sm font-semibold text-fg">{formatCurrency(totalBalance)}</p>
+                    </div>
+                    <div className="bg-bg-2 border border-border rounded-xl px-4 py-3">
+                        <p className="text-xs text-fg-muted mb-1">Committed</p>
+                        <p className="text-sm font-semibold text-fg">{formatCurrency(totalCommitted)}</p>
+                    </div>
+                    <div className={`border rounded-xl px-4 py-3 ${freeToSpend < 0 ? 'bg-expense-light border-expense' : 'bg-income-light border-income'}`}>
+                        <p className="text-xs text-fg-muted mb-1">Free to Spend</p>
+                        <p className={`text-sm font-semibold ${freeToSpend < 0 ? 'text-expense' : 'text-income'}`}>
+                            {formatCurrency(freeToSpend)}
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Add budget button */}
             {expenseCategories.length > 0 && (
                 <button
@@ -206,6 +235,9 @@ export default function BudgetsPage() {
                                                 <p className="font-medium text-fg text-sm">
                                                     {getCategoryName(budget.categoryId)}
                                                 </p>
+                                                {budget.isCommitted && (
+                                                    <Lock size={11} className="text-fg-muted shrink-0" />
+                                                )}
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 <button
@@ -337,6 +369,16 @@ export default function BudgetsPage() {
                             className="w-4 h-4 rounded accent-primary"
                         />
                         <span className="text-sm text-fg">Repeat every month</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            checked={form.isCommitted}
+                            onChange={(e) => setForm((f) => ({ ...f, isCommitted: e.target.checked }))}
+                            className="w-4 h-4 rounded accent-primary"
+                        />
+                        <span className="text-sm text-fg">Committed expense</span>
                     </label>
 
                     <div className="flex gap-2 mt-1">
