@@ -1,17 +1,17 @@
-import { Card } from "@/components/ui/Card";
-import { useState } from "react";
-import { HelpCircle } from "lucide-react";
+import { Card } from "@/components/ui/Card"
+import { useState } from "react"
+import { HelpCircle } from "lucide-react"
 
 interface StatCardProps {
-	title: string;
-	value: string;
-	trend?: string;
-	positive?: boolean;
-	trendTooltip?: string;
+	title: string
+	value: string
+	trend?: string
+	positive?: boolean
+	trendTooltip?: string
 }
 
 export function StatCard({ title, value, trend, positive, trendTooltip }: StatCardProps) {
-	const [showTooltip, setShowTooltip] = useState(false);
+	const [showTooltip, setShowTooltip] = useState(false)
 
 	return (
 		<Card>
@@ -44,5 +44,5 @@ export function StatCard({ title, value, trend, positive, trendTooltip }: StatCa
 				</div>
 			)}
 		</Card>
-	);
+	)
 }

@@ -1,167 +1,188 @@
-import type { FastifyInstance } from "fastify";
-import { eq, sql, gt, and } from "drizzle-orm";
-import * as fs from "fs";
-import { db } from "../../db/index.js";
-import { users, userSettings, accounts, transactions, sessions } from "../../db/schema.js";
-import { authenticateAdmin } from "../../middleware/authenticateAdmin.js";
+import type { FastifyInstance } from "fastify"
+import { eq, sql, gt, and } from "drizzle-orm"
+import * as fs from "fs"
+import { db } from "../../db/index.js"
+import { users, userSettings, accounts, transactions, sessions } from "../../db/schema.js"
+import { authenticateAdmin } from "../../middleware/authenticateAdmin.js"
 
 export async function adminRoutes(app: FastifyInstance) {
-    // ─── Stats ────────────────────────────────────────────────────────────────
+	// ─── Settings ─────────────────────────────────────────────────────────────
 
-    app.get("/admin/stats", { preHandler: authenticateAdmin }, async (_request, reply) => {
-        const dbPath = process.env.DATABASE_URL ?? "./data/pothos.db";
-        let dbSizeBytes = 0;
-        try {
-            dbSizeBytes = fs.statSync(dbPath).size;
-        } catch (err) {
-            app.log.warn(`Could not stat database file at ${dbPath}: ${err instanceof Error ? err.message : String(err)}`);
-        }
+	app.get("/admin/settings", { preHandler: authenticateAdmin }, async (_request, reply) => {
+		const registrationCode = process.env.REGISTRATION_CODE?.trim() || null
+		return reply.send({ registrationCode })
+	})
 
-        const userCount = db
-            .select({ count: sql<number>`count(*)` })
-            .from(users)
-            .get();
+	// ─── Stats ────────────────────────────────────────────────────────────────
 
-        const txCount = db
-            .select({ count: sql<number>`count(*)` })
-            .from(transactions)
-            .get();
+	app.get("/admin/stats", { preHandler: authenticateAdmin }, async (_request, reply) => {
+		const dbPath = process.env.DATABASE_URL ?? "./data/pothos.db"
+		let dbSizeBytes = 0
+		try {
+			dbSizeBytes = fs.statSync(dbPath).size
+		} catch (err) {
+			app.log.warn(
+				`Could not stat database file at ${dbPath}: ${err instanceof Error ? err.message : String(err)}`
+			)
+		}
 
-        return reply.send({
-            dbSizeBytes,
-            totalUsers: userCount?.count ?? 0,
-            totalTransactions: txCount?.count ?? 0,
-        });
-    });
+		const userCount = db
+			.select({ count: sql<number>`count(*)` })
+			.from(users)
+			.get()
 
-    // ─── User List ────────────────────────────────────────────────────────────
+		const txCount = db
+			.select({ count: sql<number>`count(*)` })
+			.from(transactions)
+			.get()
 
-    app.get("/admin/users", { preHandler: authenticateAdmin }, async (_request, reply) => {
-        const allUsers = db
-            .select({
-                id: users.id,
-                email: users.email,
-                createdAt: users.createdAt,
-                isSuperadmin: users.isSuperadmin,
-                currency: userSettings.currency,
-            })
-            .from(users)
-            .leftJoin(userSettings, eq(userSettings.userId, users.id))
-            .all();
+		return reply.send({
+			dbSizeBytes,
+			totalUsers: userCount?.count ?? 0,
+			totalTransactions: txCount?.count ?? 0,
+		})
+	})
 
-        const accountCounts = db
-            .select({
-                userId: accounts.userId,
-                count: sql<number>`count(*)`,
-            })
-            .from(accounts)
-            .groupBy(accounts.userId)
-            .all();
+	// ─── User List ────────────────────────────────────────────────────────────
 
-        const txCounts = db
-            .select({
-                userId: transactions.userId,
-                count: sql<number>`count(*)`,
-            })
-            .from(transactions)
-            .groupBy(transactions.userId)
-            .all();
+	app.get("/admin/users", { preHandler: authenticateAdmin }, async (_request, reply) => {
+		const allUsers = db
+			.select({
+				id: users.id,
+				email: users.email,
+				createdAt: users.createdAt,
+				isSuperadmin: users.isSuperadmin,
+				currency: userSettings.currency,
+			})
+			.from(users)
+			.leftJoin(userSettings, eq(userSettings.userId, users.id))
+			.all()
 
-        const now = Math.floor(Date.now() / 1000);
-        const sessionCounts = db
-            .select({
-                userId: sessions.userId,
-                count: sql<number>`count(*)`,
-            })
-            .from(sessions)
-            .where(gt(sessions.expiresAt, now))
-            .groupBy(sessions.userId)
-            .all();
+		const accountCounts = db
+			.select({
+				userId: accounts.userId,
+				count: sql<number>`count(*)`,
+			})
+			.from(accounts)
+			.groupBy(accounts.userId)
+			.all()
 
-        const accountMap = new Map(accountCounts.map((r) => [r.userId, r.count]));
-        const txMap = new Map(txCounts.map((r) => [r.userId, r.count]));
-        const sessionMap = new Map(sessionCounts.map((r) => [r.userId, r.count]));
+		const txCounts = db
+			.select({
+				userId: transactions.userId,
+				count: sql<number>`count(*)`,
+			})
+			.from(transactions)
+			.groupBy(transactions.userId)
+			.all()
 
-        const result = allUsers.map((u) => ({
-            id: u.id,
-            email: u.email,
-            createdAt: u.createdAt,
-            isSuperadmin: u.isSuperadmin,
-            currency: u.currency ?? null,
-            accountCount: accountMap.get(u.id) ?? 0,
-            transactionCount: txMap.get(u.id) ?? 0,
-            activeSessionCount: sessionMap.get(u.id) ?? 0,
-        }));
+		const now = Math.floor(Date.now() / 1000)
+		const sessionCounts = db
+			.select({
+				userId: sessions.userId,
+				count: sql<number>`count(*)`,
+			})
+			.from(sessions)
+			.where(gt(sessions.expiresAt, now))
+			.groupBy(sessions.userId)
+			.all()
 
-        return reply.send(result);
-    });
+		const accountMap = new Map(accountCounts.map((r) => [r.userId, r.count]))
+		const txMap = new Map(txCounts.map((r) => [r.userId, r.count]))
+		const sessionMap = new Map(sessionCounts.map((r) => [r.userId, r.count]))
 
-    // ─── Delete User ──────────────────────────────────────────────────────────
+		const result = allUsers.map((u) => ({
+			id: u.id,
+			email: u.email,
+			createdAt: u.createdAt,
+			isSuperadmin: u.isSuperadmin,
+			currency: u.currency ?? null,
+			accountCount: accountMap.get(u.id) ?? 0,
+			transactionCount: txMap.get(u.id) ?? 0,
+			activeSessionCount: sessionMap.get(u.id) ?? 0,
+		}))
 
-    app.delete("/admin/users/:id", { preHandler: authenticateAdmin }, async (request, reply) => {
-        const { id } = request.params as { id: string };
+		return reply.send(result)
+	})
 
-        if (id === request.user.id) {
-            return reply.status(403).send({ error: "Cannot delete your own account" });
-        }
+	// ─── Delete User ──────────────────────────────────────────────────────────
 
-        const target = db.select({ isSuperadmin: users.isSuperadmin }).from(users).where(eq(users.id, id)).get();
-        if (!target) {
-            return reply.status(404).send({ error: "User not found" });
-        }
-        if (target.isSuperadmin) {
-            return reply.status(403).send({ error: "Cannot delete another superadmin" });
-        }
+	app.delete("/admin/users/:id", { preHandler: authenticateAdmin }, async (request, reply) => {
+		const { id } = request.params as { id: string }
 
-        db.delete(users).where(eq(users.id, id)).run();
+		if (id === request.user.id) {
+			return reply.status(403).send({ error: "Cannot delete your own account" })
+		}
 
-        return reply.status(204).send();
-    });
+		const target = db
+			.select({ isSuperadmin: users.isSuperadmin })
+			.from(users)
+			.where(eq(users.id, id))
+			.get()
+		if (!target) {
+			return reply.status(404).send({ error: "User not found" })
+		}
+		if (target.isSuperadmin) {
+			return reply.status(403).send({ error: "Cannot delete another superadmin" })
+		}
 
-    // ─── Get User Sessions ────────────────────────────────────────────────────
+		db.delete(users).where(eq(users.id, id)).run()
 
-    app.get("/admin/users/:id/sessions", { preHandler: authenticateAdmin }, async (request, reply) => {
-        const { id } = request.params as { id: string };
-        const now = Math.floor(Date.now() / 1000);
+		return reply.status(204).send()
+	})
 
-        const result = db
-            .select()
-            .from(sessions)
-            .where(and(eq(sessions.userId, id), gt(sessions.expiresAt, now)))
-            .all();
+	// ─── Get User Sessions ────────────────────────────────────────────────────
 
-        return reply.send(result);
-    });
+	app.get(
+		"/admin/users/:id/sessions",
+		{ preHandler: authenticateAdmin },
+		async (request, reply) => {
+			const { id } = request.params as { id: string }
+			const now = Math.floor(Date.now() / 1000)
 
-    // ─── Revoke All Sessions ──────────────────────────────────────────────────
+			const result = db
+				.select()
+				.from(sessions)
+				.where(and(eq(sessions.userId, id), gt(sessions.expiresAt, now)))
+				.all()
 
-    app.delete("/admin/users/:id/sessions", { preHandler: authenticateAdmin }, async (request, reply) => {
-        const { id } = request.params as { id: string };
+			return reply.send(result)
+		}
+	)
 
-        db.delete(sessions).where(eq(sessions.userId, id)).run();
+	// ─── Revoke All Sessions ──────────────────────────────────────────────────
 
-        return reply.status(204).send();
-    });
+	app.delete(
+		"/admin/users/:id/sessions",
+		{ preHandler: authenticateAdmin },
+		async (request, reply) => {
+			const { id } = request.params as { id: string }
 
-    // ─── Revoke Single Session ────────────────────────────────────────────────
+			db.delete(sessions).where(eq(sessions.userId, id)).run()
 
-    app.delete(
-        "/admin/users/:id/sessions/:sessionId",
-        { preHandler: authenticateAdmin },
-        async (request, reply) => {
-            const { id, sessionId } = request.params as { id: string; sessionId: string };
+			return reply.status(204).send()
+		}
+	)
 
-            const session = db.select().from(sessions).where(eq(sessions.id, sessionId)).get();
-            if (!session) {
-                return reply.status(404).send({ error: "Session not found" });
-            }
-            if (session.userId !== id) {
-                return reply.status(400).send({ error: "Session does not belong to this user" });
-            }
+	// ─── Revoke Single Session ────────────────────────────────────────────────
 
-            db.delete(sessions).where(eq(sessions.id, sessionId)).run();
+	app.delete(
+		"/admin/users/:id/sessions/:sessionId",
+		{ preHandler: authenticateAdmin },
+		async (request, reply) => {
+			const { id, sessionId } = request.params as { id: string; sessionId: string }
 
-            return reply.status(204).send();
-        }
-    );
+			const session = db.select().from(sessions).where(eq(sessions.id, sessionId)).get()
+			if (!session) {
+				return reply.status(404).send({ error: "Session not found" })
+			}
+			if (session.userId !== id) {
+				return reply.status(400).send({ error: "Session does not belong to this user" })
+			}
+
+			db.delete(sessions).where(eq(sessions.id, sessionId)).run()
+
+			return reply.status(204).send()
+		}
+	)
 }

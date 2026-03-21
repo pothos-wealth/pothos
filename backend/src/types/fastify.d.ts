@@ -1,8 +1,8 @@
-import type { User, Session } from "../db/schema.js";
+import type { User, Session } from "../db/schema.js"
 
 declare module "fastify" {
 	interface FastifyRequest {
-		user: User;
-		session: Session;
+		user: User
+		session: Session
 	}
 }

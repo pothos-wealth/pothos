@@ -1,45 +1,45 @@
-import OpenAI from "openai";
-import Anthropic from "@anthropic-ai/sdk";
-import { z } from "zod";
-import { nanoid } from "nanoid";
-import { db } from "../db/index.js";
-import { pendingMessages, parsedTransactions } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import OpenAI from "openai"
+import Anthropic from "@anthropic-ai/sdk"
+import { z } from "zod"
+import { nanoid } from "nanoid"
+import { db } from "../db/index.js"
+import { pendingMessages, parsedTransactions } from "../db/schema.js"
+import { eq } from "drizzle-orm"
 
 const parsedResultSchema = z.object({
-    type: z.enum(["income", "expense"]),
-    amount: z.number().int().positive(),
-    date: z.number().int(),
-    description: z.string().min(1).max(200),
-    accountId: z.string().nullable().optional(),
-    categoryId: z.string().nullable().optional(),
-    notes: z.string().nullable().optional(),
-});
+	type: z.enum(["income", "expense"]),
+	amount: z.number().int().positive(),
+	date: z.number().int(),
+	description: z.string().min(1).max(200),
+	accountId: z.string().nullable().optional(),
+	categoryId: z.string().nullable().optional(),
+	notes: z.string().nullable().optional(),
+})
 
 interface UserAccount {
-    id: string;
-    name: string;
+	id: string
+	name: string
 }
 
 interface UserCategory {
-    id: string;
-    name: string;
-    type: string;
+	id: string
+	name: string
+	type: string
 }
 
 interface LlmConfig {
-    provider: string;
-    apiKey: string | null;
-    model: string;
+	provider: string
+	apiKey: string | null
+	model: string
 }
 
 function buildPrompt(
-    rawContent: string,
-    userAccounts: UserAccount[],
-    userCategories: UserCategory[],
-    currency: string
+	rawContent: string,
+	userAccounts: UserAccount[],
+	userCategories: UserCategory[],
+	currency: string
 ): string {
-    return `You are a financial transaction parser. The user's currency is ${currency}.
+	return `You are a financial transaction parser. The user's currency is ${currency}.
 User's bank accounts: ${JSON.stringify(userAccounts)}
 Available categories: ${JSON.stringify(userCategories)}
 
@@ -62,120 +62,126 @@ Rules:
 - If this is not a bank transaction notification, return {"not_transaction": true}
 
 Email:
-${rawContent.slice(0, 10000)}`;
+${rawContent.slice(0, 10000)}`
 }
 
 async function parseViaLlm(
-    rawContent: string,
-    userAccounts: UserAccount[],
-    userCategories: UserCategory[],
-    llmConfig: LlmConfig,
-    currency: string
+	rawContent: string,
+	userAccounts: UserAccount[],
+	userCategories: UserCategory[],
+	llmConfig: LlmConfig,
+	currency: string
 ): Promise<z.infer<typeof parsedResultSchema> | null> {
-    const prompt = buildPrompt(rawContent, userAccounts, userCategories, currency);
-    let responseText = "";
+	const prompt = buildPrompt(rawContent, userAccounts, userCategories, currency)
+	let responseText = ""
 
-    if (llmConfig.provider === "openai" && llmConfig.apiKey) {
-        const client = new OpenAI({ apiKey: llmConfig.apiKey });
-        const completion = await client.chat.completions.create({
-            model: llmConfig.model,
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0,
-            max_tokens: 300,
-        });
-        responseText = completion.choices[0]?.message?.content ?? "";
-    } else if (llmConfig.provider === "anthropic" && llmConfig.apiKey) {
-        const client = new Anthropic({ apiKey: llmConfig.apiKey });
-        const message = await client.messages.create({
-            model: llmConfig.model,
-            max_tokens: 300,
-            messages: [{ role: "user", content: prompt }],
-        });
-        const block = message.content[0];
-        responseText = block.type === "text" ? block.text : "";
-    } else {
-        return null; // local provider or no key — skip LLM
-    }
+	if (llmConfig.provider === "openai" && llmConfig.apiKey) {
+		const client = new OpenAI({ apiKey: llmConfig.apiKey })
+		const completion = await client.chat.completions.create({
+			model: llmConfig.model,
+			messages: [{ role: "user", content: prompt }],
+			temperature: 0,
+			max_tokens: 300,
+		})
+		responseText = completion.choices[0]?.message?.content ?? ""
+	} else if (llmConfig.provider === "anthropic" && llmConfig.apiKey) {
+		const client = new Anthropic({ apiKey: llmConfig.apiKey })
+		const message = await client.messages.create({
+			model: llmConfig.model,
+			max_tokens: 300,
+			messages: [{ role: "user", content: prompt }],
+		})
+		const block = message.content[0]
+		responseText = block.type === "text" ? block.text : ""
+	} else {
+		return null // local provider or no key — skip LLM
+	}
 
-    // Extract JSON from response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return null;
+	// Extract JSON from response
+	const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+	if (!jsonMatch) return null
 
-    let parsed: unknown;
-    try {
-        parsed = JSON.parse(jsonMatch[0]);
-    } catch {
-        return null;
-    }
+	let parsed: unknown
+	try {
+		parsed = JSON.parse(jsonMatch[0])
+	} catch {
+		return null
+	}
 
-    // Check if LLM flagged as non-transaction
-    if (typeof parsed === "object" && parsed !== null && "not_transaction" in parsed) {
-        return null;
-    }
+	// Check if LLM flagged as non-transaction
+	if (typeof parsed === "object" && parsed !== null && "not_transaction" in parsed) {
+		return null
+	}
 
-    const result = parsedResultSchema.safeParse(parsed);
-    return result.success ? result.data : null;
+	const result = parsedResultSchema.safeParse(parsed)
+	return result.success ? result.data : null
 }
 
 export async function parseEmail(
-    pendingMessageId: string,
-    rawContent: string,
-    userId: string,
-    userAccounts: UserAccount[],
-    userCategories: UserCategory[],
-    llmConfig: LlmConfig,
-    currency: string
+	pendingMessageId: string,
+	rawContent: string,
+	userId: string,
+	userAccounts: UserAccount[],
+	userCategories: UserCategory[],
+	llmConfig: LlmConfig,
+	currency: string
 ): Promise<boolean> {
-    const now = Math.floor(Date.now() / 1000);
+	const now = Math.floor(Date.now() / 1000)
 
-    let result: z.infer<typeof parsedResultSchema> | null = null;
+	let result: z.infer<typeof parsedResultSchema> | null = null
 
-    const cloudLlmConfigured = llmConfig.provider !== "local" && !!llmConfig.apiKey;
+	const cloudLlmConfigured = llmConfig.provider !== "local" && !!llmConfig.apiKey
 
-    if (cloudLlmConfigured) {
-        try {
-            result = await parseViaLlm(rawContent, userAccounts, userCategories, llmConfig, currency);
-        } catch {
-            // LLM call failed
-        }
+	if (cloudLlmConfigured) {
+		try {
+			result = await parseViaLlm(
+				rawContent,
+				userAccounts,
+				userCategories,
+				llmConfig,
+				currency
+			)
+		} catch {
+			// LLM call failed
+		}
 
-        if (!result) {
-            // Cloud LLM was configured but failed — mark as failed
-            db.update(pendingMessages)
-                .set({ status: "failed", error: "LLM parse failed", updatedAt: now })
-                .where(eq(pendingMessages.id, pendingMessageId))
-                .run();
-            return false;
-        }
-    } else {
-        // No cloud LLM — leave as "pending" for MCP/Ollama to process
-        return false;
-    }
+		if (!result) {
+			// Cloud LLM was configured but failed — mark as failed
+			db.update(pendingMessages)
+				.set({ status: "failed", error: "LLM parse failed", updatedAt: now })
+				.where(eq(pendingMessages.id, pendingMessageId))
+				.run()
+			return false
+		}
+	} else {
+		// No cloud LLM — leave as "pending" for MCP/Ollama to process
+		return false
+	}
 
-    // Create parsed_transaction for review
-    db.insert(parsedTransactions)
-        .values({
-            id: nanoid(),
-            userId,
-            pendingMessageId,
-            accountId: result.accountId ?? null,
-            categoryId: result.categoryId ?? null,
-            type: result.type,
-            amount: result.amount,
-            date: result.date,
-            description: result.description,
-            notes: result.notes ?? null,
-            status: "pending_review",
-            createdAt: now,
-            updatedAt: now,
-        })
-        .run();
+	// Create parsed_transaction for review
+	db.insert(parsedTransactions)
+		.values({
+			id: nanoid(),
+			userId,
+			pendingMessageId,
+			accountId: result.accountId ?? null,
+			categoryId: result.categoryId ?? null,
+			type: result.type,
+			amount: result.amount,
+			date: result.date,
+			description: result.description,
+			notes: result.notes ?? null,
+			status: "pending_review",
+			createdAt: now,
+			updatedAt: now,
+		})
+		.run()
 
-    // Mark pending_message as processed
-    db.update(pendingMessages)
-        .set({ status: "processed", updatedAt: now })
-        .where(eq(pendingMessages.id, pendingMessageId))
-        .run();
+	// Mark pending_message as processed
+	db.update(pendingMessages)
+		.set({ status: "processed", updatedAt: now })
+		.where(eq(pendingMessages.id, pendingMessageId))
+		.run()
 
-    return true;
+	return true
 }

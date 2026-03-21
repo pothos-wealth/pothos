@@ -1,11 +1,9 @@
-import { cn } from '@/lib/utils'
+import { cn } from "@/lib/utils"
 
 interface SkeletonProps {
-    className?: string
+	className?: string
 }
 
 export function Skeleton({ className }: SkeletonProps) {
-    return (
-        <div className={cn('skeleton rounded-xl', className)} />
-    )
+	return <div className={cn("skeleton rounded-xl", className)} />
 }
