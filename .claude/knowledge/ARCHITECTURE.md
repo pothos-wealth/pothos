@@ -10,7 +10,7 @@ The frontend (React / Next.js) is deployed on the same AWS instance as the backe
 
 ### User's Home PC (Optional)
 
-Users who want to run a local LLM can install the MCP server on their own machine. The MCP server is a thin tool-exposure layer - it has no business logic of its own and calls the backend API for everything. It also includes a `parse_pending` tool which polls the backend's Pending Queue, runs unparsed items through a local LLM (via Ollama), and sends the structured results back. The home PC only makes outbound HTTPS calls to the backend - no inbound connections or tunnels required.
+Users can install the MCP server (`npx @pothos/mcp`) on their own machine. The MCP server is a thin tool-exposure layer — it has no business logic of its own and calls the backend API for everything. It authenticates via a user-generated API key. The home PC only makes outbound HTTPS calls to the backend — no inbound connections or tunnels required.
 
 ### MCP Clients (Pluggable)
 
@@ -33,6 +33,16 @@ Any MCP-compatible client - OpenClaw, Cline, Claude Desktop, or others - can con
 - Passwords are hashed with bcrypt (12 salt rounds).
 - Timing attack prevention on login via constant-time bcrypt comparison.
 - Protected routes use the `authenticate` preHandler middleware.
+- API key authentication is also supported — `authenticate` checks session cookie first, then `Authorization: Bearer pth_...` header.
+
+## API Keys
+
+Users can generate named API keys in **Settings → API Keys**. Keys are formatted as `pth_<64-char-hex>` (32 random bytes) and stored as SHA-256 hashes — never plaintext. The raw key is shown once at creation only.
+
+- Keys never expire; users revoke them manually.
+- `last_used_at` is updated asynchronously (non-blocking) on each authenticated request.
+- API key management routes (`/api/v1/api-keys`) are guarded by `sessionOnlyAuthenticate` — must use a browser session, not another API key.
+- Primary use case: authenticating the MCP server.
 
 ## Superadmin
 

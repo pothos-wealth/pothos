@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { LogOut, Lock, Eye, EyeOff, Mail, Bot } from "lucide-react"
+import { LogOut, Lock, Eye, EyeOff, Mail, Bot, Key, Copy, Trash2, Plus } from "lucide-react"
 import { Card } from "@/components/ui/Card"
 import { Skeleton } from "@/components/ui/Skeleton"
 import { PageTransition } from "@/components/ui/PageTransition"
 import { ThemeToggle } from "@/components/ui/ThemeToggle"
 import { api } from "@/lib/api"
 import { useInboxCount } from "@/lib/inbox-count-context"
-import type { User, UserSettings, ImapSettings, EmailStatus, LlmSettings } from "@/lib/types"
+import type { User, UserSettings, ImapSettings, EmailStatus, LlmSettings, ApiKey } from "@/lib/types"
 
 const PASSWORD_RULES = [
 	{ label: "At least 8 characters", test: (pw: string) => pw.length >= 8 },
@@ -56,6 +56,15 @@ export default function SettingsPage() {
 	const [emailSuccess, setEmailSuccess] = useState("")
 	const [pollingNow, setPollingNow] = useState(false)
 
+	// API keys
+	const [apiKeysList, setApiKeysList] = useState<ApiKey[]>([])
+	const [newKeyName, setNewKeyName] = useState("")
+	const [generatedKey, setGeneratedKey] = useState<string | null>(null)
+	const [showNewKeyForm, setShowNewKeyForm] = useState(false)
+	const [apiKeySubmitting, setApiKeySubmitting] = useState(false)
+	const [apiKeyError, setApiKeyError] = useState("")
+	const [keyCopied, setKeyCopied] = useState(false)
+
 	// LLM settings
 	const [llmSettings, setLlmSettings] = useState<LlmSettings | null>(null)
 	const [llmProvider, setLlmProvider] = useState<"openai" | "anthropic" | "local">("openai")
@@ -73,8 +82,9 @@ export default function SettingsPage() {
 			api.email.getStatus().catch(() => null),
 			api.email.getSettings().catch(() => null),
 			api.llm.getSettings().catch(() => null),
+			api.apiKeys.list().catch(() => []),
 		])
-			.then(([u, s, gStatus, gSettings, lSettings]) => {
+			.then(([u, s, gStatus, gSettings, lSettings, keys]) => {
 				setUser(u)
 				setSettings(s)
 				if (gStatus) setEmailStatus(gStatus)
@@ -84,6 +94,7 @@ export default function SettingsPage() {
 					setLlmProvider(lSettings.provider)
 					setLlmModel(lSettings.model)
 				}
+				setApiKeysList(keys)
 			})
 			.catch((err) => {
 				if (err.message === "UNAUTHORIZED") router.push("/sign-in")
@@ -97,6 +108,46 @@ export default function SettingsPage() {
 		} finally {
 			router.push("/")
 		}
+	}
+
+	async function handleGenerateKey(e: React.FormEvent) {
+		e.preventDefault()
+		setApiKeyError("")
+		if (!newKeyName.trim()) {
+			setApiKeyError("Name is required")
+			return
+		}
+		setApiKeySubmitting(true)
+		try {
+			const res = await api.apiKeys.create(newKeyName.trim())
+			setApiKeysList((prev) => [
+				...prev,
+				{ id: res.id, name: res.name, lastUsedAt: null, createdAt: res.createdAt },
+			])
+			setGeneratedKey(res.key)
+			setNewKeyName("")
+			setShowNewKeyForm(false)
+			setKeyCopied(false)
+		} catch (err) {
+			setApiKeyError(err instanceof Error ? err.message : "Failed to generate key")
+		} finally {
+			setApiKeySubmitting(false)
+		}
+	}
+
+	async function handleRevokeKey(id: string) {
+		try {
+			await api.apiKeys.delete(id)
+			setApiKeysList((prev) => prev.filter((k) => k.id !== id))
+		} catch {
+			// ignore — list will remain unchanged
+		}
+	}
+
+	function formatLastUsed(ts: number | null) {
+		if (!ts) return "Never"
+		const d = new Date(ts * 1000)
+		return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 	}
 
 	async function handleChangePassword(e: React.FormEvent) {
@@ -268,7 +319,7 @@ export default function SettingsPage() {
 							<Skeleton className="h-8 w-24 rounded-xl" />
 						</div>
 					</Card>
-					<Card>
+					<Card className="mb-4">
 						<Skeleton className="h-3 w-32 mb-5" />
 						<div className="flex flex-col gap-3">
 							{[...Array(3)].map((_, i) => (
@@ -667,8 +718,132 @@ export default function SettingsPage() {
 					)}
 				</Card>
 
+				{/* API Keys */}
+				<Card className="mb-4">
+					<div className="flex items-center justify-between mb-4">
+						<div className="flex items-center gap-2">
+							<Key size={15} className="text-fg-muted" />
+							<p className="text-xs font-semibold text-fg-muted uppercase tracking-wide">
+								API Keys
+							</p>
+						</div>
+						{!showNewKeyForm && !generatedKey && (
+							<button
+								onClick={() => {
+									setShowNewKeyForm(true)
+									setApiKeyError("")
+								}}
+								className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-hover transition-colors duration-150"
+							>
+								<Plus size={13} />
+								Generate Key
+							</button>
+						)}
+					</div>
+
+					{generatedKey && (
+						<div className="mb-4 bg-accent-light border border-primary rounded-xl p-4 flex flex-col gap-3">
+							<p className="text-sm font-semibold text-fg">
+								Copy your API key — you won&apos;t see it again.
+							</p>
+							<div className="flex items-center gap-2">
+								<code className="flex-1 text-xs font-mono bg-bg-2 border border-border rounded-lg px-3 py-2 break-all text-fg">
+									{generatedKey}
+								</code>
+								<button
+									onClick={() => {
+										navigator.clipboard.writeText(generatedKey)
+										setKeyCopied(true)
+										setTimeout(() => setKeyCopied(false), 2000)
+									}}
+									className="shrink-0 p-2 rounded-lg border border-border hover:bg-bg-3 transition-colors duration-150"
+									title="Copy to clipboard"
+								>
+									<Copy size={14} className={keyCopied ? "text-primary" : "text-fg-muted"} />
+								</button>
+							</div>
+							<button
+								onClick={() => setGeneratedKey(null)}
+								className="text-xs text-fg-muted hover:text-fg transition-colors duration-150 text-left"
+							>
+								I&apos;ve saved it — dismiss
+							</button>
+						</div>
+					)}
+
+					{showNewKeyForm && (
+						<form onSubmit={handleGenerateKey} className="flex flex-col gap-3 mb-4">
+							{apiKeyError && (
+								<div className="bg-expense-light border border-expense text-expense rounded-xl px-4 py-3 text-sm">
+									{apiKeyError}
+								</div>
+							)}
+							<div className="flex flex-col gap-1.5">
+								<label className="text-sm font-medium text-fg">Key Name</label>
+								<input
+									type="text"
+									value={newKeyName}
+									onChange={(e) => setNewKeyName(e.target.value)}
+									placeholder="e.g. Home server, Personal script"
+									className={`${inputCls} w-full`}
+									autoFocus
+								/>
+							</div>
+							<div className="flex gap-2">
+								<button
+									type="button"
+									onClick={() => {
+										setShowNewKeyForm(false)
+										setNewKeyName("")
+										setApiKeyError("")
+									}}
+									className="flex-1 border border-border text-fg font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 hover:bg-bg-3"
+								>
+									Cancel
+								</button>
+								<button
+									type="submit"
+									disabled={apiKeySubmitting}
+									className="flex-1 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150 disabled:opacity-60"
+								>
+									{apiKeySubmitting ? "Generating…" : "Generate"}
+								</button>
+							</div>
+						</form>
+					)}
+
+					{apiKeysList.length === 0 && !showNewKeyForm && !generatedKey ? (
+						<p className="text-sm text-fg-muted">
+							No API keys yet. Generate one to use the Pothos API programmatically.
+						</p>
+					) : (
+						<div className="flex flex-col divide-y divide-border">
+							{apiKeysList.map((key) => (
+								<div
+									key={key.id}
+									className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+								>
+									<div className="flex flex-col gap-0.5">
+										<span className="text-sm font-medium text-fg">{key.name}</span>
+										<span className="text-xs text-fg-muted">
+											Last used: {formatLastUsed(key.lastUsedAt)}
+										</span>
+									</div>
+									<button
+										onClick={() => handleRevokeKey(key.id)}
+										className="p-1.5 rounded-lg hover:bg-expense-light text-fg-muted hover:text-expense transition-colors duration-150"
+										title="Revoke key"
+									>
+										<Trash2 size={14} />
+									</button>
+								</div>
+							))}
+						</div>
+					)}
+				</Card>
+
 				{/* Change password */}
-				<Card>
+				<Card className="mb-4">
 					<div className="flex items-center gap-2 mb-4">
 						<Lock size={15} className="text-fg-muted" />
 						<p className="text-xs font-semibold text-fg-muted uppercase tracking-wide">

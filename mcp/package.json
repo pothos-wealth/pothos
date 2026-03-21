@@ -1,12 +1,19 @@
 {
-	"name": "pothos-mcp",
+	"name": "@pothos/mcp",
 	"version": "0.1.0",
-	"private": true,
+	"description": "MCP server for Pothos — natural language access to your budgets, transactions, and email parsing",
 	"type": "module",
+	"bin": {
+		"pothos-mcp": "dist/index.js"
+	},
+	"files": [
+		"dist"
+	],
 	"scripts": {
 		"dev": "tsx watch src/index.ts",
 		"build": "tsc",
 		"start": "node dist/index.js",
+		"parse-queue": "tsx src/ollama-parse.ts",
 		"format": "npx prettier --write \"src/**/*.ts\""
 	},
 	"dependencies": {

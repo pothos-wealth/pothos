@@ -10,7 +10,7 @@ Pothos is a self-hostable, open-source budget and expense tracking app for indiv
 
 All pages are built and fully integrated with the backend. Users can sign up, manage accounts, enter transactions with decimal precision, set budgets, and view reports. Currency is selected at signup and displayed correctly throughout the app.
 
-**Next:** MCP server (WS5) — IMAP email ingestion (WS3) is now complete. Email poller extracted into a dedicated `worker` service (fault isolation from the API process).
+**Complete.** All workstreams finished. T13 (API key auth) and WS5 (MCP server) are built and ready to deploy. The MCP is published as `@pothos/mcp`.
 
 ## Progress
 
@@ -32,7 +32,8 @@ All pages are built and fully integrated with the backend. Users can sign up, ma
 | Deployment — Production     | ✅ Complete    |
 | WS3 — Email Ingestion       | ✅ Complete    |
 | Worker extraction           | ✅ Complete    |
-| WS5 — MCP Server            | ⬜ Not started |
+| T13 — API Key Auth          | ✅ Complete    |
+| WS5 — MCP Server            | ✅ Complete    |
 
 ## V1 Feature Scope
 
@@ -306,27 +307,105 @@ See `FRONTEND.md` for detailed architecture, component structure, and patterns.
 
 ---
 
-### WS5 — MCP Server `⬜ not started`
+### T13 — API Key Auth `✅ complete`
 
-**Goal:** Thin tool-exposure layer. Calls backend for all logic. Includes `parse_pending` for local Ollama users.
-
-> Tasks TBD — to be planned at start of WS5.
+**Goal:** Add API key authentication to the backend as a clean, non-expiring alternative to session cookies. Required before building the MCP so it has a proper auth mechanism.
 
 **Dependencies:** WS3 complete
+
+**Design:**
+- Keys stored as SHA-256 hashes — never plaintext. Long random keys have sufficient entropy that SHA-256 (fast, per-request) is fine; bcrypt is unnecessary.
+- Format: `pth_<64-char-hex>` (32 random bytes). Prefix makes them greppable in logs/config if accidentally exposed.
+- Shown once at creation only — user must copy it immediately.
+- Named by the user (e.g. "My MCP", "Claude Desktop") for easy identification and revocation.
+- `last_used_at` updated on each authenticated request — gives the user visibility into activity.
+- Works alongside sessions: `authenticate` middleware checks cookie first, then `Authorization: Bearer` header. Route handlers are unchanged.
+
+**Migration:**
+
+```
+api_keys
+├── id            text     nanoid PK
+├── user_id       text     FK → users
+├── key_hash      text     SHA-256 of raw key, unique
+├── name          text     user-given label
+├── last_used_at  integer  Unix timestamp, nullable
+└── created_at    integer  Unix timestamp
+```
+
+**Backend tasks:**
+- Migration: `api_keys` table
+- `backend/src/services/apiKeys.ts` — `generateKey()`, `hashKey()`, `validateKey()`
+- Update `authenticate` middleware: check session cookie first, then `Authorization: Bearer <key>` header
+- Routes under `/api/v1/api-keys`:
+  - `GET /` — list user's keys (id, name, last_used_at, created_at — never the hash)
+  - `POST /` — generate new key, return raw key once only
+  - `DELETE /:id` — revoke a key
+
+**Frontend tasks:**
+- New "API Keys" card in `/settings`
+- Generate button → modal shows raw key with copy button and "you won't see this again" warning
+- Table of existing keys: name, last used, revoke button
+
+---
+
+### WS5 — MCP Server `✅ complete`
+
+**Goal:** Thin tool-exposure layer that runs on the user's home PC. Calls the backend API for all logic. No business logic in the MCP.
+
+**Dependencies:** T13 (API Key Auth) complete
+
+**Distribution:** Monorepo (`mcp/` folder) + published to npm as `@pothos/mcp`. Users install via `npx @pothos/mcp` — no need to clone the repo.
+
+**Auth:** MCP authenticates via API key (`Authorization: Bearer pth_...`). User generates a key in the Settings page and sets it as `POTHOS_API_KEY` in the MCP's `.env`. No expiry, no re-auth logic, no credentials stored.
+
+**Transport:** stdio (standard for local MCP servers).
+
+#### Tasks
+
+**T14 — MCP scaffold** `✅ complete`
+
+- `mcp/package.json`: `@pothos/mcp`, `bin: { pothos-mcp: dist/index.js }`, published to npm
+- `mcp/src/index.ts` — MCP server entry point using `StdioServerTransport`, includes agent instructions
+- `mcp/src/client.ts` — HTTP client with `Authorization: Bearer <POTHOS_API_KEY>`, `fmtAmount()`, `fmtDate()` helpers
+- Configure via `.env`: `POTHOS_URL`, `POTHOS_API_KEY`
+- `mcp/.env.example`
+
+**T15 — Read tools** `✅ complete`
+
+- `get_accounts` — `GET /accounts` → per-account name, type, balance + net worth total (includes closed)
+- `get_transactions` — `GET /transactions` with filters: `accountId`, `type`, `startDate`, `endDate`, `limit`, `page`
+- `get_categories` — `GET /categories` → all categories grouped by type with icons
+- `get_budgets` — `GET /budgets?month=&year=` → category budgets with spent/remaining, committed flags
+- `get_spending_overview` — `GET /reports/overview?month=&year=` → total income, expenses, net
+- `get_category_breakdown` — `GET /reports/categories?month=&year=` → expenses grouped by category with percentages
+- `get_spending_trends` — `GET /reports/trends?months=N` → monthly trends over last N months (default 6, max 24)
+
+**T16 — Write tools** `✅ complete`
+
+- `add_transaction` — `POST /transactions` (income or expense; amount as positive decimal, date as YYYY-MM-DD)
+- `add_transfer` — `POST /transactions/transfer` (source account, destination account, amount, description)
+
+**T17 — Email parse tools** `✅ complete`
+
+- `get_pending_emails` — fetches up to 50 raw emails from `GET /parse-queue?status=pending`
+- `submit_parsed_email` — submits agent-interpreted result via `POST /parse-queue/:id/submit` (always goes to inbox review, never creates transactions directly)
+- `dismiss_email` — dismisses non-transaction emails via `POST /parse-queue/:id/dismiss`
+- Agent does the parsing — no local LLM dependency in the MCP itself
+
+**T18 — npm publish setup** `✅ complete`
+
+- `.npmignore` excludes `src/`, `.env*`, `tsconfig.json`, `node_modules/`
+- `build` script compiles TypeScript to `dist/`
+- Published as `@pothos/mcp` on npm
 
 ---
 
 ## Recommendations for Next Steps
 
-### WS5 — MCP Server (Recommended Next)
+### WS5 — MCP Server (Current)
 
 **Why:** WS3 is complete. MCP multiplies the value — natural language queries on top of parsed + manual transactions. The `parse_pending` tool enables local Ollama users to process emails that failed the cloud LLM path.
-
-**Key Design Points:**
-- Thin tool-exposure layer — no business logic, calls backend for everything
-- `parse_pending` tool: polls `GET /api/v1/parse-queue?status=pending`, runs through local Ollama, submits via `POST /api/v1/parse-queue/:id/submit`
-- Balance query: returns per-account breakdown + net worth total
-- No inbound connections required — home PC makes outbound HTTPS calls only
 
 ### WS4.1 — Polish & Quality (Optional)
 

@@ -4,6 +4,7 @@ import * as fs from "fs"
 import { db } from "../../db/index.js"
 import { users, userSettings, accounts, transactions, sessions } from "../../db/schema.js"
 import { authenticateAdmin } from "../../middleware/authenticateAdmin.js"
+import { runInboxCleanup } from "../../services/maintenance.js"
 
 export async function adminRoutes(app: FastifyInstance) {
 	// ─── Settings ─────────────────────────────────────────────────────────────
@@ -183,6 +184,17 @@ export async function adminRoutes(app: FastifyInstance) {
 			db.delete(sessions).where(eq(sessions.id, sessionId)).run()
 
 			return reply.status(204).send()
+		}
+	)
+
+	// ─── POST /admin/maintenance/run ──────────────────────────────────────────
+
+	app.post(
+		"/admin/maintenance/run",
+		{ preHandler: authenticateAdmin },
+		async (_request, reply) => {
+			runInboxCleanup()
+			return reply.send({ ok: true })
 		}
 	)
 }

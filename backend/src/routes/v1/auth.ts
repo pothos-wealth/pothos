@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm"
 import { db } from "../../db/index.js"
 import { users, sessions, userSettings } from "../../db/schema.js"
 import { authenticate } from "../../middleware/authenticate.js"
+import { sessionOnlyAuthenticate } from "../../middleware/sessionOnlyAuthenticate.js"
 
 const SALT_ROUNDS = 12
 const SESSION_TTL_DAYS = parseInt(process.env.SESSION_TTL_DAYS ?? "7", 10)
@@ -187,8 +188,8 @@ export async function authRoutes(app: FastifyInstance) {
 
 	// ─── Logout ───────────────────────────────────────────────────────────────
 
-	app.post("/auth/logout", { preHandler: authenticate }, async (request, reply) => {
-		db.delete(sessions).where(eq(sessions.id, request.session.id)).run()
+	app.post("/auth/logout", { preHandler: sessionOnlyAuthenticate }, async (request, reply) => {
+		db.delete(sessions).where(eq(sessions.id, request.session!.id)).run()
 
 		return reply
 			.clearCookie("session_id", { path: "/" })
@@ -197,7 +198,7 @@ export async function authRoutes(app: FastifyInstance) {
 
 	// ─── Change Password ──────────────────────────────────────────────────────
 
-	app.post("/auth/change-password", { preHandler: authenticate }, async (request, reply) => {
+	app.post("/auth/change-password", { preHandler: sessionOnlyAuthenticate }, async (request, reply) => {
 		const result = changePasswordSchema.safeParse(request.body)
 
 		if (!result.success) {

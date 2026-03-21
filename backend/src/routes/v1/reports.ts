@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify"
 import { eq, and, gte, lte, lt, sql, ne } from "drizzle-orm"
 import { z } from "zod"
 import { db } from "../../db/index.js"
-import { transactions, categories } from "../../db/schema.js"
+import { transactions, categories, budgets } from "../../db/schema.js"
 import { authenticate } from "../../middleware/authenticate.js"
 
 const monthQuerySchema = z.object({
@@ -63,12 +63,52 @@ export async function reportRoutes(app: FastifyInstance) {
 		const expenses = expenseResult?.total ?? 0 // negative number
 		const net = income + expenses // expenses is negative so this is correct
 
+		// Committed = unspent budget remaining for the month
+		const budgetRows = db
+			.select({ amount: budgets.amount, categoryId: budgets.categoryId })
+			.from(budgets)
+			.where(
+				and(
+					eq(budgets.userId, request.user.id),
+					eq(budgets.month, month),
+					eq(budgets.year, year)
+				)
+			)
+			.all()
+
+		const spendingRows = db
+			.select({
+				categoryId: transactions.categoryId,
+				total: sql<number>`COALESCE(SUM(${transactions.amount}), 0)`,
+			})
+			.from(transactions)
+			.where(
+				and(
+					eq(transactions.userId, request.user.id),
+					eq(transactions.type, "expense"),
+					gte(transactions.date, start),
+					lte(transactions.date, end)
+				)
+			)
+			.groupBy(transactions.categoryId)
+			.all()
+
+		const spendingMap = new Map(
+			spendingRows.map((r) => [r.categoryId, Math.abs(r.total)])
+		)
+
+		const committed = budgetRows.reduce((sum, b) => {
+			const spent = spendingMap.get(b.categoryId) ?? 0
+			return sum + Math.max(0, b.amount - spent)
+		}, 0)
+
 		return reply.send({
 			month,
 			year,
 			income,
 			expenses: Math.abs(expenses), // return as positive for display
 			net,
+			committed,
 		})
 	})
 
