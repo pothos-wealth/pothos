@@ -6,6 +6,13 @@ import { users, userSettings, accounts, transactions, sessions } from "../../db/
 import { authenticateAdmin } from "../../middleware/authenticateAdmin.js";
 
 export async function adminRoutes(app: FastifyInstance) {
+    // ─── Settings ─────────────────────────────────────────────────────────────
+
+    app.get("/admin/settings", { preHandler: authenticateAdmin }, async (_request, reply) => {
+        const registrationCode = process.env.REGISTRATION_CODE?.trim() || null;
+        return reply.send({ registrationCode });
+    });
+
     // ─── Stats ────────────────────────────────────────────────────────────────
 
     app.get("/admin/stats", { preHandler: authenticateAdmin }, async (_request, reply) => {

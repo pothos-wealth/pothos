@@ -1,7 +1,7 @@
+import "./env.js";
 import Fastify from "fastify";
 import cookie from "@fastify/cookie";
 import rateLimit from "@fastify/rate-limit";
-import dotenv from "dotenv";
 import type { FastifyError, FastifyRequest } from "fastify";
 import { healthRoutes } from "./routes/v1/health.js";
 import { authRoutes } from "./routes/v1/auth.js";
@@ -20,8 +20,6 @@ import { llmRoutes } from "./routes/v1/llm.js";
 import { parsedTransactionRoutes } from "./routes/v1/parsedTransactions.js";
 import { parseQueueRoutes } from "./routes/v1/parseQueue.js";
 import { validateEncryptionKey } from "./services/crypto.js";
-
-dotenv.config();
 
 const PORT = parseInt(process.env.PORT ?? "3001", 10);
 const NODE_ENV = process.env.NODE_ENV ?? "development";
@@ -135,6 +133,13 @@ try {
 
 	await app.listen({ port: PORT, host: "0.0.0.0" });
 	app.log.info(`Server running in ${NODE_ENV} mode on port ${PORT}`);
+
+	const REGISTRATION_CODE = process.env.REGISTRATION_CODE?.trim();
+	if (REGISTRATION_CODE) {
+		app.log.info(`Registration restricted: invite code is set (${REGISTRATION_CODE.length} chars)`);
+	} else {
+		app.log.info("Registration open: no invite code configured");
+	}
 
 	// Clean up expired sessions once per hour
 	setInterval(

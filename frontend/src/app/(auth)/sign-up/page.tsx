@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { CheckCircle2, Circle, Eye, EyeOff } from 'lucide-react'
@@ -34,10 +34,18 @@ export default function SignUpPage() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [currency, setCurrency] = useState('INR')
+    const [inviteCode, setInviteCode] = useState('')
+    const [requiresCode, setRequiresCode] = useState(false)
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
     const [showRules, setShowRules] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
+
+    useEffect(() => {
+        api.auth.config()
+            .then((cfg) => setRequiresCode(cfg.registrationRequiresCode))
+            .catch((err) => console.error('[auth/config] failed:', err))
+    }, [])
 
     const allRulesPassed = PASSWORD_RULES.every((r) => r.test(password))
 
@@ -56,9 +64,14 @@ export default function SignUpPage() {
             return
         }
 
+        if (requiresCode && !inviteCode.trim()) {
+            setError('An invite code is required to create an account.')
+            return
+        }
+
         setLoading(true)
         try {
-            await api.auth.register(email, password, currency)
+            await api.auth.register(email, password, currency, requiresCode ? inviteCode.trim() : undefined)
             router.push('/dashboard')
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Registration failed. Please try again.')
@@ -159,6 +172,23 @@ export default function SignUpPage() {
                         </ul>
                     )}
                 </div>
+
+                {requiresCode && (
+                    <div className="flex flex-col gap-1.5">
+                        <label htmlFor="inviteCode" className="text-sm font-medium text-fg">
+                            Invite Code
+                        </label>
+                        <input
+                            id="inviteCode"
+                            type="text"
+                            required
+                            value={inviteCode}
+                            onChange={(e) => setInviteCode(e.target.value)}
+                            className="bg-bg-2 border border-border rounded-xl px-3 py-2.5 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-shadow"
+                            placeholder="Enter your invite code"
+                        />
+                    </div>
+                )}
 
                 <button
                     type="submit"

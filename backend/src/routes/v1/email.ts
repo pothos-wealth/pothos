@@ -40,7 +40,7 @@ export async function emailRoutes(app: FastifyInstance) {
             .get();
 
         if (!settings) {
-            return reply.status(404).send({ error: "Email integration not configured" });
+            return reply.status(204).send();
         }
 
         return reply.send(settings);

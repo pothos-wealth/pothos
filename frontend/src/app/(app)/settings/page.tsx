@@ -89,7 +89,7 @@ export default function SettingsPage() {
                 if (err.message === 'UNAUTHORIZED') router.push('/sign-in')
             })
             .finally(() => setLoading(false))
-    }, [router])
+    }, [])
 
     async function handleLogout() {
         try {

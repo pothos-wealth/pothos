@@ -35,7 +35,7 @@ export async function llmRoutes(app: FastifyInstance) {
             .get();
 
         if (!settings) {
-            return reply.status(404).send({ error: "LLM settings not configured" });
+            return reply.status(204).send();
         }
 
         return reply.send({

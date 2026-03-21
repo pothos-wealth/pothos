@@ -116,6 +116,10 @@ export interface AdminStats {
     totalTransactions: number
 }
 
+export interface AdminSettings {
+    registrationCode: string | null
+}
+
 export interface UserSettings {
     id: string
     userId: string

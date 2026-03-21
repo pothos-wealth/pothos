@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { CurrencyProvider } from "@/lib/currency-context";
-import { InboxCountProvider } from "@/lib/inbox-count-context";
 import { TopLoader } from "@/components/ui/TopLoader";
 import "./globals.css";
 
@@ -42,9 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 			<body className={`${jakarta.variable} font-sans antialiased bg-bg text-fg`}>
 				<ThemeProvider>
 					<TopLoader />
-					<InboxCountProvider>
 					<CurrencyProvider>{children}</CurrencyProvider>
-				</InboxCountProvider>
 				</ThemeProvider>
 			</body>
 		</html>

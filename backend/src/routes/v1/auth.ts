@@ -11,6 +11,7 @@ const SALT_ROUNDS = 12;
 const SESSION_TTL_DAYS = parseInt(process.env.SESSION_TTL_DAYS ?? "7", 10);
 const RATE_LIMIT_REGISTER_MAX = parseInt(process.env.RATE_LIMIT_REGISTER_MAX ?? "5", 10);
 const RATE_LIMIT_LOGIN_MAX = parseInt(process.env.RATE_LIMIT_LOGIN_MAX ?? "10", 10);
+const REGISTRATION_CODE = process.env.REGISTRATION_CODE?.trim() ?? "";
 
 const passwordSchema = z
 	.string()
@@ -23,6 +24,7 @@ const registerSchema = z.object({
 	email: z.string().email().toLowerCase(),
 	password: passwordSchema,
 	currency: z.string().length(3, "Currency must be a valid ISO 4217 code").toUpperCase().default("INR"),
+	inviteCode: z.string().optional(),
 });
 
 const loginSchema = z.object({
@@ -46,6 +48,12 @@ function createSessionCookie(sessionId: string, expiresAt: number) {
 }
 
 export async function authRoutes(app: FastifyInstance) {
+	// ─── Registration Config ───────────────────────────────────────────────────
+
+	app.get("/auth/config", async (_request, reply) => {
+		return reply.send({ registrationRequiresCode: !!REGISTRATION_CODE });
+	});
+
 	// ─── Register ─────────────────────────────────────────────────────────────
 
 	app.post("/auth/register", { config: { rateLimit: { max: RATE_LIMIT_REGISTER_MAX, timeWindow: "1 minute" } } }, async (request, reply) => {
@@ -58,7 +66,13 @@ export async function authRoutes(app: FastifyInstance) {
 			});
 		}
 
-		const { email, password, currency } = result.data;
+		const { email, password, currency, inviteCode } = result.data;
+
+		if (REGISTRATION_CODE) {
+			if (!inviteCode || inviteCode.trim() !== REGISTRATION_CODE) {
+				return reply.status(403).send({ error: "Invalid invite code" });
+			}
+		}
 		const now = Math.floor(Date.now() / 1000);
 
 		// Check if email already exists

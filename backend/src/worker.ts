@@ -1,9 +1,7 @@
-import dotenv from "dotenv";
+import "./env.js";
 import { validateEncryptionKey } from "./services/crypto.js";
 import { startPoller } from "./services/poller.js";
 import { startMaintenance } from "./services/maintenance.js";
-
-dotenv.config();
 
 validateEncryptionKey();
 

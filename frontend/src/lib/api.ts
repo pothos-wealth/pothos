@@ -12,6 +12,7 @@ import type {
     AdminUser,
     AdminSession,
     AdminStats,
+    AdminSettings,
     ImapSettings,
     EmailStatus,
     LlmSettings,
@@ -46,6 +47,8 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
 export const api = {
     auth: {
+        config: () =>
+            apiFetch<{ registrationRequiresCode: boolean }>('/auth/config'),
         login: (email: string, password: string) =>
             apiFetch<{ message: string }>('/auth/login', {
                 method: 'POST',
@@ -53,10 +56,10 @@ export const api = {
             }),
         logout: () =>
             apiFetch<{ message: string }>('/auth/logout', { method: 'POST' }),
-        register: (email: string, password: string, currency: string = 'INR') =>
+        register: (email: string, password: string, currency: string = 'INR', inviteCode?: string) =>
             apiFetch<{ message: string }>('/auth/register', {
                 method: 'POST',
-                body: JSON.stringify({ email, password, currency }),
+                body: JSON.stringify({ email, password, currency, ...(inviteCode ? { inviteCode } : {}) }),
             }),
         changePassword: (currentPassword: string, newPassword: string) =>
             apiFetch<{ message: string }>('/auth/change-password', {
@@ -147,6 +150,7 @@ export const api = {
             }),
     },
     admin: {
+        settings: () => apiFetch<AdminSettings>('/admin/settings'),
         stats: () => apiFetch<AdminStats>('/admin/stats'),
         users: () => apiFetch<AdminUser[]>('/admin/users'),
         deleteUser: (id: string) => apiFetch<void>(`/admin/users/${id}`, { method: 'DELETE' }),
