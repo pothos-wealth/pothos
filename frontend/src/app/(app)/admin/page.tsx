@@ -188,7 +188,11 @@ export default function AdminPage() {
 							disabled={maintenanceRunning}
 							className="mt-1 w-full text-sm font-semibold rounded-xl px-3 py-2 transition-colors duration-150 disabled:opacity-60 bg-bg-3 hover:bg-border text-fg"
 						>
-							{maintenanceRunning ? "Running…" : maintenanceDone ? "Done ✓" : "Run Now"}
+							{maintenanceRunning
+								? "Running…"
+								: maintenanceDone
+									? "Done ✓"
+									: "Run Now"}
 						</button>
 					</Card>
 					<Card>

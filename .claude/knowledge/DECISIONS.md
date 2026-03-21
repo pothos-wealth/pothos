@@ -177,6 +177,7 @@
 **SSL/TLS** - Let's Encrypt via Certbot. Initial bootstrap manual (one-time). Auto-renewal every 12 hours. Nginx enforces HTTPS with redirect from HTTP.
 
 **Deployment scripts** - Two scripts for minimal manual effort:
+
 - `scripts/setup.sh` - First deploy (asks for domain, email, generates secrets, bootstraps SSL, starts app)
 - `scripts/deploy.sh` - Subsequent deploys (git pull, rebuild, restart)
 
@@ -208,7 +209,7 @@
 
 **Worker heartbeat** - If the worker crashes, `docker-compose` restarts it but `GET /health` still returns 200 in the gap - no visibility for the self-hoster. Planned fix: worker writes a `data/worker.heartbeat` file every poll cycle; health endpoint flags it stale if older than 2x the configured poll interval. Deferred to v2.
 
-**`authFailures` counter is persisted in DB** - The 3-strike auto-disable counter is stored as `consecutive_auth_failures` on `imap_settings` (migration 0006). Incremented via `sql\`consecutive_auth_failures + 1\`` on each IMAP auth failure; reset to 0 on success. Survives worker restarts - a flaky connection will correctly accumulate failures across restarts until `is_active` flips to false.
+**`authFailures` counter is persisted in DB** - The 3-strike auto-disable counter is stored as `consecutive_auth_failures` on `imap_settings` (migration 0006). Incremented via `sql\`consecutive_auth_failures + 1\``on each IMAP auth failure; reset to 0 on success. Survives worker restarts - a flaky connection will correctly accumulate failures across restarts until`is_active` flips to false.
 
 Not in scope for v1:
 

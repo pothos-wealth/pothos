@@ -5,7 +5,6 @@ import { nanoid } from "nanoid"
 import { eq } from "drizzle-orm"
 import { db } from "../../db/index.js"
 import { users, sessions, userSettings } from "../../db/schema.js"
-import { authenticate } from "../../middleware/authenticate.js"
 import { sessionOnlyAuthenticate } from "../../middleware/sessionOnlyAuthenticate.js"
 
 const SALT_ROUNDS = 12
@@ -198,45 +197,49 @@ export async function authRoutes(app: FastifyInstance) {
 
 	// ─── Change Password ──────────────────────────────────────────────────────
 
-	app.post("/auth/change-password", { preHandler: sessionOnlyAuthenticate }, async (request, reply) => {
-		const result = changePasswordSchema.safeParse(request.body)
+	app.post(
+		"/auth/change-password",
+		{ preHandler: sessionOnlyAuthenticate },
+		async (request, reply) => {
+			const result = changePasswordSchema.safeParse(request.body)
 
-		if (!result.success) {
-			return reply.status(400).send({
-				error: "Validation error",
-				details: result.error.flatten(),
+			if (!result.success) {
+				return reply.status(400).send({
+					error: "Validation error",
+					details: result.error.flatten(),
+				})
+			}
+
+			const { currentPassword, newPassword } = result.data
+			const now = Math.floor(Date.now() / 1000)
+
+			const user = db.select().from(users).where(eq(users.id, request.user.id)).get()
+
+			if (!user) {
+				return reply.status(404).send({ error: "User not found" })
+			}
+
+			const passwordMatch = await bcrypt.compare(currentPassword, user.passwordHash)
+
+			if (!passwordMatch) {
+				return reply.status(401).send({ error: "Current password is incorrect" })
+			}
+
+			const newPasswordHash = await bcrypt.hash(newPassword, SALT_ROUNDS)
+
+			// Update password and invalidate all sessions in a transaction
+			db.transaction((tx) => {
+				tx.update(users)
+					.set({ passwordHash: newPasswordHash, updatedAt: now })
+					.where(eq(users.id, user.id))
+					.run()
+
+				tx.delete(sessions).where(eq(sessions.userId, user.id)).run()
 			})
+
+			return reply
+				.clearCookie("session_id", { path: "/" })
+				.send({ message: "Password changed successfully" })
 		}
-
-		const { currentPassword, newPassword } = result.data
-		const now = Math.floor(Date.now() / 1000)
-
-		const user = db.select().from(users).where(eq(users.id, request.user.id)).get()
-
-		if (!user) {
-			return reply.status(404).send({ error: "User not found" })
-		}
-
-		const passwordMatch = await bcrypt.compare(currentPassword, user.passwordHash)
-
-		if (!passwordMatch) {
-			return reply.status(401).send({ error: "Current password is incorrect" })
-		}
-
-		const newPasswordHash = await bcrypt.hash(newPassword, SALT_ROUNDS)
-
-		// Update password and invalidate all sessions in a transaction
-		db.transaction((tx) => {
-			tx.update(users)
-				.set({ passwordHash: newPasswordHash, updatedAt: now })
-				.where(eq(users.id, user.id))
-				.run()
-
-			tx.delete(sessions).where(eq(sessions.userId, user.id)).run()
-		})
-
-		return reply
-			.clearCookie("session_id", { path: "/" })
-			.send({ message: "Password changed successfully" })
-	})
+	)
 }

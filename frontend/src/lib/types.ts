@@ -173,10 +173,10 @@ export interface LlmSettings {
 }
 
 export interface ApiKey {
-    id: string
-    name: string
-    lastUsedAt: number | null
-    createdAt: number
+	id: string
+	name: string
+	lastUsedAt: number | null
+	createdAt: number
 }
 
 export interface ParsedTransaction {

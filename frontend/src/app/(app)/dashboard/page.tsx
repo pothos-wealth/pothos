@@ -214,7 +214,9 @@ export default function DashboardPage() {
 					<StatCard
 						title="Available"
 						value={formatCurrency(available)}
-						subtitle={committed > 0 ? `${formatCurrency(committed)} committed` : undefined}
+						subtitle={
+							committed > 0 ? `${formatCurrency(committed)} committed` : undefined
+						}
 					/>
 					<StatCard
 						title="Monthly Income"

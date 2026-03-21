@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify"
-import { eq, and, gte, lte, lt, sql, ne } from "drizzle-orm"
+import { eq, and, gte, lte, sql, ne } from "drizzle-orm"
 import { z } from "zod"
 import { db } from "../../db/index.js"
 import { transactions, categories, budgets } from "../../db/schema.js"
@@ -71,7 +71,8 @@ export async function reportRoutes(app: FastifyInstance) {
 				and(
 					eq(budgets.userId, request.user.id),
 					eq(budgets.month, month),
-					eq(budgets.year, year)
+					eq(budgets.year, year),
+					eq(budgets.isCommitted, true)
 				)
 			)
 			.all()
@@ -93,9 +94,7 @@ export async function reportRoutes(app: FastifyInstance) {
 			.groupBy(transactions.categoryId)
 			.all()
 
-		const spendingMap = new Map(
-			spendingRows.map((r) => [r.categoryId, Math.abs(r.total)])
-		)
+		const spendingMap = new Map(spendingRows.map((r) => [r.categoryId, Math.abs(r.total)]))
 
 		const committed = budgetRows.reduce((sum, b) => {
 			const spent = spendingMap.get(b.categoryId) ?? 0

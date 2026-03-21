@@ -9,7 +9,14 @@ import { PageTransition } from "@/components/ui/PageTransition"
 import { ThemeToggle } from "@/components/ui/ThemeToggle"
 import { api } from "@/lib/api"
 import { useInboxCount } from "@/lib/inbox-count-context"
-import type { User, UserSettings, ImapSettings, EmailStatus, LlmSettings, ApiKey } from "@/lib/types"
+import type {
+	User,
+	UserSettings,
+	ImapSettings,
+	EmailStatus,
+	LlmSettings,
+	ApiKey,
+} from "@/lib/types"
 
 const PASSWORD_RULES = [
 	{ label: "At least 8 characters", test: (pw: string) => pw.length >= 8 },
@@ -759,7 +766,10 @@ export default function SettingsPage() {
 									className="shrink-0 p-2 rounded-lg border border-border hover:bg-bg-3 transition-colors duration-150"
 									title="Copy to clipboard"
 								>
-									<Copy size={14} className={keyCopied ? "text-primary" : "text-fg-muted"} />
+									<Copy
+										size={14}
+										className={keyCopied ? "text-primary" : "text-fg-muted"}
+									/>
 								</button>
 							</div>
 							<button
@@ -824,7 +834,9 @@ export default function SettingsPage() {
 									className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
 								>
 									<div className="flex flex-col gap-0.5">
-										<span className="text-sm font-medium text-fg">{key.name}</span>
+										<span className="text-sm font-medium text-fg">
+											{key.name}
+										</span>
 										<span className="text-xs text-fg-muted">
 											Last used: {formatLastUsed(key.lastUsedAt)}
 										</span>
