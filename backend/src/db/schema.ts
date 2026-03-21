@@ -1,5 +1,5 @@
-import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm"
+import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 
@@ -14,7 +14,7 @@ export const users = sqliteTable("users", {
 		.notNull()
 		.default(sql`(unixepoch())`),
 	isSuperadmin: integer("is_superadmin", { mode: "boolean" }).notNull().default(false),
-});
+})
 
 // ─── User Settings ────────────────────────────────────────────────────────────
 
@@ -31,7 +31,7 @@ export const userSettings = sqliteTable("user_settings", {
 	updatedAt: integer("updated_at")
 		.notNull()
 		.default(sql`(unixepoch())`),
-});
+})
 
 // ─── Sessions ─────────────────────────────────────────────────────────────────
 
@@ -44,7 +44,7 @@ export const sessions = sqliteTable("sessions", {
 	createdAt: integer("created_at")
 		.notNull()
 		.default(sql`(unixepoch())`),
-});
+})
 
 // ─── Accounts ─────────────────────────────────────────────────────────────────
 
@@ -63,7 +63,7 @@ export const accounts = sqliteTable("accounts", {
 	updatedAt: integer("updated_at")
 		.notNull()
 		.default(sql`(unixepoch())`),
-});
+})
 
 // ─── Categories ───────────────────────────────────────────────────────────────
 
@@ -77,7 +77,7 @@ export const categories = sqliteTable("categories", {
 	createdAt: integer("created_at")
 		.notNull()
 		.default(sql`(unixepoch())`),
-});
+})
 
 // ─── Transactions ─────────────────────────────────────────────────────────────
 
@@ -107,7 +107,7 @@ export const transactions = sqliteTable("transactions", {
 	updatedAt: integer("updated_at")
 		.notNull()
 		.default(sql`(unixepoch())`),
-});
+})
 
 // ─── Budgets ──────────────────────────────────────────────────────────────────
 
@@ -141,7 +141,7 @@ export const budgets = sqliteTable(
 			table.year
 		),
 	})
-);
+)
 
 // ─── Pending Messages ─────────────────────────────────────────────────────────
 
@@ -163,7 +163,7 @@ export const pendingMessages = sqliteTable("pending_messages", {
 	updatedAt: integer("updated_at")
 		.notNull()
 		.default(sql`(unixepoch())`),
-});
+})
 
 // ─── IMAP Settings ────────────────────────────────────────────────────────────
 
@@ -188,7 +188,7 @@ export const imapSettings = sqliteTable("imap_settings", {
 	updatedAt: integer("updated_at")
 		.notNull()
 		.default(sql`(unixepoch())`),
-});
+})
 
 // ─── LLM Settings ─────────────────────────────────────────────────────────────
 
@@ -209,7 +209,7 @@ export const llmSettings = sqliteTable("llm_settings", {
 	updatedAt: integer("updated_at")
 		.notNull()
 		.default(sql`(unixepoch())`),
-});
+})
 
 // ─── Parsed Transactions ──────────────────────────────────────────────────────
 
@@ -237,39 +237,39 @@ export const parsedTransactions = sqliteTable("parsed_transactions", {
 	updatedAt: integer("updated_at")
 		.notNull()
 		.default(sql`(unixepoch())`),
-});
+})
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
+export type User = typeof users.$inferSelect
+export type NewUser = typeof users.$inferInsert
 
-export type UserSettings = typeof userSettings.$inferSelect;
-export type NewUserSettings = typeof userSettings.$inferInsert;
+export type UserSettings = typeof userSettings.$inferSelect
+export type NewUserSettings = typeof userSettings.$inferInsert
 
-export type Session = typeof sessions.$inferSelect;
-export type NewSession = typeof sessions.$inferInsert;
+export type Session = typeof sessions.$inferSelect
+export type NewSession = typeof sessions.$inferInsert
 
-export type Account = typeof accounts.$inferSelect;
-export type NewAccount = typeof accounts.$inferInsert;
+export type Account = typeof accounts.$inferSelect
+export type NewAccount = typeof accounts.$inferInsert
 
-export type Category = typeof categories.$inferSelect;
-export type NewCategory = typeof categories.$inferInsert;
+export type Category = typeof categories.$inferSelect
+export type NewCategory = typeof categories.$inferInsert
 
-export type Transaction = typeof transactions.$inferSelect;
-export type NewTransaction = typeof transactions.$inferInsert;
+export type Transaction = typeof transactions.$inferSelect
+export type NewTransaction = typeof transactions.$inferInsert
 
-export type Budget = typeof budgets.$inferSelect;
-export type NewBudget = typeof budgets.$inferInsert;
+export type Budget = typeof budgets.$inferSelect
+export type NewBudget = typeof budgets.$inferInsert
 
-export type PendingMessage = typeof pendingMessages.$inferSelect;
-export type NewPendingMessage = typeof pendingMessages.$inferInsert;
+export type PendingMessage = typeof pendingMessages.$inferSelect
+export type NewPendingMessage = typeof pendingMessages.$inferInsert
 
-export type ImapSettings = typeof imapSettings.$inferSelect;
-export type NewImapSettings = typeof imapSettings.$inferInsert;
+export type ImapSettings = typeof imapSettings.$inferSelect
+export type NewImapSettings = typeof imapSettings.$inferInsert
 
-export type LlmSettings = typeof llmSettings.$inferSelect;
-export type NewLlmSettings = typeof llmSettings.$inferInsert;
+export type LlmSettings = typeof llmSettings.$inferSelect
+export type NewLlmSettings = typeof llmSettings.$inferInsert
 
-export type ParsedTransaction = typeof parsedTransactions.$inferSelect;
-export type NewParsedTransaction = typeof parsedTransactions.$inferInsert;
+export type ParsedTransaction = typeof parsedTransactions.$inferSelect
+export type NewParsedTransaction = typeof parsedTransactions.$inferInsert

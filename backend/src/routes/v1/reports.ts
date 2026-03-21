@@ -1,23 +1,23 @@
-import type { FastifyInstance } from "fastify";
-import { eq, and, gte, lte, lt, sql, ne } from "drizzle-orm";
-import { z } from "zod";
-import { db } from "../../db/index.js";
-import { transactions, categories } from "../../db/schema.js";
-import { authenticate } from "../../middleware/authenticate.js";
+import type { FastifyInstance } from "fastify"
+import { eq, and, gte, lte, lt, sql, ne } from "drizzle-orm"
+import { z } from "zod"
+import { db } from "../../db/index.js"
+import { transactions, categories } from "../../db/schema.js"
+import { authenticate } from "../../middleware/authenticate.js"
 
 const monthQuerySchema = z.object({
 	month: z.coerce.number().int().min(1).max(12).optional(),
 	year: z.coerce.number().int().min(2000).optional(),
-});
+})
 
 const trendsQuerySchema = z.object({
 	months: z.coerce.number().int().min(1).max(24).default(12),
-});
+})
 
 function getMonthBounds(month: number, year: number): { start: number; end: number } {
-	const start = Math.floor(new Date(year, month - 1, 1).getTime() / 1000);
-	const end = Math.floor(new Date(year, month, 1).getTime() / 1000) - 1;
-	return { start, end };
+	const start = Math.floor(new Date(year, month - 1, 1).getTime() / 1000)
+	const end = Math.floor(new Date(year, month, 1).getTime() / 1000) - 1
+	return { start, end }
 }
 
 export async function reportRoutes(app: FastifyInstance) {
@@ -26,42 +26,42 @@ export async function reportRoutes(app: FastifyInstance) {
 	// Transfers excluded.
 
 	app.get("/reports/overview", { preHandler: authenticate }, async (request, reply) => {
-		const result = monthQuerySchema.safeParse(request.query);
+		const result = monthQuerySchema.safeParse(request.query)
 
 		if (!result.success) {
 			return reply.status(400).send({
 				error: "Validation error",
 				details: result.error.flatten(),
-			});
+			})
 		}
 
-		const now = new Date();
-		const month = result.data.month ?? now.getMonth() + 1;
-		const year = result.data.year ?? now.getFullYear();
-		const { start, end } = getMonthBounds(month, year);
+		const now = new Date()
+		const month = result.data.month ?? now.getMonth() + 1
+		const year = result.data.year ?? now.getFullYear()
+		const { start, end } = getMonthBounds(month, year)
 
 		const baseConditions = and(
 			eq(transactions.userId, request.user.id),
 			ne(transactions.type, "transfer"),
 			gte(transactions.date, start),
 			lte(transactions.date, end)
-		);
+		)
 
 		const incomeResult = db
 			.select({ total: sql<number>`COALESCE(SUM(amount), 0)` })
 			.from(transactions)
 			.where(and(baseConditions, eq(transactions.type, "income")))
-			.get();
+			.get()
 
 		const expenseResult = db
 			.select({ total: sql<number>`COALESCE(SUM(amount), 0)` })
 			.from(transactions)
 			.where(and(baseConditions, eq(transactions.type, "expense")))
-			.get();
+			.get()
 
-		const income = incomeResult?.total ?? 0;
-		const expenses = expenseResult?.total ?? 0; // negative number
-		const net = income + expenses; // expenses is negative so this is correct
+		const income = incomeResult?.total ?? 0
+		const expenses = expenseResult?.total ?? 0 // negative number
+		const net = income + expenses // expenses is negative so this is correct
 
 		return reply.send({
 			month,
@@ -69,27 +69,27 @@ export async function reportRoutes(app: FastifyInstance) {
 			income,
 			expenses: Math.abs(expenses), // return as positive for display
 			net,
-		});
-	});
+		})
+	})
 
 	// ─── Category Breakdown ───────────────────────────────────────────────────
 	// Expenses grouped by category for a given month.
 	// Transfers excluded. Only expense transactions.
 
 	app.get("/reports/categories", { preHandler: authenticate }, async (request, reply) => {
-		const result = monthQuerySchema.safeParse(request.query);
+		const result = monthQuerySchema.safeParse(request.query)
 
 		if (!result.success) {
 			return reply.status(400).send({
 				error: "Validation error",
 				details: result.error.flatten(),
-			});
+			})
 		}
 
-		const now = new Date();
-		const month = result.data.month ?? now.getMonth() + 1;
-		const year = result.data.year ?? now.getFullYear();
-		const { start, end } = getMonthBounds(month, year);
+		const now = new Date()
+		const month = result.data.month ?? now.getMonth() + 1
+		const year = result.data.year ?? now.getFullYear()
+		const { start, end } = getMonthBounds(month, year)
 
 		const rows = db
 			.select({
@@ -110,7 +110,7 @@ export async function reportRoutes(app: FastifyInstance) {
 				)
 			)
 			.groupBy(transactions.categoryId)
-			.all();
+			.all()
 
 		const data = rows.map((row) => ({
 			categoryId: row.categoryId,
@@ -118,41 +118,41 @@ export async function reportRoutes(app: FastifyInstance) {
 			categoryIcon: row.categoryIcon ?? null,
 			categoryColor: row.categoryColor ?? null,
 			total: Math.abs(row.total), // return as positive for display
-		}));
+		}))
 
-		return reply.send({ month, year, data });
-	});
+		return reply.send({ month, year, data })
+	})
 
 	// ─── Trends ───────────────────────────────────────────────────────────────
 	// Monthly income, expenses, and net over the last N months.
 	// Transfers excluded. Months with no transactions are included as zeroes.
 
 	app.get("/reports/trends", { preHandler: authenticate }, async (request, reply) => {
-		const result = trendsQuerySchema.safeParse(request.query);
+		const result = trendsQuerySchema.safeParse(request.query)
 
 		if (!result.success) {
 			return reply.status(400).send({
 				error: "Validation error",
 				details: result.error.flatten(),
-			});
+			})
 		}
 
-		const { months } = result.data;
+		const { months } = result.data
 
 		// Build the list of months to cover, going backwards from current month
-		const now = new Date();
-		const periods: { month: number; year: number; start: number; end: number }[] = [];
+		const now = new Date()
+		const periods: { month: number; year: number; start: number; end: number }[] = []
 
 		for (let i = months - 1; i >= 0; i--) {
-			const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-			const month = date.getMonth() + 1;
-			const year = date.getFullYear();
-			const { start, end } = getMonthBounds(month, year);
-			periods.push({ month, year, start, end });
+			const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+			const month = date.getMonth() + 1
+			const year = date.getFullYear()
+			const { start, end } = getMonthBounds(month, year)
+			periods.push({ month, year, start, end })
 		}
 
-		const earliestStart = periods[0].start;
-		const latestEnd = periods[periods.length - 1].end;
+		const earliestStart = periods[0].start
+		const latestEnd = periods[periods.length - 1].end
 
 		// Fetch all relevant transactions in one query
 		const rows = db
@@ -170,21 +170,21 @@ export async function reportRoutes(app: FastifyInstance) {
 					lte(transactions.date, latestEnd)
 				)
 			)
-			.all();
+			.all()
 
 		// Aggregate into periods
 		const data = periods.map(({ month, year, start, end }) => {
-			const periodRows = rows.filter((r) => r.date >= start && r.date <= end);
+			const periodRows = rows.filter((r) => r.date >= start && r.date <= end)
 
 			const income = periodRows
 				.filter((r) => r.type === "income")
-				.reduce((sum, r) => sum + r.amount, 0);
+				.reduce((sum, r) => sum + r.amount, 0)
 
 			const expenses = periodRows
 				.filter((r) => r.type === "expense")
-				.reduce((sum, r) => sum + r.amount, 0); // negative
+				.reduce((sum, r) => sum + r.amount, 0) // negative
 
-			const net = income + expenses;
+			const net = income + expenses
 
 			return {
 				month,
@@ -192,9 +192,9 @@ export async function reportRoutes(app: FastifyInstance) {
 				income,
 				expenses: Math.abs(expenses), // return as positive for display
 				net,
-			};
-		});
+			}
+		})
 
-		return reply.send({ months, data });
-	});
+		return reply.send({ months, data })
+	})
 }

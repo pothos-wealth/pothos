@@ -1,29 +1,29 @@
-import type { FastifyInstance } from "fastify";
-import { eq, sql, and, or, isNull } from "drizzle-orm";
-import { z } from "zod";
-import { nanoid } from "nanoid";
-import { db } from "../../db/index.js";
-import { categories, transactions } from "../../db/schema.js";
-import { authenticate } from "../../middleware/authenticate.js";
+import type { FastifyInstance } from "fastify"
+import { eq, sql, and, or, isNull } from "drizzle-orm"
+import { z } from "zod"
+import { nanoid } from "nanoid"
+import { db } from "../../db/index.js"
+import { categories, transactions } from "../../db/schema.js"
+import { authenticate } from "../../middleware/authenticate.js"
 
 const hexColorSchema = z
 	.string()
 	.regex(/^#[0-9a-fA-F]{6}$/, "Color must be a valid hex color (e.g. #ff0000)")
-	.optional();
+	.optional()
 
 const createCategorySchema = z.object({
 	name: z.string().min(1, "Category name is required"),
 	icon: z.string().optional(),
 	color: hexColorSchema,
 	type: z.enum(["expense", "income", "neutral"]),
-});
+})
 
 const updateCategorySchema = z.object({
 	name: z.string().min(1, "Category name is required").optional(),
 	icon: z.string().optional(),
 	color: hexColorSchema,
 	type: z.enum(["expense", "income", "neutral"]).optional(),
-});
+})
 
 export async function categoryRoutes(app: FastifyInstance) {
 	// ─── List Categories ──────────────────────────────────────────────────────
@@ -33,25 +33,25 @@ export async function categoryRoutes(app: FastifyInstance) {
 			.select()
 			.from(categories)
 			.where(or(isNull(categories.userId), eq(categories.userId, request.user.id)))
-			.all();
+			.all()
 
-		return reply.send(rows);
-	});
+		return reply.send(rows)
+	})
 
 	// ─── Create Category ──────────────────────────────────────────────────────
 
 	app.post("/categories", { preHandler: authenticate }, async (request, reply) => {
-		const result = createCategorySchema.safeParse(request.body);
+		const result = createCategorySchema.safeParse(request.body)
 
 		if (!result.success) {
 			return reply.status(400).send({
 				error: "Validation error",
 				details: result.error.flatten(),
-			});
+			})
 		}
 
-		const now = Math.floor(Date.now() / 1000);
-		const id = nanoid();
+		const now = Math.floor(Date.now() / 1000)
+		const id = nanoid()
 
 		const category = db
 			.insert(categories)
@@ -65,40 +65,45 @@ export async function categoryRoutes(app: FastifyInstance) {
 				createdAt: now,
 			})
 			.returning()
-			.get();
+			.get()
 
-		return reply.status(201).send(category);
-	});
+		return reply.status(201).send(category)
+	})
 
 	// ─── Update Category ──────────────────────────────────────────────────────
 
 	app.put("/categories/:id", { preHandler: authenticate }, async (request, reply) => {
-		const { id } = request.params as { id: string };
+		const { id } = request.params as { id: string }
 
-		const result = updateCategorySchema.safeParse(request.body);
+		const result = updateCategorySchema.safeParse(request.body)
 
 		if (!result.success) {
 			return reply.status(400).send({
 				error: "Validation error",
 				details: result.error.flatten(),
-			});
+			})
 		}
 
 		const category = db
 			.select()
 			.from(categories)
-			.where(and(eq(categories.id, id), or(eq(categories.userId, request.user.id), isNull(categories.userId))))
-			.get();
+			.where(
+				and(
+					eq(categories.id, id),
+					or(eq(categories.userId, request.user.id), isNull(categories.userId))
+				)
+			)
+			.get()
 
 		if (!category) {
-			return reply.status(404).send({ error: "Category not found" });
+			return reply.status(404).send({ error: "Category not found" })
 		}
 
 		// Block editing global default categories
 		if (category.userId === null) {
 			return reply.status(403).send({
 				error: "Cannot edit global default categories",
-			});
+			})
 		}
 
 		const updated = db
@@ -111,31 +116,36 @@ export async function categoryRoutes(app: FastifyInstance) {
 			})
 			.where(eq(categories.id, id))
 			.returning()
-			.get();
+			.get()
 
-		return reply.send(updated);
-	});
+		return reply.send(updated)
+	})
 
 	// ─── Delete Category ──────────────────────────────────────────────────────
 
 	app.delete("/categories/:id", { preHandler: authenticate }, async (request, reply) => {
-		const { id } = request.params as { id: string };
+		const { id } = request.params as { id: string }
 
 		const category = db
 			.select()
 			.from(categories)
-			.where(and(eq(categories.id, id), or(eq(categories.userId, request.user.id), isNull(categories.userId))))
-			.get();
+			.where(
+				and(
+					eq(categories.id, id),
+					or(eq(categories.userId, request.user.id), isNull(categories.userId))
+				)
+			)
+			.get()
 
 		if (!category) {
-			return reply.status(404).send({ error: "Category not found" });
+			return reply.status(404).send({ error: "Category not found" })
 		}
 
 		// Block deleting global default categories
 		if (category.userId === null) {
 			return reply.status(403).send({
 				error: "Cannot delete global default categories",
-			});
+			})
 		}
 
 		// Block deletion if any transactions reference this category
@@ -143,16 +153,16 @@ export async function categoryRoutes(app: FastifyInstance) {
 			.select({ count: sql<number>`count(*)` })
 			.from(transactions)
 			.where(eq(transactions.categoryId, id))
-			.get();
+			.get()
 
 		if (txCount && txCount.count > 0) {
 			return reply.status(409).send({
 				error: "Cannot delete category with existing transactions",
-			});
+			})
 		}
 
-		db.delete(categories).where(eq(categories.id, id)).run();
+		db.delete(categories).where(eq(categories.id, id)).run()
 
-		return reply.status(204).send();
-	});
+		return reply.status(204).send()
+	})
 }

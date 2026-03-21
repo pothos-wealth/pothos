@@ -1,21 +1,21 @@
-import type { FastifyInstance } from "fastify";
-import { eq, and, sum, sql, inArray } from "drizzle-orm";
-import { z } from "zod";
-import { nanoid } from "nanoid";
-import { db } from "../../db/index.js";
-import { accounts, transactions } from "../../db/schema.js";
-import { authenticate } from "../../middleware/authenticate.js";
+import type { FastifyInstance } from "fastify"
+import { eq, and, sum, sql, inArray } from "drizzle-orm"
+import { z } from "zod"
+import { nanoid } from "nanoid"
+import { db } from "../../db/index.js"
+import { accounts, transactions } from "../../db/schema.js"
+import { authenticate } from "../../middleware/authenticate.js"
 
 const createAccountSchema = z.object({
 	name: z.string().min(1, "Account name is required"),
 	type: z.string().min(1, "Account type is required"),
 	initialBalance: z.number().int().min(-1_000_000_000).max(1_000_000_000).default(0),
-});
+})
 
 const updateAccountSchema = z.object({
 	name: z.string().min(1, "Account name is required").optional(),
 	type: z.string().min(1, "Account type is required").optional(),
-});
+})
 
 // ─── Balance Helper ───────────────────────────────────────────────────────────
 
@@ -24,17 +24,17 @@ function getAccountBalance(accountId: string, initialBalance: number): number {
 		.select({ total: sql<number>`COALESCE(SUM(amount), 0)` })
 		.from(transactions)
 		.where(eq(transactions.accountId, accountId))
-		.get();
+		.get()
 
-	return initialBalance + (result?.total ?? 0);
+	return initialBalance + (result?.total ?? 0)
 }
 
 export async function accountRoutes(app: FastifyInstance) {
 	// ─── List Accounts ────────────────────────────────────────────────────────
 
 	app.get("/accounts", { preHandler: authenticate }, async (request, reply) => {
-		const query = request.query as { includeInactive?: string };
-		const includeInactive = query.includeInactive === "true";
+		const query = request.query as { includeInactive?: string }
+		const includeInactive = query.includeInactive === "true"
 
 		const rows = db
 			.select()
@@ -44,10 +44,10 @@ export async function accountRoutes(app: FastifyInstance) {
 					? eq(accounts.userId, request.user.id)
 					: and(eq(accounts.userId, request.user.id), eq(accounts.isActive, true))
 			)
-			.all();
+			.all()
 
-		const accountIds = rows.map((a) => a.id);
-		const balanceMap = new Map<string, number>();
+		const accountIds = rows.map((a) => a.id)
+		const balanceMap = new Map<string, number>()
 
 		if (accountIds.length > 0) {
 			const balances = db
@@ -58,35 +58,35 @@ export async function accountRoutes(app: FastifyInstance) {
 				.from(transactions)
 				.where(inArray(transactions.accountId, accountIds))
 				.groupBy(transactions.accountId)
-				.all();
+				.all()
 
 			for (const b of balances) {
-				balanceMap.set(b.accountId, b.total);
+				balanceMap.set(b.accountId, b.total)
 			}
 		}
 
 		const result = rows.map((account) => ({
 			...account,
 			balance: account.initialBalance + (balanceMap.get(account.id) ?? 0),
-		}));
+		}))
 
-		return reply.send(result);
-	});
+		return reply.send(result)
+	})
 
 	// ─── Create Account ───────────────────────────────────────────────────────
 
 	app.post("/accounts", { preHandler: authenticate }, async (request, reply) => {
-		const result = createAccountSchema.safeParse(request.body);
+		const result = createAccountSchema.safeParse(request.body)
 
 		if (!result.success) {
 			return reply.status(400).send({
 				error: "Validation error",
 				details: result.error.flatten(),
-			});
+			})
 		}
 
-		const now = Math.floor(Date.now() / 1000);
-		const id = nanoid();
+		const now = Math.floor(Date.now() / 1000)
+		const id = nanoid()
 
 		const account = db
 			.insert(accounts)
@@ -101,60 +101,60 @@ export async function accountRoutes(app: FastifyInstance) {
 				updatedAt: now,
 			})
 			.returning()
-			.get();
+			.get()
 
 		return reply.status(201).send({
 			...account,
 			balance: account.initialBalance,
-		});
-	});
+		})
+	})
 
 	// ─── Get Account ──────────────────────────────────────────────────────────
 
 	app.get("/accounts/:id", { preHandler: authenticate }, async (request, reply) => {
-		const { id } = request.params as { id: string };
+		const { id } = request.params as { id: string }
 
 		const account = db
 			.select()
 			.from(accounts)
 			.where(and(eq(accounts.id, id), eq(accounts.userId, request.user.id)))
-			.get();
+			.get()
 
 		if (!account) {
-			return reply.status(404).send({ error: "Account not found" });
+			return reply.status(404).send({ error: "Account not found" })
 		}
 
 		return reply.send({
 			...account,
 			balance: getAccountBalance(account.id, account.initialBalance),
-		});
-	});
+		})
+	})
 
 	// ─── Update Account ───────────────────────────────────────────────────────
 
 	app.put("/accounts/:id", { preHandler: authenticate }, async (request, reply) => {
-		const { id } = request.params as { id: string };
+		const { id } = request.params as { id: string }
 
-		const result = updateAccountSchema.safeParse(request.body);
+		const result = updateAccountSchema.safeParse(request.body)
 
 		if (!result.success) {
 			return reply.status(400).send({
 				error: "Validation error",
 				details: result.error.flatten(),
-			});
+			})
 		}
 
 		const account = db
 			.select()
 			.from(accounts)
 			.where(and(eq(accounts.id, id), eq(accounts.userId, request.user.id)))
-			.get();
+			.get()
 
 		if (!account) {
-			return reply.status(404).send({ error: "Account not found" });
+			return reply.status(404).send({ error: "Account not found" })
 		}
 
-		const now = Math.floor(Date.now() / 1000);
+		const now = Math.floor(Date.now() / 1000)
 
 		const updated = db
 			.update(accounts)
@@ -165,27 +165,27 @@ export async function accountRoutes(app: FastifyInstance) {
 			})
 			.where(eq(accounts.id, id))
 			.returning()
-			.get();
+			.get()
 
 		return reply.send({
 			...updated,
 			balance: getAccountBalance(id, updated!.initialBalance),
-		});
-	});
+		})
+	})
 
 	// ─── Delete Account ───────────────────────────────────────────────────────
 
 	app.delete("/accounts/:id", { preHandler: authenticate }, async (request, reply) => {
-		const { id } = request.params as { id: string };
+		const { id } = request.params as { id: string }
 
 		const account = db
 			.select()
 			.from(accounts)
 			.where(and(eq(accounts.id, id), eq(accounts.userId, request.user.id)))
-			.get();
+			.get()
 
 		if (!account) {
-			return reply.status(404).send({ error: "Account not found" });
+			return reply.status(404).send({ error: "Account not found" })
 		}
 
 		// Block deletion if any transactions exist
@@ -193,92 +193,92 @@ export async function accountRoutes(app: FastifyInstance) {
 			.select({ count: sql<number>`count(*)` })
 			.from(transactions)
 			.where(eq(transactions.accountId, id))
-			.get();
+			.get()
 
 		if (txCount && txCount.count > 0) {
 			return reply.status(409).send({
 				error: "Cannot delete account with existing transactions. Close it instead.",
-			});
+			})
 		}
 
-		db.delete(accounts).where(eq(accounts.id, id)).run();
+		db.delete(accounts).where(eq(accounts.id, id)).run()
 
-		return reply.status(204).send();
-	});
+		return reply.status(204).send()
+	})
 
 	// ─── Close Account ────────────────────────────────────────────────────────
 
 	app.post("/accounts/:id/close", { preHandler: authenticate }, async (request, reply) => {
-		const { id } = request.params as { id: string };
+		const { id } = request.params as { id: string }
 
 		const account = db
 			.select()
 			.from(accounts)
 			.where(and(eq(accounts.id, id), eq(accounts.userId, request.user.id)))
-			.get();
+			.get()
 
 		if (!account) {
-			return reply.status(404).send({ error: "Account not found" });
+			return reply.status(404).send({ error: "Account not found" })
 		}
 
 		if (!account.isActive) {
-			return reply.status(409).send({ error: "Account is already closed" });
+			return reply.status(409).send({ error: "Account is already closed" })
 		}
 
-		const balance = getAccountBalance(id, account.initialBalance);
+		const balance = getAccountBalance(id, account.initialBalance)
 
 		if (balance !== 0) {
 			return reply.status(409).send({
 				error: "Cannot close account with non-zero balance",
-			});
+			})
 		}
 
-		const now = Math.floor(Date.now() / 1000);
+		const now = Math.floor(Date.now() / 1000)
 
 		const updated = db
 			.update(accounts)
 			.set({ isActive: false, updatedAt: now })
 			.where(eq(accounts.id, id))
 			.returning()
-			.get();
+			.get()
 
 		return reply.send({
 			...updated,
 			balance: getAccountBalance(id, updated!.initialBalance),
-		});
-	});
+		})
+	})
 
 	// ─── Reopen Account ───────────────────────────────────────────────────────
 
 	app.post("/accounts/:id/reopen", { preHandler: authenticate }, async (request, reply) => {
-		const { id } = request.params as { id: string };
+		const { id } = request.params as { id: string }
 
 		const account = db
 			.select()
 			.from(accounts)
 			.where(and(eq(accounts.id, id), eq(accounts.userId, request.user.id)))
-			.get();
+			.get()
 
 		if (!account) {
-			return reply.status(404).send({ error: "Account not found" });
+			return reply.status(404).send({ error: "Account not found" })
 		}
 
 		if (account.isActive) {
-			return reply.status(409).send({ error: "Account is already active" });
+			return reply.status(409).send({ error: "Account is already active" })
 		}
 
-		const now = Math.floor(Date.now() / 1000);
+		const now = Math.floor(Date.now() / 1000)
 
 		const updated = db
 			.update(accounts)
 			.set({ isActive: true, updatedAt: now })
 			.where(eq(accounts.id, id))
 			.returning()
-			.get();
+			.get()
 
 		return reply.send({
 			...updated,
 			balance: getAccountBalance(id, updated!.initialBalance),
-		});
-	});
+		})
+	})
 }

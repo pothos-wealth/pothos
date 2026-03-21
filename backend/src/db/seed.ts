@@ -1,6 +1,6 @@
-import { nanoid } from "nanoid";
-import { db } from "./index.js";
-import { categories } from "./schema.js";
+import { nanoid } from "nanoid"
+import { db } from "./index.js"
+import { categories } from "./schema.js"
 
 const defaultCategories = [
 	{ name: "Food & Dining", icon: "🍔", color: "#ef4444", type: "expense" },
@@ -18,38 +18,40 @@ const defaultCategories = [
 	{ name: "Other Income", icon: "📈", color: "#34d399", type: "income" },
 	{ name: "Savings", icon: "🏦", color: "#3b82f6", type: "neutral" },
 	{ name: "Miscellaneous", icon: "📦", color: "#94a3b8", type: "neutral" },
-] as const;
+] as const
 
 function seed() {
-	console.log("Seeding default categories...");
+	console.log("Seeding default categories...")
 
-	const existing = db.select().from(categories).all();
+	const existing = db.select().from(categories).all()
 
 	if (existing.length > 0) {
-		console.log("Categories already seeded, skipping.");
-		return;
+		console.log("Categories already seeded, skipping.")
+		return
 	}
 
-	const now = Math.floor(Date.now() / 1000);
+	const now = Math.floor(Date.now() / 1000)
 
-	db.insert(categories).values(
-		defaultCategories.map((cat) => ({
-			id: nanoid(),
-			userId: null,
-			name: cat.name,
-			icon: cat.icon,
-			color: cat.color,
-			type: cat.type,
-			createdAt: now,
-		}))
-	).run();
+	db.insert(categories)
+		.values(
+			defaultCategories.map((cat) => ({
+				id: nanoid(),
+				userId: null,
+				name: cat.name,
+				icon: cat.icon,
+				color: cat.color,
+				type: cat.type,
+				createdAt: now,
+			}))
+		)
+		.run()
 
-	console.log(`Seeded ${defaultCategories.length} default categories.`);
+	console.log(`Seeded ${defaultCategories.length} default categories.`)
 }
 
 try {
-	seed();
+	seed()
 } catch (err) {
-	console.error("Seed failed:", err);
-	process.exit(1);
+	console.error("Seed failed:", err)
+	process.exit(1)
 }

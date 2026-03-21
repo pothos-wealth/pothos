@@ -1,10 +1,10 @@
-import type { FastifyInstance } from "fastify";
-import { eq, and, or, isNull, lt, desc, sql, inArray } from "drizzle-orm";
-import { z } from "zod";
-import { nanoid } from "nanoid";
-import { db } from "../../db/index.js";
-import { budgets, transactions, categories } from "../../db/schema.js";
-import { authenticate } from "../../middleware/authenticate.js";
+import type { FastifyInstance } from "fastify"
+import { eq, and, or, isNull, lt, desc, sql, inArray } from "drizzle-orm"
+import { z } from "zod"
+import { nanoid } from "nanoid"
+import { db } from "../../db/index.js"
+import { budgets, transactions, categories } from "../../db/schema.js"
+import { authenticate } from "../../middleware/authenticate.js"
 
 const createBudgetSchema = z.object({
 	categoryId: z.string().min(1, "Category is required"),
@@ -13,38 +13,38 @@ const createBudgetSchema = z.object({
 	year: z.number().int().min(2000).max(2100),
 	isRecurring: z.boolean().default(true),
 	isCommitted: z.boolean().default(false),
-});
+})
 
 const listQuerySchema = z.object({
 	month: z.coerce.number().int().min(1).max(12).optional(),
 	year: z.coerce.number().int().min(2000).optional(),
-});
+})
 
 function getMonthBounds(month: number, year: number): { start: number; end: number } {
-	const start = Math.floor(new Date(year, month - 1, 1).getTime() / 1000);
-	const end = Math.floor(new Date(year, month, 1).getTime() / 1000) - 1;
-	return { start, end };
+	const start = Math.floor(new Date(year, month - 1, 1).getTime() / 1000)
+	const end = Math.floor(new Date(year, month, 1).getTime() / 1000) - 1
+	return { start, end }
 }
 
 export async function budgetRoutes(app: FastifyInstance) {
 	// ─── List Budgets ─────────────────────────────────────────────────────────
 
 	app.get("/budgets", { preHandler: authenticate }, async (request, reply) => {
-		const result = listQuerySchema.safeParse(request.query);
+		const result = listQuerySchema.safeParse(request.query)
 
 		if (!result.success) {
 			return reply.status(400).send({
 				error: "Validation error",
 				details: result.error.flatten(),
-			});
+			})
 		}
 
-		const now = new Date();
-		const month = result.data.month ?? now.getMonth() + 1;
-		const year = result.data.year ?? now.getFullYear();
-		const { start, end } = getMonthBounds(month, year);
+		const now = new Date()
+		const month = result.data.month ?? now.getMonth() + 1
+		const year = result.data.year ?? now.getFullYear()
+		const { start, end } = getMonthBounds(month, year)
 
-		const isCurrentMonth = month === now.getMonth() + 1 && year === now.getFullYear();
+		const isCurrentMonth = month === now.getMonth() + 1 && year === now.getFullYear()
 
 		let rows = db
 			.select()
@@ -56,7 +56,7 @@ export async function budgetRoutes(app: FastifyInstance) {
 					eq(budgets.year, year)
 				)
 			)
-			.all();
+			.all()
 
 		// Auto-generate recurring budgets for the current month on first view
 		if (isCurrentMonth) {
@@ -69,13 +69,13 @@ export async function budgetRoutes(app: FastifyInstance) {
 						or(isNull(categories.userId), eq(categories.userId, request.user.id))
 					)
 				)
-				.all();
+				.all()
 
-			const budgetedIds = new Set(rows.map((r) => r.categoryId));
-			const unbudgeted = allExpenseCategories.filter((c) => !budgetedIds.has(c.id));
+			const budgetedIds = new Set(rows.map((r) => r.categoryId))
+			const unbudgeted = allExpenseCategories.filter((c) => !budgetedIds.has(c.id))
 
 			if (unbudgeted.length > 0) {
-				const nowTs = Math.floor(Date.now() / 1000);
+				const nowTs = Math.floor(Date.now() / 1000)
 
 				for (const cat of unbudgeted) {
 					const source = db
@@ -94,7 +94,7 @@ export async function budgetRoutes(app: FastifyInstance) {
 						)
 						.orderBy(desc(budgets.year), desc(budgets.month))
 						.limit(1)
-						.get();
+						.get()
 
 					if (source) {
 						db.insert(budgets)
@@ -111,7 +111,7 @@ export async function budgetRoutes(app: FastifyInstance) {
 								updatedAt: nowTs,
 							})
 							.onConflictDoNothing()
-							.run();
+							.run()
 					}
 				}
 
@@ -126,13 +126,13 @@ export async function budgetRoutes(app: FastifyInstance) {
 							eq(budgets.year, year)
 						)
 					)
-					.all();
+					.all()
 			}
 		}
 
 		// Calculate actual spending per category for the period in a single query
-		const categoryIds = rows.map((b) => b.categoryId);
-		const spendingMap = new Map<string, number>();
+		const categoryIds = rows.map((b) => b.categoryId)
+		const spendingMap = new Map<string, number>()
 
 		if (categoryIds.length > 0) {
 			const spending = db
@@ -151,54 +151,59 @@ export async function budgetRoutes(app: FastifyInstance) {
 					)
 				)
 				.groupBy(transactions.categoryId)
-				.all();
+				.all()
 
 			for (const s of spending) {
 				if (s.categoryId) {
 					// Spending is stored as negative — convert to positive for display
-					spendingMap.set(s.categoryId, Math.abs(s.total));
+					spendingMap.set(s.categoryId, Math.abs(s.total))
 				}
 			}
 		}
 
 		const result2 = rows.map((budget) => {
-			const spent = spendingMap.get(budget.categoryId) ?? 0;
+			const spent = spendingMap.get(budget.categoryId) ?? 0
 			return {
 				...budget,
 				spent,
 				remaining: budget.amount - spent,
-			};
-		});
+			}
+		})
 
-		return reply.send(result2);
-	});
+		return reply.send(result2)
+	})
 
 	// ─── Create or Update Budget (Upsert) ─────────────────────────────────────
 
 	app.post("/budgets", { preHandler: authenticate }, async (request, reply) => {
-		const result = createBudgetSchema.safeParse(request.body);
+		const result = createBudgetSchema.safeParse(request.body)
 
 		if (!result.success) {
 			return reply.status(400).send({
 				error: "Validation error",
 				details: result.error.flatten(),
-			});
+			})
 		}
 
-		const { categoryId, amount, month, year, isRecurring, isCommitted } = result.data;
+		const { categoryId, amount, month, year, isRecurring, isCommitted } = result.data
 
 		// Verify category exists and belongs to user or is a global default
 		const category = db
 			.select()
 			.from(categories)
-			.where(and(eq(categories.id, categoryId), or(eq(categories.userId, request.user.id), isNull(categories.userId))))
-			.get();
+			.where(
+				and(
+					eq(categories.id, categoryId),
+					or(eq(categories.userId, request.user.id), isNull(categories.userId))
+				)
+			)
+			.get()
 
 		if (!category) {
-			return reply.status(404).send({ error: "Category not found" });
+			return reply.status(404).send({ error: "Category not found" })
 		}
 
-		const now = Math.floor(Date.now() / 1000);
+		const now = Math.floor(Date.now() / 1000)
 
 		// Check if budget already exists for this category/month/year
 		const existing = db
@@ -212,7 +217,7 @@ export async function budgetRoutes(app: FastifyInstance) {
 					eq(budgets.year, year)
 				)
 			)
-			.get();
+			.get()
 
 		if (existing) {
 			// Update existing budget
@@ -221,9 +226,9 @@ export async function budgetRoutes(app: FastifyInstance) {
 				.set({ amount, isRecurring, isCommitted, updatedAt: now })
 				.where(eq(budgets.id, existing.id))
 				.returning()
-				.get();
+				.get()
 
-			return reply.status(200).send(updated);
+			return reply.status(200).send(updated)
 		}
 
 		// Create new budget
@@ -242,28 +247,28 @@ export async function budgetRoutes(app: FastifyInstance) {
 				updatedAt: now,
 			})
 			.returning()
-			.get();
+			.get()
 
-		return reply.status(201).send(budget);
-	});
+		return reply.status(201).send(budget)
+	})
 
 	// ─── Delete Budget ────────────────────────────────────────────────────────
 
 	app.delete("/budgets/:id", { preHandler: authenticate }, async (request, reply) => {
-		const { id } = request.params as { id: string };
+		const { id } = request.params as { id: string }
 
 		const budget = db
 			.select()
 			.from(budgets)
 			.where(and(eq(budgets.id, id), eq(budgets.userId, request.user.id)))
-			.get();
+			.get()
 
 		if (!budget) {
-			return reply.status(404).send({ error: "Budget not found" });
+			return reply.status(404).send({ error: "Budget not found" })
 		}
 
-		db.delete(budgets).where(eq(budgets.id, id)).run();
+		db.delete(budgets).where(eq(budgets.id, id)).run()
 
-		return reply.status(204).send();
-	});
+		return reply.status(204).send()
+	})
 }

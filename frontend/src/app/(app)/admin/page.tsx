@@ -1,137 +1,137 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Card } from "@/components/ui/Card";
-import { StatCard } from "@/components/dashboard/StatCard";
-import { Modal } from "@/components/ui/Modal";
-import { ConfirmModal } from "@/components/ui/ConfirmModal";
-import { PageTransition } from "@/components/ui/PageTransition";
-import { PothosLottie } from "@/components/ui/PothosLottie";
-import { api } from "@/lib/api";
-import { formatDate } from "@/lib/utils";
-import { Copy, Check } from "lucide-react";
-import type { AdminStats, AdminUser, AdminSession, AdminSettings, User } from "@/lib/types";
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Card } from "@/components/ui/Card"
+import { StatCard } from "@/components/dashboard/StatCard"
+import { Modal } from "@/components/ui/Modal"
+import { ConfirmModal } from "@/components/ui/ConfirmModal"
+import { PageTransition } from "@/components/ui/PageTransition"
+import { PothosLottie } from "@/components/ui/PothosLottie"
+import { api } from "@/lib/api"
+import { formatDate } from "@/lib/utils"
+import { Copy, Check } from "lucide-react"
+import type { AdminStats, AdminUser, AdminSession, AdminSettings, User } from "@/lib/types"
 
 function formatBytes(bytes: number): string {
-	if (bytes < 1024) return `${bytes} B`;
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-	return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+	if (bytes < 1024) return `${bytes} B`
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+	return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 }
 
 export default function AdminPage() {
-	const router = useRouter();
-	const [currentUser, setCurrentUser] = useState<User | null>(null);
-	const [stats, setStats] = useState<AdminStats | null>(null);
-	const [settings, setSettings] = useState<AdminSettings | null>(null);
-	const [users, setUsers] = useState<AdminUser[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [actionError, setActionError] = useState<string | null>(null);
-	const [copied, setCopied] = useState(false);
+	const router = useRouter()
+	const [currentUser, setCurrentUser] = useState<User | null>(null)
+	const [stats, setStats] = useState<AdminStats | null>(null)
+	const [settings, setSettings] = useState<AdminSettings | null>(null)
+	const [users, setUsers] = useState<AdminUser[]>([])
+	const [loading, setLoading] = useState(true)
+	const [actionError, setActionError] = useState<string | null>(null)
+	const [copied, setCopied] = useState(false)
 
 	// Sessions modal
-	const [sessionsModalOpen, setSessionsModalOpen] = useState(false);
-	const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
-	const [sessions, setSessions] = useState<AdminSession[]>([]);
-	const [sessionsLoading, setSessionsLoading] = useState(false);
-	const [sessionError, setSessionError] = useState<string | null>(null);
-	const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
-	const [revokeAllPending, setRevokeAllPending] = useState(false);
+	const [sessionsModalOpen, setSessionsModalOpen] = useState(false)
+	const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null)
+	const [sessions, setSessions] = useState<AdminSession[]>([])
+	const [sessionsLoading, setSessionsLoading] = useState(false)
+	const [sessionError, setSessionError] = useState<string | null>(null)
+	const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null)
+	const [revokeAllPending, setRevokeAllPending] = useState(false)
 
 	// Delete confirm
-	const [pendingDeleteUser, setPendingDeleteUser] = useState<AdminUser | null>(null);
-	const [deleting, setDeleting] = useState(false);
+	const [pendingDeleteUser, setPendingDeleteUser] = useState<AdminUser | null>(null)
+	const [deleting, setDeleting] = useState(false)
 
 	useEffect(() => {
 		Promise.all([api.user.me(), api.admin.settings(), api.admin.stats(), api.admin.users()])
 			.then(([me, cfg, s, u]) => {
-				setCurrentUser(me);
-				setSettings(cfg);
-				setStats(s);
-				setUsers(u);
+				setCurrentUser(me)
+				setSettings(cfg)
+				setStats(s)
+				setUsers(u)
 			})
 			.catch((err) => {
-				if (err.message === "UNAUTHORIZED") router.push("/sign-in");
-				else if (err.message === "Forbidden") router.push("/dashboard");
+				if (err.message === "UNAUTHORIZED") router.push("/sign-in")
+				else if (err.message === "Forbidden") router.push("/dashboard")
 			})
-			.finally(() => setLoading(false));
-	}, [router]);
+			.finally(() => setLoading(false))
+	}, [router])
 
 	function copyCode(code: string) {
 		navigator.clipboard.writeText(code).then(() => {
-			setCopied(true);
-			setTimeout(() => setCopied(false), 2000);
-		});
+			setCopied(true)
+			setTimeout(() => setCopied(false), 2000)
+		})
 	}
 
 	function openSessions(user: AdminUser) {
-		setSelectedUser(user);
-		setSessions([]);
-		setSessionsModalOpen(true);
-		setSessionsLoading(true);
-		setSessionError(null);
+		setSelectedUser(user)
+		setSessions([])
+		setSessionsModalOpen(true)
+		setSessionsLoading(true)
+		setSessionError(null)
 		api.admin
 			.getSessions(user.id)
 			.then(setSessions)
 			.catch(() => setSessions([]))
-			.finally(() => setSessionsLoading(false));
+			.finally(() => setSessionsLoading(false))
 	}
 
 	function closeSessions() {
-		setSessionsModalOpen(false);
-		setSelectedUser(null);
-		setSessions([]);
-		setSessionError(null);
+		setSessionsModalOpen(false)
+		setSelectedUser(null)
+		setSessions([])
+		setSessionError(null)
 	}
 
 	async function revokeSession(sessionId: string) {
-		if (!selectedUser) return;
-		setSessionError(null);
-		setRevokingSessionId(sessionId);
+		if (!selectedUser) return
+		setSessionError(null)
+		setRevokingSessionId(sessionId)
 		try {
-			await api.admin.deleteSession(selectedUser.id, sessionId);
-			setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+			await api.admin.deleteSession(selectedUser.id, sessionId)
+			setSessions((prev) => prev.filter((s) => s.id !== sessionId))
 			setUsers((prev) =>
 				prev.map((u) =>
 					u.id === selectedUser.id
 						? { ...u, activeSessionCount: Math.max(0, u.activeSessionCount - 1) }
 						: u
 				)
-			);
+			)
 		} catch (err) {
-			setSessionError(err instanceof Error ? err.message : "Failed to revoke session");
+			setSessionError(err instanceof Error ? err.message : "Failed to revoke session")
 		} finally {
-			setRevokingSessionId(null);
+			setRevokingSessionId(null)
 		}
 	}
 
 	async function revokeAllSessions() {
-		if (!selectedUser) return;
-		setSessionError(null);
+		if (!selectedUser) return
+		setSessionError(null)
 		try {
-			await api.admin.deleteAllSessions(selectedUser.id);
-			setSessions([]);
+			await api.admin.deleteAllSessions(selectedUser.id)
+			setSessions([])
 			setUsers((prev) =>
 				prev.map((u) => (u.id === selectedUser.id ? { ...u, activeSessionCount: 0 } : u))
-			);
-			closeSessions();
+			)
+			closeSessions()
 		} catch (err) {
-			setSessionError(err instanceof Error ? err.message : "Failed to revoke all sessions");
+			setSessionError(err instanceof Error ? err.message : "Failed to revoke all sessions")
 		}
 	}
 
 	async function deleteUser() {
-		if (!pendingDeleteUser) return;
-		setDeleting(true);
-		setActionError(null);
+		if (!pendingDeleteUser) return
+		setDeleting(true)
+		setActionError(null)
 		try {
-			await api.admin.deleteUser(pendingDeleteUser.id);
-			setUsers((prev) => prev.filter((u) => u.id !== pendingDeleteUser.id));
-			setPendingDeleteUser(null);
+			await api.admin.deleteUser(pendingDeleteUser.id)
+			setUsers((prev) => prev.filter((u) => u.id !== pendingDeleteUser.id))
+			setPendingDeleteUser(null)
 		} catch (err) {
-			setActionError(err instanceof Error ? err.message : "Failed to delete user");
+			setActionError(err instanceof Error ? err.message : "Failed to delete user")
 		} finally {
-			setDeleting(false);
+			setDeleting(false)
 		}
 	}
 
@@ -142,7 +142,7 @@ export default function AdminPage() {
 					<PothosLottie size={80} />
 				</div>
 			</PageTransition>
-		);
+		)
 	}
 
 	return (
@@ -159,7 +159,10 @@ export default function AdminPage() {
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 					<StatCard title="Database Size" value={formatBytes(stats?.dbSizeBytes ?? 0)} />
 					<StatCard title="Total Users" value={String(stats?.totalUsers ?? 0)} />
-					<StatCard title="Total Transactions" value={String(stats?.totalTransactions ?? 0)} />
+					<StatCard
+						title="Total Transactions"
+						value={String(stats?.totalTransactions ?? 0)}
+					/>
 					<Card>
 						<p className="text-xs font-medium text-fg-muted mb-1">Invite Code</p>
 						{settings?.registrationCode ? (
@@ -172,7 +175,11 @@ export default function AdminPage() {
 									className="shrink-0 text-fg-muted hover:text-fg transition-colors duration-150"
 									aria-label="Copy invite code"
 								>
-									{copied ? <Check size={16} className="text-primary" /> : <Copy size={16} />}
+									{copied ? (
+										<Check size={16} className="text-primary" />
+									) : (
+										<Copy size={16} />
+									)}
 								</button>
 							</div>
 						) : (
@@ -324,8 +331,8 @@ export default function AdminPage() {
 				open={revokeAllPending}
 				onClose={() => setRevokeAllPending(false)}
 				onConfirm={async () => {
-					setRevokeAllPending(false);
-					await revokeAllSessions();
+					setRevokeAllPending(false)
+					await revokeAllSessions()
 				}}
 				title="Revoke All Sessions"
 				message={`This will immediately log ${selectedUser?.email ?? "this user"} out of all devices.`}
@@ -343,5 +350,5 @@ export default function AdminPage() {
 				loading={deleting}
 			/>
 		</PageTransition>
-	);
+	)
 }

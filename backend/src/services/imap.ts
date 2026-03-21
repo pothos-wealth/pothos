@@ -1,13 +1,13 @@
-import { ImapFlow } from "imapflow";
-import { simpleParser } from "mailparser";
-import { nanoid } from "nanoid";
-import { db } from "../db/index.js";
-import { pendingMessages, imapSettings } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { ImapFlow } from "imapflow"
+import { simpleParser } from "mailparser"
+import { nanoid } from "nanoid"
+import { db } from "../db/index.js"
+import { pendingMessages, imapSettings } from "../db/schema.js"
+import { eq } from "drizzle-orm"
 
 function htmlToText(html: string): string {
-	const match = html.match(/<html[^>]*>([\s\S]*?)<\/html>/i);
-	if (!match) return html;
+	const match = html.match(/<html[^>]*>([\s\S]*?)<\/html>/i)
+	if (!match) return html
 
 	const inner = match[1]
 		.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
@@ -21,17 +21,17 @@ function htmlToText(html: string): string {
 		.replace(/&nbsp;/gi, " ")
 		.replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
 		.replace(/\s+/g, " ")
-		.trim();
+		.trim()
 
-	return `<html>\n${inner}\n</html>`;
+	return `<html>\n${inner}\n</html>`
 }
 
 interface ImapConfig {
-	host: string;
-	port: number;
-	email: string;
-	password: string; // already decrypted
-	mailbox: string;
+	host: string
+	port: number
+	email: string
+	password: string // already decrypted
+	mailbox: string
 }
 
 function createClient(config: ImapConfig): ImapFlow {
@@ -44,18 +44,18 @@ function createClient(config: ImapConfig): ImapFlow {
 			pass: config.password,
 		},
 		logger: false,
-	});
+	})
 }
 
 export async function testConnection(config: ImapConfig): Promise<string | null> {
-	const client = createClient(config);
+	const client = createClient(config)
 	try {
-		await client.connect();
-		const mailbox = await client.mailboxOpen(config.mailbox, { readOnly: true });
-		const uidNext = mailbox.uidNext;
-		return uidNext && uidNext > 1 ? String(uidNext - 1) : null;
+		await client.connect()
+		const mailbox = await client.mailboxOpen(config.mailbox, { readOnly: true })
+		const uidNext = mailbox.uidNext
+		return uidNext && uidNext > 1 ? String(uidNext - 1) : null
 	} finally {
-		await client.logout().catch(() => {});
+		await client.logout().catch(() => {})
 	}
 }
 
@@ -64,53 +64,53 @@ export async function fetchNewEmails(
 	config: ImapConfig,
 	lastUid: string | null
 ): Promise<{ fetched: number; newCursor: string | null }> {
-	const client = createClient(config);
-	let fetched = 0;
-	let newCursor: string | null = null;
+	const client = createClient(config)
+	let fetched = 0
+	let newCursor: string | null = null
 
 	try {
-		await client.connect();
-		await client.mailboxOpen(config.mailbox);
+		await client.connect()
+		await client.mailboxOpen(config.mailbox)
 
 		// First run: last 90 days. Subsequent: from lastUid+1 onward.
-		let searchCriteria: object;
+		let searchCriteria: object
 		if (lastUid) {
-			const nextUid = String(parseInt(lastUid, 10) + 1);
-			searchCriteria = { uid: `${nextUid}:*` };
+			const nextUid = String(parseInt(lastUid, 10) + 1)
+			searchCriteria = { uid: `${nextUid}:*` }
 		} else {
-			const since = new Date();
-			since.setDate(since.getDate() - 90);
-			searchCriteria = { since };
+			const since = new Date()
+			since.setDate(since.getDate() - 90)
+			searchCriteria = { since }
 		}
 
-		const now = Math.floor(Date.now() / 1000);
+		const now = Math.floor(Date.now() / 1000)
 
 		for await (const message of client.fetch(searchCriteria, {
 			uid: true,
 			source: true,
 			envelope: true,
 		})) {
-			const uid = String(message.uid);
+			const uid = String(message.uid)
 
 			// Skip the lastUid itself (search is inclusive)
-			if (lastUid && uid === lastUid) continue;
+			if (lastUid && uid === lastUid) continue
 
 			try {
-				if (!message.source) continue;
+				if (!message.source) continue
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const parsed = (await (simpleParser as any)(message.source)) as {
-					subject?: string;
-					text?: string;
-					html?: string;
-				};
-				const subject = parsed.subject ?? null;
+					subject?: string
+					text?: string
+					html?: string
+				}
+				const subject = parsed.subject ?? null
 				const rawContent = parsed.text
 					? parsed.text
 					: parsed.html
 						? htmlToText(parsed.html)
-						: "";
+						: ""
 
-				if (!rawContent.trim()) continue;
+				if (!rawContent.trim()) continue
 
 				db.insert(pendingMessages)
 					.values({
@@ -123,10 +123,10 @@ export async function fetchNewEmails(
 						createdAt: now,
 						updatedAt: now,
 					})
-					.run();
+					.run()
 
-				fetched++;
-				newCursor = uid;
+				fetched++
+				newCursor = uid
 			} catch {
 				// Skip unparseable individual messages
 			}
@@ -137,11 +137,11 @@ export async function fetchNewEmails(
 			db.update(imapSettings)
 				.set({ lastUid: newCursor, updatedAt: now })
 				.where(eq(imapSettings.userId, userId))
-				.run();
+				.run()
 		}
 	} finally {
-		await client.logout().catch(() => {});
+		await client.logout().catch(() => {})
 	}
 
-	return { fetched, newCursor };
+	return { fetched, newCursor }
 }

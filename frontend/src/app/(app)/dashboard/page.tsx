@@ -1,19 +1,19 @@
-"use client";
+"use client"
 
-import { useState, useEffect, Suspense } from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Greeting } from "@/components/dashboard/Greeting";
-import { StatCard } from "@/components/dashboard/StatCard";
-import { SpendingChart } from "@/components/dashboard/SpendingChart";
-import { BudgetProgress } from "@/components/dashboard/BudgetProgress";
-import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
-import { MonthPicker } from "@/components/dashboard/MonthPicker";
-import { Card } from "@/components/ui/Card";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { PageTransition } from "@/components/ui/PageTransition";
-import { api } from "@/lib/api";
-import { useCurrency } from "@/lib/currency-context";
-import { useCurrencyFormatter, useCurrencySymbol } from "@/lib/utils";
+import { useState, useEffect, Suspense } from "react"
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts"
+import { Greeting } from "@/components/dashboard/Greeting"
+import { StatCard } from "@/components/dashboard/StatCard"
+import { SpendingChart } from "@/components/dashboard/SpendingChart"
+import { BudgetProgress } from "@/components/dashboard/BudgetProgress"
+import { RecentTransactions } from "@/components/dashboard/RecentTransactions"
+import { MonthPicker } from "@/components/dashboard/MonthPicker"
+import { Card } from "@/components/ui/Card"
+import { Skeleton } from "@/components/ui/Skeleton"
+import { PageTransition } from "@/components/ui/PageTransition"
+import { api } from "@/lib/api"
+import { useCurrency } from "@/lib/currency-context"
+import { useCurrencyFormatter, useCurrencySymbol } from "@/lib/utils"
 import type {
 	Account,
 	Overview,
@@ -22,7 +22,7 @@ import type {
 	TransactionList,
 	Category,
 	TrendsReport,
-} from "@/lib/types";
+} from "@/lib/types"
 
 const MONTH_SHORT = [
 	"Jan",
@@ -37,16 +37,16 @@ const MONTH_SHORT = [
 	"Oct",
 	"Nov",
 	"Dec",
-];
+]
 
 interface DashboardData {
-	accounts: Account[];
-	overview: Overview;
-	categoryReport: CategoryReport;
-	budgets: BudgetWithSpent[];
-	transactions: TransactionList;
-	categories: Category[];
-	trends: TrendsReport;
+	accounts: Account[]
+	overview: Overview
+	categoryReport: CategoryReport
+	budgets: BudgetWithSpent[]
+	transactions: TransactionList
+	categories: Category[]
+	trends: TrendsReport
 }
 
 function DashboardSkeleton() {
@@ -103,21 +103,21 @@ function DashboardSkeleton() {
 				))}
 			</Card>
 		</div>
-	);
+	)
 }
 
 export default function DashboardPage() {
-	const { loading: currencyLoading } = useCurrency();
-	const formatCurrency = useCurrencyFormatter();
-	const currencySymbol = useCurrencySymbol();
-	const [month, setMonth] = useState(() => new Date().getMonth() + 1);
-	const [year, setYear] = useState(() => new Date().getFullYear());
-	const [data, setData] = useState<DashboardData | null>(null);
-	const [loading, setLoading] = useState(true);
-	const [unauthorized, setUnauthorized] = useState(false);
+	const { loading: currencyLoading } = useCurrency()
+	const formatCurrency = useCurrencyFormatter()
+	const currencySymbol = useCurrencySymbol()
+	const [month, setMonth] = useState(() => new Date().getMonth() + 1)
+	const [year, setYear] = useState(() => new Date().getFullYear())
+	const [data, setData] = useState<DashboardData | null>(null)
+	const [loading, setLoading] = useState(true)
+	const [unauthorized, setUnauthorized] = useState(false)
 
 	useEffect(() => {
-		setLoading(true);
+		setLoading(true)
 		Promise.all([
 			api.accounts.list(),
 			api.reports.overview(month, year),
@@ -145,16 +145,21 @@ export default function DashboardPage() {
 						transactions,
 						categories,
 						trends,
-					});
+					})
 				}
 			)
 			.catch((err) => {
-				if (err.message === "UNAUTHORIZED") setUnauthorized(true);
+				if (err.message === "UNAUTHORIZED") setUnauthorized(true)
 			})
-			.finally(() => setLoading(false));
-	}, [month, year]);
+			.finally(() => setLoading(false))
+	}, [month, year])
 
-	if (loading || currencyLoading) return <PageTransition><DashboardSkeleton /></PageTransition>;
+	if (loading || currencyLoading)
+		return (
+			<PageTransition>
+				<DashboardSkeleton />
+			</PageTransition>
+		)
 
 	if (unauthorized) {
 		return (
@@ -164,20 +169,20 @@ export default function DashboardPage() {
 					Sign in →
 				</a>
 			</div>
-		);
+		)
 	}
 
-	const totalBalance = data?.accounts.reduce((sum, a) => sum + a.balance, 0) ?? 0;
-	const overview = data?.overview;
+	const totalBalance = data?.accounts.reduce((sum, a) => sum + a.balance, 0) ?? 0
+	const overview = data?.overview
 	const savingsRate =
-		overview && overview.income > 0 ? Math.round((overview.net / overview.income) * 100) : null;
+		overview && overview.income > 0 ? Math.round((overview.net / overview.income) * 100) : null
 
 	const trendData =
 		data?.trends.data.map((d) => ({
 			name: `${MONTH_SHORT[d.month - 1]} '${String(d.year).slice(2)}`,
 			Income: d.income,
 			Expenses: d.expenses,
-		})) ?? [];
+		})) ?? []
 
 	return (
 		<PageTransition>
@@ -196,8 +201,8 @@ export default function DashboardPage() {
 						month={month}
 						year={year}
 						onChange={(m, y) => {
-							setMonth(m);
-							setYear(y);
+							setMonth(m)
+							setYear(y)
 						}}
 					/>
 				</div>
@@ -246,8 +251,24 @@ export default function DashboardPage() {
 						<div className="h-[200px]">
 							<ResponsiveContainer width="100%" height="100%">
 								<BarChart data={trendData} barGap={4} barSize={14}>
-									<XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--color-fg-muted)" }} axisLine={false} tickLine={false} />
-									<YAxis tick={{ fontSize: 10, fill: "var(--color-fg-muted)" }} axisLine={false} tickLine={false} tickFormatter={(v) => { const major = v / 100; return major >= 1000 ? `${currencySymbol}${(major / 1000).toFixed(0)}k` : `${currencySymbol}${major.toFixed(0)}`; }} width={44} />
+									<XAxis
+										dataKey="name"
+										tick={{ fontSize: 11, fill: "var(--color-fg-muted)" }}
+										axisLine={false}
+										tickLine={false}
+									/>
+									<YAxis
+										tick={{ fontSize: 10, fill: "var(--color-fg-muted)" }}
+										axisLine={false}
+										tickLine={false}
+										tickFormatter={(v) => {
+											const major = v / 100
+											return major >= 1000
+												? `${currencySymbol}${(major / 1000).toFixed(0)}k`
+												: `${currencySymbol}${major.toFixed(0)}`
+										}}
+										width={44}
+									/>
 									<Tooltip
 										contentStyle={{
 											backgroundColor: "var(--color-bg-2)",
@@ -287,5 +308,5 @@ export default function DashboardPage() {
 				/>
 			</div>
 		</PageTransition>
-	);
+	)
 }
