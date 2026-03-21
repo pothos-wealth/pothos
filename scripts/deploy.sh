@@ -8,6 +8,9 @@ DOMAIN=$(grep "^DOMAIN=" .env | cut -d'=' -f2)
 echo "Pulling latest changes..."
 git pull
 
+echo "Pruning unused Docker resources..."
+docker system prune -af
+
 echo "Pulling latest images..."
 docker-compose pull backend frontend
 

@@ -13,6 +13,7 @@ export interface Overview {
 	income: number
 	expenses: number
 	net: number
+	committed: number
 }
 
 export interface CategoryBreakdown {
@@ -169,6 +170,13 @@ export interface LlmSettings {
 	model: string
 	createdAt: number
 	updatedAt: number
+}
+
+export interface ApiKey {
+	id: string
+	name: string
+	lastUsedAt: number | null
+	createdAt: number
 }
 
 export interface ParsedTransaction {

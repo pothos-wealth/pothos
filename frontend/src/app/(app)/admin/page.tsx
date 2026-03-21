@@ -42,6 +42,10 @@ export default function AdminPage() {
 	const [pendingDeleteUser, setPendingDeleteUser] = useState<AdminUser | null>(null)
 	const [deleting, setDeleting] = useState(false)
 
+	// Maintenance
+	const [maintenanceRunning, setMaintenanceRunning] = useState(false)
+	const [maintenanceDone, setMaintenanceDone] = useState(false)
+
 	useEffect(() => {
 		Promise.all([api.user.me(), api.admin.settings(), api.admin.stats(), api.admin.users()])
 			.then(([me, cfg, s, u]) => {
@@ -56,6 +60,20 @@ export default function AdminPage() {
 			})
 			.finally(() => setLoading(false))
 	}, [router])
+
+	async function runMaintenance() {
+		setMaintenanceRunning(true)
+		setMaintenanceDone(false)
+		try {
+			await api.admin.runMaintenance()
+			setMaintenanceDone(true)
+			setTimeout(() => setMaintenanceDone(false), 3000)
+		} catch (err) {
+			setActionError(err instanceof Error ? err.message : "Maintenance failed")
+		} finally {
+			setMaintenanceRunning(false)
+		}
+	}
 
 	function copyCode(code: string) {
 		navigator.clipboard.writeText(code).then(() => {
@@ -156,13 +174,27 @@ export default function AdminPage() {
 				{actionError && <p className="text-sm text-expense mb-4">{actionError}</p>}
 
 				{/* Stats */}
-				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
 					<StatCard title="Database Size" value={formatBytes(stats?.dbSizeBytes ?? 0)} />
 					<StatCard title="Total Users" value={String(stats?.totalUsers ?? 0)} />
 					<StatCard
 						title="Total Transactions"
 						value={String(stats?.totalTransactions ?? 0)}
 					/>
+					<Card>
+						<p className="text-xs font-medium text-fg-muted mb-1">Maintenance</p>
+						<button
+							onClick={runMaintenance}
+							disabled={maintenanceRunning}
+							className="mt-1 w-full text-sm font-semibold rounded-xl px-3 py-2 transition-colors duration-150 disabled:opacity-60 bg-bg-3 hover:bg-border text-fg"
+						>
+							{maintenanceRunning
+								? "Running…"
+								: maintenanceDone
+									? "Done ✓"
+									: "Run Now"}
+						</button>
+					</Card>
 					<Card>
 						<p className="text-xs font-medium text-fg-muted mb-1">Invite Code</p>
 						{settings?.registrationCode ? (

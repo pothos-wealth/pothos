@@ -49,6 +49,21 @@ Enums are implemented as Drizzle `text` columns with an `enum` option. SQLite st
 
 > All sessions for a user are deleted on password change.
 
+### `api_keys`
+
+| Column       | Type    | Notes                                             |
+| ------------ | ------- | ------------------------------------------------- |
+| id           | text    | nanoid, PK                                        |
+| user_id      | text    | FK → users, cascade delete                        |
+| key_hash     | text    | SHA-256 of raw key, unique                        |
+| name         | text    | user-given label (1–64 chars)                     |
+| last_used_at | integer | Unix timestamp, nullable                          |
+| created_at   | integer | Unix timestamp                                    |
+
+> Raw key is never stored — only the SHA-256 hash. Key format: `pth_<64-char-hex>` (32 random bytes).
+> Shown once at creation. `last_used_at` updated asynchronously (non-blocking) on each authenticated request.
+> API key management routes are guarded by `sessionOnlyAuthenticate` — cannot be accessed via API key itself.
+
 ### `accounts`
 
 | Column          | Type    | Notes                                         |

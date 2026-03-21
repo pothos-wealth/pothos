@@ -46,6 +46,22 @@ export const sessions = sqliteTable("sessions", {
 		.default(sql`(unixepoch())`),
 })
 
+// ─── API Keys ─────────────────────────────────────────────────────────────────
+
+export const apiKeys = sqliteTable("api_keys", {
+	id: text("id").primaryKey(),
+	userId: text("user_id")
+		.notNull()
+		.references(() => users.id, { onDelete: "cascade" }),
+	keyHash: text("key_hash").notNull().unique(),
+	name: text("name").notNull(),
+	lastUsedAt: integer("last_used_at"),
+	createdAt: integer("created_at").notNull(),
+})
+
+export type ApiKey = typeof apiKeys.$inferSelect
+export type NewApiKey = typeof apiKeys.$inferInsert
+
 // ─── Accounts ─────────────────────────────────────────────────────────────────
 
 export const accounts = sqliteTable("accounts", {

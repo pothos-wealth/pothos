@@ -184,6 +184,8 @@ export const api = {
 			apiFetch<void>(`/admin/users/${userId}/sessions/${sessionId}`, { method: "DELETE" }),
 		deleteAllSessions: (userId: string) =>
 			apiFetch<void>(`/admin/users/${userId}/sessions`, { method: "DELETE" }),
+		runMaintenance: () =>
+			apiFetch<{ ok: boolean }>("/admin/maintenance/run", { method: "POST" }),
 	},
 	email: {
 		getSettings: () => apiFetch<ImapSettings>("/email/settings"),
@@ -203,6 +205,15 @@ export const api = {
 		getStatus: () => apiFetch<EmailStatus>("/email/status"),
 		poll: () =>
 			apiFetch<{ fetched: number; parsed: number }>("/email/poll", { method: "POST" }),
+	},
+	apiKeys: {
+		list: () => apiFetch<import("./types").ApiKey[]>("/api-keys"),
+		create: (name: string) =>
+			apiFetch<{ id: string; name: string; key: string; createdAt: number }>("/api-keys", {
+				method: "POST",
+				body: JSON.stringify({ name }),
+			}),
+		delete: (id: string) => apiFetch<void>(`/api-keys/${id}`, { method: "DELETE" }),
 	},
 	llm: {
 		getSettings: () => apiFetch<LlmSettings>("/llm/settings"),

@@ -174,6 +174,8 @@ export default function DashboardPage() {
 
 	const totalBalance = data?.accounts.reduce((sum, a) => sum + a.balance, 0) ?? 0
 	const overview = data?.overview
+	const committed = overview?.committed ?? 0
+	const available = totalBalance - committed
 	const savingsRate =
 		overview && overview.income > 0 ? Math.round((overview.net / overview.income) * 100) : null
 
@@ -209,7 +211,13 @@ export default function DashboardPage() {
 
 				{/* Stat cards */}
 				<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-					<StatCard title="Total Balance" value={formatCurrency(totalBalance)} />
+					<StatCard
+						title="Available"
+						value={formatCurrency(available)}
+						subtitle={
+							committed > 0 ? `${formatCurrency(committed)} committed` : undefined
+						}
+					/>
 					<StatCard
 						title="Monthly Income"
 						value={formatCurrency(overview?.income ?? 0)}

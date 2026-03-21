@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import {
 	Check,
@@ -93,6 +93,8 @@ export default function InboxPage() {
 	// Parsed transactions state
 	const [parsedData, setParsedData] = useState<ParsedTransactionList | null>(null)
 	const [loading, setLoading] = useState(true)
+	const [refreshing, setRefreshing] = useState(false)
+	const loadedTabs = useRef(new Set<InboxTab>())
 	const [page, setPage] = useState(1)
 
 	// Raw pending messages state
@@ -132,7 +134,12 @@ export default function InboxPage() {
 	}, [setInboxCount])
 
 	const fetchData = useCallback(async () => {
-		setLoading(true)
+		const isFirstLoad = !loadedTabs.current.has(activeTab)
+		if (isFirstLoad) {
+			setLoading(true)
+		} else {
+			setRefreshing(true)
+		}
 		try {
 			if (activeTab === "unprocessed") {
 				const msgs = await api.parseQueue.list()
@@ -147,10 +154,12 @@ export default function InboxPage() {
 				setParsedData(result)
 				if (activeTab === "pending_review") setReviewCount(result.pagination.total)
 			}
+			loadedTabs.current.add(activeTab)
 		} catch (err) {
 			if (err instanceof Error && err.message === "UNAUTHORIZED") router.push("/sign-in")
 		} finally {
 			setLoading(false)
+			setRefreshing(false)
 		}
 	}, [activeTab, page, router])
 
@@ -273,7 +282,8 @@ export default function InboxPage() {
 		"bg-bg border border-border rounded-xl px-3 py-2.5 text-sm text-fg placeholder:text-fg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-shadow"
 
 	const isEmpty =
-		activeTab === "unprocessed" ? rawMessages.length === 0 : parsedData?.data.length === 0
+		!refreshing &&
+		(activeTab === "unprocessed" ? rawMessages.length === 0 : parsedData?.data.length === 0)
 
 	return (
 		<PageTransition>
@@ -315,6 +325,12 @@ export default function InboxPage() {
 						</button>
 					))}
 				</div>
+
+				{refreshing && (
+					<div className="h-0.5 w-full bg-primary/20 rounded-full mb-4 overflow-hidden">
+						<div className="h-full bg-primary rounded-full animate-pulse w-1/2" />
+					</div>
+				)}
 
 				{actionError && (
 					<div className="mb-4 bg-expense-light border border-expense text-expense rounded-xl px-4 py-3 text-sm">

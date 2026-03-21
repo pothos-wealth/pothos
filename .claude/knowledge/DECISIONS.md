@@ -2,7 +2,7 @@
 
 ## Infrastructure & Tooling
 
-**Repo structure** - Single repo, three independent folders: `backend/`, `frontend/`, `mcp/`. No monorepo tooling (no Turborepo). Each folder is its own Node project.
+**Repo structure** - Single repo, three independent folders: `backend/`, `frontend/`, `mcp/`. No monorepo tooling (no Turborepo). Each folder is its own Node project. The MCP is developed in the monorepo but distributed separately as an npm package (`@pothos/mcp`). This keeps API + MCP changes in the same PR while letting home-PC users install via `npx @pothos/mcp` without cloning the full repo.
 
 **Database** - SQLite via Drizzle ORM. Single file, zero infra, perfect for t2.micro self-hosted setup. Driver: `better-sqlite3` (synchronous, no external deps, battle-tested).
 
@@ -177,6 +177,7 @@
 **SSL/TLS** - Let's Encrypt via Certbot. Initial bootstrap manual (one-time). Auto-renewal every 12 hours. Nginx enforces HTTPS with redirect from HTTP.
 
 **Deployment scripts** - Two scripts for minimal manual effort:
+
 - `scripts/setup.sh` - First deploy (asks for domain, email, generates secrets, bootstraps SSL, starts app)
 - `scripts/deploy.sh` - Subsequent deploys (git pull, rebuild, restart)
 
@@ -186,13 +187,29 @@
 
 ---
 
+## MCP Server
+
+**MCP distribution** - Developed in the monorepo under `mcp/` but published to npm as `@pothos/mcp`. Monorepo keeps backend API and MCP changes in sync (same PR). npm distribution lets home-PC users install with `npx @pothos/mcp` without cloning the full repo. `private: true` removed from `mcp/package.json` for publishing.
+
+**MCP auth** - The MCP authenticates via API key (`Authorization: Bearer pth_...`). User generates a key in the Settings page and sets it as `POTHOS_API_KEY` in the MCP's `.env`. No expiry, no re-auth logic, no credentials stored in the MCP config. See T13 for full API key design.
+
+**API key auth (T13)** - Added as a backend task before WS5. Keys are SHA-256 hashed (sufficient for 32-byte random keys; bcrypt is overkill per-request), formatted as `pth_<64-char-hex>`, shown once at creation. Named by the user for easy revocation. `last_used_at` tracked for visibility. `authenticate` middleware checks session cookie first, then `Authorization: Bearer` — all existing routes unchanged. Why not email/password session for MCP: sessions expire after 7 days requiring re-auth logic; storing the user's password in the MCP's `.env` is worse than storing a revocable key.
+
+**MCP transport** - stdio (standard for local MCP servers). No HTTP server — the MCP client (Claude Desktop, Cline, etc.) spawns the process directly.
+
+**MCP tools scope** - Read tools: `get_accounts`, `get_transactions`, `get_categories`, `get_budgets`, `get_spending_overview`, `get_category_breakdown`, `get_spending_trends`. Write tools: `add_transaction`, `add_transfer`. Email parse tools: `get_pending_emails`, `submit_parsed_email`, `dismiss_email`. No admin or destructive tools exposed via MCP.
+
+**Email parse tools design** - The MCP exposes `get_pending_emails` (returns raw email content to the agent), `submit_parsed_email` (submits the agent's interpretation), and `dismiss_email`. The agent does the parsing — no local LLM dependency in the MCP. This makes the MCP agent-agnostic: Claude, GPT, a local Ollama client, or any other MCP-compatible agent can use the same tools. The old design hardcoded Ollama inside the MCP, which was both model-specific and an architectural violation (MCP should be a thin tool layer, not an LLM runner).
+
+---
+
 ## Deferred to v2
 
 **Pending message retention** - `failed` status rows (dismissed emails, non-transactions, parse failures) accumulate indefinitely. A scheduled cleanup job to delete `failed` `pending_messages` older than 30 days would keep the DB lean. Deferred - acceptable at current scale.
 
 **Worker heartbeat** - If the worker crashes, `docker-compose` restarts it but `GET /health` still returns 200 in the gap - no visibility for the self-hoster. Planned fix: worker writes a `data/worker.heartbeat` file every poll cycle; health endpoint flags it stale if older than 2x the configured poll interval. Deferred to v2.
 
-**`authFailures` counter is persisted in DB** - The 3-strike auto-disable counter is stored as `consecutive_auth_failures` on `imap_settings` (migration 0006). Incremented via `sql\`consecutive_auth_failures + 1\`` on each IMAP auth failure; reset to 0 on success. Survives worker restarts - a flaky connection will correctly accumulate failures across restarts until `is_active` flips to false.
+**`authFailures` counter is persisted in DB** - The 3-strike auto-disable counter is stored as `consecutive_auth_failures` on `imap_settings` (migration 0006). Incremented via `sql\`consecutive_auth_failures + 1\``on each IMAP auth failure; reset to 0 on success. Survives worker restarts - a flaky connection will correctly accumulate failures across restarts until`is_active` flips to false.
 
 Not in scope for v1:
 
