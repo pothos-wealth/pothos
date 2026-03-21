@@ -97,7 +97,7 @@ export const api = {
     budgets: {
         list: (month: number, year: number) =>
             apiFetch<BudgetWithSpent[]>(`/budgets?month=${month}&year=${year}`),
-        upsert: (data: { categoryId: string; amount: number; month: number; year: number; isRecurring: boolean }) =>
+        upsert: (data: { categoryId: string; amount: number; month: number; year: number; isRecurring: boolean; isCommitted: boolean }) =>
             apiFetch<BudgetWithSpent>('/budgets', { method: 'POST', body: JSON.stringify(data) }),
         delete: (id: string) =>
             apiFetch<void>(`/budgets/${id}`, { method: 'DELETE' }),
