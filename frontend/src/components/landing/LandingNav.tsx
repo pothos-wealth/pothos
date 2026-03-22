@@ -22,6 +22,7 @@ export function LandingNav() {
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.5, ease: "easeOut" }}
 			className="fixed top-0 inset-x-0 z-50 backdrop-blur-md border-b border-border bg-[rgba(250,248,243,0.85)] dark:bg-[rgba(17,23,16,0.85)]"
+			style={{ paddingTop: "env(safe-area-inset-top)" }}
 		>
 			<div className="mx-auto max-w-6xl px-6 py-3.5 flex items-center justify-between">
 				{/* Logo */}

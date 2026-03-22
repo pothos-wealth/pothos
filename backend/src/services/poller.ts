@@ -9,7 +9,7 @@ import {
 	pendingMessages,
 	userSettings,
 } from "../db/schema.js"
-import { eq, and, sql } from "drizzle-orm"
+import { eq, and, or, isNull, sql } from "drizzle-orm"
 import { fetchNewEmails } from "./imap.js"
 import { parseEmail } from "./parser.js"
 import { decrypt } from "./crypto.js"
@@ -103,7 +103,7 @@ export async function pollUser(userId: string): Promise<{ fetched: number; parse
 	const userCategories = db
 		.select({ id: categories.id, name: categories.name, type: categories.type })
 		.from(categories)
-		.where(eq(categories.userId, userId))
+		.where(or(isNull(categories.userId), eq(categories.userId, userId)))
 		.all()
 
 	const userCurrencyRow = db

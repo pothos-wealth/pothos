@@ -1,19 +1,34 @@
 {
-	"name": "@pothos/mcp",
-	"version": "0.1.0",
-	"description": "MCP server for Pothos — natural language access to your budgets, transactions, and email parsing",
+	"name": "@pothos-wealth/mcp",
+	"version": "0.1.1",
+	"description": "MCP server for Pothos - natural language access to your budgets, transactions, and email parsing",
 	"type": "module",
+	"license": "AGPL-3.0",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/pothos-wealth/pothos.git",
+		"directory": "mcp"
+	},
+	"homepage": "https://github.com/pothos-wealth/pothos#mcp-server",
+	"keywords": [
+		"mcp",
+		"finance",
+		"budget",
+		"personal-finance",
+		"pothos"
+	],
 	"bin": {
 		"pothos-mcp": "dist/index.js"
 	},
 	"files": [
-		"dist"
+		"dist/client.js",
+		"dist/index.js",
+		"dist/tools"
 	],
 	"scripts": {
 		"dev": "tsx watch src/index.ts",
 		"build": "tsc",
 		"start": "node dist/index.js",
-		"parse-queue": "tsx src/ollama-parse.ts",
 		"format": "npx prettier --write \"src/**/*.ts\""
 	},
 	"dependencies": {

@@ -14,6 +14,10 @@ components:
       type: apiKey
       in: cookie
       name: session_id
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: pth_<64-char-hex>
 
   schemas:
     Error:
@@ -158,7 +162,7 @@ components:
 
     Budget:
       type: object
-      required: [id, userId, categoryId, amount, month, year, isRecurring, spent, remaining, createdAt, updatedAt]
+      required: [id, userId, categoryId, amount, month, year, isRecurring, isCommitted, spent, remaining, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -177,6 +181,9 @@ components:
           type: integer
         isRecurring:
           type: boolean
+        isCommitted:
+          type: boolean
+          description: When true, this budget is counted as committed spending in the overview report
         spent:
           type: integer
           description: Calculated from expense transactions in the month (positive)
@@ -186,6 +193,21 @@ components:
         createdAt:
           type: integer
         updatedAt:
+          type: integer
+
+    ApiKey:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          description: User-given label (1–64 chars)
+        lastUsedAt:
+          type: [integer, "null"]
+          description: Unix timestamp of last authenticated request
+        createdAt:
           type: integer
 
     ImapSettings:
@@ -301,6 +323,7 @@ components:
 
 security:
   - sessionCookie: []
+  - bearerAuth: []
 
 paths:
   # ── Health ────────────────────────────────────────────────────────────────
@@ -347,6 +370,23 @@ paths:
 
   # ── Auth ──────────────────────────────────────────────────────────────────
 
+  /auth/config:
+    get:
+      summary: Get registration configuration
+      security: []
+      tags: [Auth]
+      responses:
+        "200":
+          description: Whether registration requires an invite code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [registrationRequiresCode]
+                properties:
+                  registrationRequiresCode:
+                    type: boolean
+
   /auth/register:
     post:
       summary: Register a new account
@@ -373,6 +413,9 @@ paths:
                   maxLength: 3
                   default: INR
                   description: ISO 4217 code. Immutable after registration.
+                inviteCode:
+                  type: string
+                  description: Required when REGISTRATION_CODE is set on the server
       responses:
         "201":
           description: Account created. Sets session_id HttpOnly cookie.
@@ -384,6 +427,12 @@ paths:
                   message:
                     type: string
                     example: Account created successfully
+        "403":
+          description: Invalid invite code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "409":
           description: Email already in use
           content:
@@ -844,6 +893,11 @@ paths:
           schema:
             type: integer
           description: Unix timestamp (seconds)
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Partial match on transaction description
         - name: page
           in: query
           schema:
@@ -1280,12 +1334,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ImapSettings"
-        "404":
+        "204":
           description: Not configured
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
 
     put:
       summary: Create or update IMAP settings
@@ -1417,12 +1467,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/LlmSettings"
-        "404":
+        "204":
           description: Not configured
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
 
     put:
       summary: Create or update LLM settings
@@ -1676,9 +1722,13 @@ paths:
                   type: [string, "null"]
                 notes:
                   type: [string, "null"]
+                bypassReview:
+                  type: boolean
+                  default: false
+                  description: When true, creates the transaction directly instead of adding to the review queue
       responses:
         "201":
-          description: Parsed transaction created in review queue
+          description: Parsed transaction created in review queue (or actual transaction if bypassReview=true)
           content:
             application/json:
               schema:
@@ -1716,7 +1766,122 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  # ── API Keys ──────────────────────────────────────────────────────────────
+
+  /api-keys:
+    get:
+      summary: List API keys (session auth only)
+      tags: [ApiKeys]
+      responses:
+        "200":
+          description: User's API keys (key hash never returned)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiKey"
+
+    post:
+      summary: Generate a new API key (session auth only)
+      tags: [ApiKeys]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 64
+      responses:
+        "201":
+          description: Created key. Raw key shown once — copy it immediately.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, name, key, createdAt]
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  key:
+                    type: string
+                    description: Raw key in format pth_<64-char-hex>. Shown once only.
+                  createdAt:
+                    type: integer
+
+  /api-keys/{id}:
+    delete:
+      summary: Revoke an API key (session auth only)
+      tags: [ApiKeys]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Revoked
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   # ── Admin ─────────────────────────────────────────────────────────────────
+
+  /admin/settings:
+    get:
+      summary: Get instance settings (superadmin only)
+      tags: [Admin]
+      responses:
+        "200":
+          description: Current instance configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [registrationCode]
+                properties:
+                  registrationCode:
+                    type: [string, "null"]
+                    description: Current REGISTRATION_CODE env var value, or null if not set
+        "403":
+          description: Not superadmin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /admin/maintenance/run:
+    post:
+      summary: Trigger manual inbox cleanup (superadmin only)
+      tags: [Admin]
+      responses:
+        "200":
+          description: Cleanup triggered
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+        "403":
+          description: Not superadmin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /admin/stats:
     get:
@@ -1894,5 +2059,7 @@ tags:
     description: Review queue for LLM-parsed transactions
   - name: ParseQueue
     description: Raw pending message queue for local LLM / MCP processing
+  - name: ApiKeys
+    description: API key management (session auth only — cannot use an API key to manage API keys)
   - name: Admin
     description: Superadmin-only instance management

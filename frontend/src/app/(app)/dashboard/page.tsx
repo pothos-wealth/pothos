@@ -244,6 +244,7 @@ export default function DashboardPage() {
 						<BudgetProgress
 							budgets={data?.budgets ?? []}
 							categories={data?.categories ?? []}
+							limit={5}
 						/>
 					</div>
 				</div>

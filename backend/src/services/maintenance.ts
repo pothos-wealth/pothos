@@ -1,26 +1,62 @@
 import cron from "node-cron"
 import { db } from "../db/index.js"
-import { sql } from "drizzle-orm"
+import { parsedTransactions, pendingMessages } from "../db/schema.js"
+import { eq, or, inArray } from "drizzle-orm"
 
 const BATCH_SIZE = 500
 
-function deleteBatched(table: string, where: string): number {
-	const stmt = db.$client.prepare(
-		`DELETE FROM ${table} WHERE id IN (SELECT id FROM ${table} WHERE ${where} LIMIT ${BATCH_SIZE})`
-	)
+function deleteParsedTransactionsBatch(): number {
 	let total = 0
 	while (true) {
-		const result = stmt.run()
-		total += result.changes
-		if (result.changes < BATCH_SIZE) break
+		const ids = db
+			.select({ id: parsedTransactions.id })
+			.from(parsedTransactions)
+			.where(
+				or(
+					eq(parsedTransactions.status, "approved"),
+					eq(parsedTransactions.status, "rejected")
+				)
+			)
+			.limit(BATCH_SIZE)
+			.all()
+			.map((r) => r.id)
+
+		if (ids.length === 0) break
+		db.delete(parsedTransactions).where(inArray(parsedTransactions.id, ids)).run()
+		total += ids.length
+		if (ids.length < BATCH_SIZE) break
+	}
+	return total
+}
+
+function deletePendingMessagesBatch(): number {
+	let total = 0
+	while (true) {
+		const ids = db
+			.select({ id: pendingMessages.id })
+			.from(pendingMessages)
+			.where(
+				or(
+					eq(pendingMessages.status, "processed"),
+					eq(pendingMessages.status, "failed")
+				)
+			)
+			.limit(BATCH_SIZE)
+			.all()
+			.map((r) => r.id)
+
+		if (ids.length === 0) break
+		db.delete(pendingMessages).where(inArray(pendingMessages.id, ids)).run()
+		total += ids.length
+		if (ids.length < BATCH_SIZE) break
 	}
 	return total
 }
 
 export function runInboxCleanup(): void {
 	try {
-		const ptDeleted = deleteBatched("parsed_transactions", "status IN ('approved', 'rejected')")
-		const pmDeleted = deleteBatched("pending_messages", "status IN ('processed', 'failed')")
+		const ptDeleted = deleteParsedTransactionsBatch()
+		const pmDeleted = deletePendingMessagesBatch()
 		console.info(
 			`[maintenance] Inbox cleanup complete: ${ptDeleted} parsed_transactions, ${pmDeleted} pending_messages removed`
 		)

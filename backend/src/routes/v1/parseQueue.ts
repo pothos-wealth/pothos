@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { nanoid } from "nanoid"
-import { eq, and } from "drizzle-orm"
+import { eq, and, desc, sql } from "drizzle-orm"
 import { db } from "../../db/index.js"
 import { pendingMessages, parsedTransactions, transactions, accounts } from "../../db/schema.js"
 import { authenticate } from "../../middleware/authenticate.js"
@@ -21,13 +21,22 @@ export async function parseQueueRoutes(app: FastifyInstance) {
 	// ─── GET /parse-queue ─────────────────────────────────────────────────────
 	// Returns raw pending emails for local LLM processing (MCP WS5 path)
 
-	app.get("/parse-queue", { preHandler: authenticate }, async (request, reply) => {
-		const { status = "pending" } = request.query as { status?: string }
+	const listQuerySchema = z.object({
+		status: z.enum(["pending", "processed", "failed"]).default("pending"),
+		page: z.coerce.number().int().min(1).default(1),
+		limit: z.coerce.number().int().min(1).max(100).default(50),
+	})
 
-		const validStatuses = ["pending", "processed", "failed"]
-		if (!validStatuses.includes(status)) {
-			return reply.status(400).send({ error: "Invalid status filter" })
+	app.get("/parse-queue", { preHandler: authenticate }, async (request, reply) => {
+		const result = listQuerySchema.safeParse(request.query)
+		if (!result.success) {
+			return reply
+				.status(400)
+				.send({ error: "Validation error", details: result.error.flatten() })
 		}
+
+		const { status, page, limit } = result.data
+		const offset = (page - 1) * limit
 
 		const rows = db
 			.select()
@@ -35,12 +44,36 @@ export async function parseQueueRoutes(app: FastifyInstance) {
 			.where(
 				and(
 					eq(pendingMessages.userId, request.user.id),
-					eq(pendingMessages.status, status as "pending" | "processed" | "failed")
+					eq(pendingMessages.status, status)
 				)
 			)
+			.orderBy(desc(pendingMessages.createdAt))
+			.limit(limit)
+			.offset(offset)
 			.all()
 
-		return reply.send(rows)
+		const totalResult = db
+			.select({ count: sql`count(*)` })
+			.from(pendingMessages)
+			.where(
+				and(
+					eq(pendingMessages.userId, request.user.id),
+					eq(pendingMessages.status, status)
+				)
+			)
+			.get()
+
+		const total = totalResult?.count ?? 0
+
+		return reply.send({
+			data: rows,
+			pagination: {
+				page,
+				limit,
+				total,
+				totalPages: Math.ceil(total / limit),
+			},
+		})
 	})
 
 	// ─── POST /parse-queue/:id/submit ─────────────────────────────────────────

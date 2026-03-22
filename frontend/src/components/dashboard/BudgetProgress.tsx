@@ -5,10 +5,13 @@ import type { BudgetWithSpent, Category } from "@/lib/types"
 interface BudgetProgressProps {
 	budgets: BudgetWithSpent[]
 	categories: Category[]
+	limit?: number
 }
 
-export function BudgetProgress({ budgets, categories }: BudgetProgressProps) {
+export function BudgetProgress({ budgets, categories, limit }: BudgetProgressProps) {
 	const formatCurrency = useCurrencyFormatter()
+	const visible = limit ? budgets.slice(0, limit) : budgets
+	const hidden = limit ? Math.max(0, budgets.length - limit) : 0
 
 	return (
 		<Card className="h-full flex flex-col">
@@ -20,7 +23,7 @@ export function BudgetProgress({ budgets, categories }: BudgetProgressProps) {
 				</div>
 			) : (
 				<div className="flex flex-col flex-1 gap-4 overflow-y-auto">
-					{budgets.map((budget) => {
+					{visible.map((budget) => {
 						const isOver = budget.spent >= budget.amount
 						const percent = Math.min((budget.spent / budget.amount) * 100, 100)
 						return (
@@ -52,6 +55,11 @@ export function BudgetProgress({ budgets, categories }: BudgetProgressProps) {
 						)
 					})}
 				</div>
+			)}
+			{hidden > 0 && (
+				<p className="text-xs text-fg-muted mt-3 text-center">
+					+{hidden} more — <a href="/budgets" className="text-primary hover:underline">view all</a>
+				</p>
 			)}
 		</Card>
 	)

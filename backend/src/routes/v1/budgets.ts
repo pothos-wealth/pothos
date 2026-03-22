@@ -5,6 +5,7 @@ import { nanoid } from "nanoid"
 import { db } from "../../db/index.js"
 import { budgets, transactions, categories } from "../../db/schema.js"
 import { authenticate } from "../../middleware/authenticate.js"
+import { getMonthBounds } from "../../db/utils.js"
 
 const createBudgetSchema = z.object({
 	categoryId: z.string().min(1, "Category is required"),
@@ -20,11 +21,6 @@ const listQuerySchema = z.object({
 	year: z.coerce.number().int().min(2000).optional(),
 })
 
-function getMonthBounds(month: number, year: number): { start: number; end: number } {
-	const start = Math.floor(new Date(year, month - 1, 1).getTime() / 1000)
-	const end = Math.floor(new Date(year, month, 1).getTime() / 1000) - 1
-	return { start, end }
-}
 
 export async function budgetRoutes(app: FastifyInstance) {
 	// ─── List Budgets ─────────────────────────────────────────────────────────
@@ -161,7 +157,7 @@ export async function budgetRoutes(app: FastifyInstance) {
 			}
 		}
 
-		const result2 = rows.map((budget) => {
+		const budgetsWithSpending = rows.map((budget) => {
 			const spent = spendingMap.get(budget.categoryId) ?? 0
 			return {
 				...budget,
@@ -170,7 +166,7 @@ export async function budgetRoutes(app: FastifyInstance) {
 			}
 		})
 
-		return reply.send(result2)
+		return reply.send(budgetsWithSpending)
 	})
 
 	// ─── Create or Update Budget (Upsert) ─────────────────────────────────────

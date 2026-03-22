@@ -1,0 +1,8 @@
+{
+	"mcpServers": {
+		"pothos": {
+			"command": "node",
+			"args": ["C:/Users/Bryan/Documents/Work/pothos/mcp/dist/index.js"]
+		}
+	}
+}

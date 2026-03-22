@@ -4,6 +4,7 @@ import { z } from "zod"
 import { db } from "../../db/index.js"
 import { transactions, categories, budgets } from "../../db/schema.js"
 import { authenticate } from "../../middleware/authenticate.js"
+import { getMonthBounds } from "../../db/utils.js"
 
 const monthQuerySchema = z.object({
 	month: z.coerce.number().int().min(1).max(12).optional(),
@@ -14,11 +15,6 @@ const trendsQuerySchema = z.object({
 	months: z.coerce.number().int().min(1).max(24).default(12),
 })
 
-function getMonthBounds(month: number, year: number): { start: number; end: number } {
-	const start = Math.floor(new Date(year, month - 1, 1).getTime() / 1000)
-	const end = Math.floor(new Date(year, month, 1).getTime() / 1000) - 1
-	return { start, end }
-}
 
 export async function reportRoutes(app: FastifyInstance) {
 	// ─── Overview ─────────────────────────────────────────────────────────────

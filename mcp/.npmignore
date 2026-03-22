@@ -1,4 +1,6 @@
 src/
+dist/ollama-parse.js
 .env
 .env.example
 tsconfig.json
+node_modules/
