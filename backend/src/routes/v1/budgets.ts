@@ -72,7 +72,7 @@ export async function budgetRoutes(app: FastifyInstance) {
 			if (unbudgeted.length > 0) {
 				const nowTs = Math.floor(Date.now() / 1000)
 
-				for (const cat of unbudgeted) {
+				const toInsert = unbudgeted.flatMap((cat) => {
 					const source = db
 						.select()
 						.from(budgets)
@@ -91,23 +91,27 @@ export async function budgetRoutes(app: FastifyInstance) {
 						.limit(1)
 						.get()
 
-					if (source) {
-						db.insert(budgets)
-							.values({
-								id: nanoid(),
-								userId: request.user.id,
-								categoryId: cat.id,
-								amount: source.amount,
-								month,
-								year,
-								isRecurring: true,
-								isCommitted: source.isCommitted,
-								createdAt: nowTs,
-								updatedAt: nowTs,
-							})
-							.onConflictDoNothing()
-							.run()
-					}
+					if (!source) return []
+					return [{
+						id: nanoid(),
+						userId: request.user.id,
+						categoryId: cat.id,
+						amount: source.amount,
+						month,
+						year,
+						isRecurring: true as const,
+						isCommitted: source.isCommitted,
+						createdAt: nowTs,
+						updatedAt: nowTs,
+					}]
+				})
+
+				if (toInsert.length > 0) {
+					db.transaction((tx) => {
+						for (const values of toInsert) {
+							tx.insert(budgets).values(values).onConflictDoNothing().run()
+						}
+					})
 				}
 
 				// Re-fetch to include newly inserted rows

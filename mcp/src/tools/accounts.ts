@@ -15,19 +15,36 @@ export function registerAccountTools(server: McpServer) {
 		{
 			description:
 				"Get all accounts with their current balances and a net worth total. " +
-				"Closed accounts are included and marked [closed].",
+				"Active accounts are listed first. Closed accounts are shown separately — " +
+				"do not use them for new transactions or transfers.",
 		},
 		async () => {
 			try {
 				const accounts = await apiFetch<Account[]>("/accounts?includeInactive=true")
+
+				const active = accounts.filter((a) => a.isActive)
+				const closed = accounts.filter((a) => !a.isActive)
 				const netWorth = accounts.reduce((sum, a) => sum + a.balance, 0)
 
-				const lines = accounts.map(
-					(a) =>
-						`- ${a.name} (${a.type}): ${fmtAmount(a.balance)}${a.isActive ? "" : " [closed]"} [id: ${a.id}]`
-				)
+				const lines: string[] = []
+
+				if (active.length === 0) {
+					lines.push("No active accounts.")
+				} else {
+					lines.push("Active accounts:")
+					for (const a of active) {
+						lines.push(`  - ${a.name} (${a.type}): ${fmtAmount(a.balance)} [id: ${a.id}]`)
+					}
+				}
+
+				if (closed.length > 0) {
+					lines.push("\nClosed accounts (included in net worth, not usable for transactions):")
+					for (const a of closed) {
+						lines.push(`  - ${a.name} (${a.type}): ${fmtAmount(a.balance)} [id: ${a.id}]`)
+					}
+				}
+
 				lines.push(`\nNet worth: ${fmtAmount(netWorth)}`)
-				lines.push(`(${accounts.length} account${accounts.length !== 1 ? "s" : ""} total)`)
 
 				return { content: [{ type: "text" as const, text: lines.join("\n") }] }
 			} catch (err) {
