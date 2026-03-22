@@ -215,13 +215,13 @@ export async function parsedTransactionRoutes(app: FastifyInstance) {
 					.values({
 						id: txId,
 						userId: request.user.id,
-						accountId: pt.accountId,
-						categoryId: pt.categoryId ?? null,
+						accountId: pt.accountId!,
+						categoryId: pt.categoryId ?? undefined,
 						type: pt.type,
 						amount: signedAmount,
 						date: pt.date,
 						description: pt.description,
-						notes: pt.notes ?? null,
+						notes: pt.notes ?? undefined,
 						createdAt: now,
 						updatedAt: now,
 					})
@@ -283,17 +283,19 @@ export async function parsedTransactionRoutes(app: FastifyInstance) {
 
 			const now = Math.floor(Date.now() / 1000)
 
-			db.update(parsedTransactions)
-				.set({ status: "rejected", updatedAt: now })
-				.where(eq(parsedTransactions.id, id))
-				.run()
-
-			if (pt.pendingMessageId) {
-				db.update(pendingMessages)
-					.set({ status: "failed", error: "Rejected by user", updatedAt: now })
-					.where(eq(pendingMessages.id, pt.pendingMessageId))
+			db.transaction((tx) => {
+				tx.update(parsedTransactions)
+					.set({ status: "rejected", updatedAt: now })
+					.where(eq(parsedTransactions.id, id))
 					.run()
-			}
+
+				if (pt.pendingMessageId) {
+					tx.update(pendingMessages)
+						.set({ status: "failed", error: "Rejected by user", updatedAt: now })
+						.where(eq(pendingMessages.id, pt.pendingMessageId))
+						.run()
+				}
+			})
 
 			return reply.status(204).send()
 		}

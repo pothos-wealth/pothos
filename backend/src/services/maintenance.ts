@@ -36,10 +36,7 @@ function deletePendingMessagesBatch(): number {
 			.select({ id: pendingMessages.id })
 			.from(pendingMessages)
 			.where(
-				or(
-					eq(pendingMessages.status, "processed"),
-					eq(pendingMessages.status, "failed")
-				)
+				or(eq(pendingMessages.status, "processed"), eq(pendingMessages.status, "failed"))
 			)
 			.limit(BATCH_SIZE)
 			.all()

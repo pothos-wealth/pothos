@@ -31,9 +31,11 @@ export function registerReportTools(server: McpServer) {
 		"get_spending_overview",
 		{
 			description:
-				"Get total income, expenses, net, and committed budget for a given month. " +
-				"Committed = unspent budget remaining (money set aside but not yet spent). " +
-				"Use this to assess true available funds. Defaults to the current month.",
+				"Get a month's income, expenses, net, and total committed (pre-allocated) spending. " +
+				"The committed figure is the sum of unspent committed budget obligations — money set aside " +
+				"for rent, subscriptions, and other fixed costs that hasn't been transacted yet. " +
+				"Subtract committed from account balance to determine what is truly available. " +
+				"Defaults to the current month. Use alongside get_budgets for a full picture.",
 			inputSchema: {
 				month: z.number().int().min(1).max(12).optional().describe("Month (1-12)"),
 				year: z.number().int().optional().describe("Year (e.g. 2026)"),
@@ -57,7 +59,7 @@ export function registerReportTools(server: McpServer) {
 					`  Income:    ${fmtAmount(overview.income)}\n` +
 					`  Expenses:  ${fmtAmount(Math.abs(overview.expenses))}\n` +
 					`  Net:       ${netSign}${fmtAmount(overview.net)}\n` +
-					`  Committed: ${fmtAmount(overview.committed)} (budgeted but not yet spent this month)`
+					`  Committed: ${fmtAmount(overview.committed)} (pre-allocated obligations not yet transacted — not available to spend)`
 
 				return { content: [{ type: "text" as const, text }] }
 			} catch (err) {
@@ -73,8 +75,10 @@ export function registerReportTools(server: McpServer) {
 		"get_category_breakdown",
 		{
 			description:
-				"Get expense breakdown by category for a given month, with percentages. " +
-				"Defaults to the current month.",
+				"Get expense breakdown by category for a given month, with amounts and percentages of total spending. " +
+				"Useful for identifying where most money is going. Transfers are excluded. " +
+				"Defaults to the current month. Combine with get_transactions (filtered by account or search) " +
+				"to drill into individual items within a category.",
 			inputSchema: {
 				month: z.number().int().min(1).max(12).optional().describe("Month (1-12)"),
 				year: z.number().int().optional().describe("Year (e.g. 2026)"),
@@ -134,7 +138,10 @@ export function registerReportTools(server: McpServer) {
 		"get_spending_trends",
 		{
 			description:
-				"Get monthly income, expenses, and net over the last N months. Useful for spotting trends.",
+				"Get monthly income, expenses, and net over the last N months (default 6, max 24). " +
+				"Useful for identifying whether spending is increasing, decreasing, or stable over time. " +
+				"A consistently positive net means saving; negative net means spending more than earning. " +
+				"Months with no transactions return zeroes. Transfers are excluded.",
 			inputSchema: {
 				months: z
 					.number()

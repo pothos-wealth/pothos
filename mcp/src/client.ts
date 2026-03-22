@@ -37,8 +37,8 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 	return res.json() as Promise<T>
 }
 
-export function fmtAmount(minorUnits: number): string {
-	return (minorUnits / 100).toFixed(2)
+export function fmtAmount(minorUnits: number): number {
+	return Math.round(minorUnits) / 100
 }
 
 export function fmtDate(unixTs: number): string {

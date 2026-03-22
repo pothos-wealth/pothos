@@ -58,7 +58,10 @@ export function BudgetProgress({ budgets, categories, limit }: BudgetProgressPro
 			)}
 			{hidden > 0 && (
 				<p className="text-xs text-fg-muted mt-3 text-center">
-					+{hidden} more — <a href="/budgets" className="text-primary hover:underline">view all</a>
+					+{hidden} more —{" "}
+					<a href="/budgets" className="text-primary hover:underline">
+						view all
+					</a>
 				</p>
 			)}
 		</Card>

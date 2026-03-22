@@ -42,10 +42,7 @@ export async function parseQueueRoutes(app: FastifyInstance) {
 			.select()
 			.from(pendingMessages)
 			.where(
-				and(
-					eq(pendingMessages.userId, request.user.id),
-					eq(pendingMessages.status, status)
-				)
+				and(eq(pendingMessages.userId, request.user.id), eq(pendingMessages.status, status))
 			)
 			.orderBy(desc(pendingMessages.createdAt))
 			.limit(limit)
@@ -56,10 +53,7 @@ export async function parseQueueRoutes(app: FastifyInstance) {
 			.select({ count: count() })
 			.from(pendingMessages)
 			.where(
-				and(
-					eq(pendingMessages.userId, request.user.id),
-					eq(pendingMessages.status, status)
-				)
+				and(eq(pendingMessages.userId, request.user.id), eq(pendingMessages.status, status))
 			)
 			.get()
 

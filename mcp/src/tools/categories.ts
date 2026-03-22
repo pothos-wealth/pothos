@@ -13,8 +13,9 @@ export function registerCategoryTools(server: McpServer) {
 		"get_categories",
 		{
 			description:
-				"List all available categories (global defaults and your custom ones), grouped by type. " +
-				"Use this to find valid category names when adding transactions.",
+				"List all categories (global defaults and custom ones), grouped by expense/income/neutral. " +
+				"Each entry includes the category ID needed for add_transaction and submit_parsed_email. " +
+				"Also use this to decode category IDs returned in budget and transaction responses.",
 		},
 		async () => {
 			try {

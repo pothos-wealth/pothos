@@ -24,6 +24,10 @@ interface Account {
 	name: string
 }
 
+function dateToUnix(dateStr: string): number {
+	return Math.floor(new Date(`${dateStr}T00:00:00`).getTime() / 1000)
+}
+
 export function registerTransactionTools(server: McpServer) {
 	server.registerTool(
 		"get_transactions",
@@ -38,6 +42,10 @@ export function registerTransactionTools(server: McpServer) {
 					.describe("Filter by transaction type"),
 				startDate: z.string().optional().describe("Start date filter (YYYY-MM-DD)"),
 				endDate: z.string().optional().describe("End date filter (YYYY-MM-DD)"),
+				search: z
+					.string()
+					.optional()
+					.describe("Search by transaction description (partial match)"),
 				limit: z
 					.number()
 					.int()
@@ -49,18 +57,14 @@ export function registerTransactionTools(server: McpServer) {
 				page: z.number().int().min(1).optional().default(1).describe("Page number"),
 			},
 		},
-		async ({ accountId, type, startDate, endDate, limit, page }) => {
+		async ({ accountId, type, startDate, endDate, search, limit, page }) => {
 			try {
 				const params = new URLSearchParams()
 				if (accountId) params.set("accountId", accountId)
 				if (type) params.set("type", type)
-				if (startDate)
-					params.set(
-						"startDate",
-						String(Math.floor(new Date(startDate).getTime() / 1000))
-					)
-				if (endDate)
-					params.set("endDate", String(Math.floor(new Date(endDate).getTime() / 1000)))
+				if (startDate) params.set("startDate", String(dateToUnix(startDate)))
+				if (endDate) params.set("endDate", String(dateToUnix(endDate)))
+				if (search) params.set("search", search)
 				params.set("limit", String(limit ?? 20))
 				params.set("page", String(page ?? 1))
 
@@ -108,11 +112,15 @@ export function registerTransactionTools(server: McpServer) {
 		{
 			description:
 				"Create a new income or expense transaction. " +
-				"Use get_accounts to find account IDs and get_categories to find category IDs.",
+				"Use get_accounts to find the right account ID. " +
+				"Use get_categories to find a matching category ID — if nothing fits, omit categoryId rather than guessing.",
 			inputSchema: {
 				accountId: z.string().describe("ID of the account"),
 				type: z.enum(["income", "expense"]).describe("Transaction type"),
-				amount: z.number().positive().describe("Amount as a positive decimal (e.g. 45.50)"),
+				amount: z
+					.number()
+					.positive()
+					.describe("Amount as a positive decimal (e.g. 45.50)"),
 				date: z.string().describe("Transaction date (YYYY-MM-DD)"),
 				description: z.string().min(1).describe("Merchant name or description"),
 				categoryId: z.string().optional().describe("Category ID (optional)"),
@@ -121,16 +129,13 @@ export function registerTransactionTools(server: McpServer) {
 		},
 		async ({ accountId, type, amount, date, description, categoryId, notes }) => {
 			try {
-				const minorUnits = Math.round(amount * 100)
-				const unixTs = Math.floor(new Date(date).getTime() / 1000)
-
 				const tx = await apiFetch<Transaction>("/transactions", {
 					method: "POST",
 					body: JSON.stringify({
 						accountId,
 						type,
-						amount: minorUnits,
-						date: unixTs,
+						amount: Math.round(amount * 100),
+						date: dateToUnix(date),
 						description,
 						categoryId: categoryId ?? null,
 						notes: notes ?? null,
@@ -177,15 +182,14 @@ export function registerTransactionTools(server: McpServer) {
 		},
 		async ({ fromAccountId, toAccountId, amount, date, description }) => {
 			try {
-				const minorUnits = Math.round(amount * 100)
-				const unixTs = Math.floor(new Date(date).getTime() / 1000)
+				const unixTs = dateToUnix(date)
 
 				await apiFetch("/transactions/transfer", {
 					method: "POST",
 					body: JSON.stringify({
 						fromAccountId,
 						toAccountId,
-						amount: minorUnits,
+						amount: Math.round(amount * 100),
 						date: unixTs,
 						description,
 					}),
@@ -195,7 +199,7 @@ export function registerTransactionTools(server: McpServer) {
 					content: [
 						{
 							type: "text" as const,
-							text: `Transfer of ${fmtAmount(minorUnits)} on ${new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} created successfully.`,
+							text: `Transfer of ${fmtAmount(Math.round(amount * 100))} on ${fmtDate(unixTs)} created successfully.`,
 						},
 					],
 				}
