@@ -112,7 +112,8 @@ export function registerTransactionTools(server: McpServer) {
 		{
 			description:
 				"Create a new income or expense transaction. " +
-				"Use get_accounts to find account IDs and get_categories to find category IDs.",
+				"Use get_accounts to find the right account ID. " +
+				"Use get_categories to find a matching category ID — if nothing fits, omit categoryId rather than guessing.",
 			inputSchema: {
 				accountId: z.string().describe("ID of the account"),
 				type: z.enum(["income", "expense"]).describe("Transaction type"),
