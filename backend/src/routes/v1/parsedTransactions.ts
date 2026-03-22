@@ -208,43 +208,45 @@ export async function parsedTransactionRoutes(app: FastifyInstance) {
 			// Apply sign: income positive, expense negative
 			const signedAmount = pt.type === "income" ? pt.amount : -pt.amount
 
-			// Create actual transaction
-			const transaction = db
-				.insert(transactions)
-				.values({
-					id: txId,
-					userId: request.user.id,
-					accountId: pt.accountId,
-					categoryId: pt.categoryId ?? null,
-					type: pt.type,
-					amount: signedAmount,
-					date: pt.date,
-					description: pt.description,
-					notes: pt.notes ?? null,
-					createdAt: now,
-					updatedAt: now,
-				})
-				.returning()
-				.get()
+			// Create transaction, mark as approved, and update source email — all atomically
+			const transaction = db.transaction((tx) => {
+				const inserted = tx
+					.insert(transactions)
+					.values({
+						id: txId,
+						userId: request.user.id,
+						accountId: pt.accountId,
+						categoryId: pt.categoryId ?? null,
+						type: pt.type,
+						amount: signedAmount,
+						date: pt.date,
+						description: pt.description,
+						notes: pt.notes ?? null,
+						createdAt: now,
+						updatedAt: now,
+					})
+					.returning()
+					.get()
 
-			// Mark parsed transaction as approved
-			db.update(parsedTransactions)
-				.set({ status: "approved", updatedAt: now })
-				.where(eq(parsedTransactions.id, id))
-				.run()
-
-			// Mark source pending_message as processed (if still pending)
-			if (pt.pendingMessageId) {
-				db.update(pendingMessages)
-					.set({ status: "processed", updatedAt: now })
-					.where(
-						and(
-							eq(pendingMessages.id, pt.pendingMessageId),
-							eq(pendingMessages.status, "pending")
-						)
-					)
+				tx.update(parsedTransactions)
+					.set({ status: "approved", updatedAt: now })
+					.where(eq(parsedTransactions.id, id))
 					.run()
-			}
+
+				if (pt.pendingMessageId) {
+					tx.update(pendingMessages)
+						.set({ status: "processed", updatedAt: now })
+						.where(
+							and(
+								eq(pendingMessages.id, pt.pendingMessageId),
+								eq(pendingMessages.status, "pending")
+							)
+						)
+						.run()
+				}
+
+				return inserted
+			})
 
 			return reply.status(201).send(transaction)
 		}

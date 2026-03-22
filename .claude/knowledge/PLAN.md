@@ -10,7 +10,7 @@ Pothos is a self-hostable, open-source budget and expense tracking app for indiv
 
 All pages are built and fully integrated with the backend. Users can sign up, manage accounts, enter transactions with decimal precision, set budgets, and view reports. Currency is selected at signup and displayed correctly throughout the app.
 
-**Complete.** All workstreams finished. T13 (API key auth) and WS5 (MCP server) are built and ready to deploy. The MCP is published as `@pothos/mcp`.
+**Complete.** All workstreams finished. T13 (API key auth) and WS5 (MCP server) are built and ready to deploy. The MCP is published as `@pothos-wealth/mcp`.
 
 ## Progress
 
@@ -355,7 +355,7 @@ api_keys
 
 **Dependencies:** T13 (API Key Auth) complete
 
-**Distribution:** Monorepo (`mcp/` folder) + published to npm as `@pothos/mcp`. Users install via `npx @pothos/mcp` — no need to clone the repo.
+**Distribution:** Monorepo (`mcp/` folder) + published to npm as `@pothos-wealth/mcp`. Users install via `npx @pothos-wealth/mcp` — no need to clone the repo.
 
 **Auth:** MCP authenticates via API key (`Authorization: Bearer pth_...`). User generates a key in the Settings page and sets it as `POTHOS_API_KEY` in the MCP's `.env`. No expiry, no re-auth logic, no credentials stored.
 
@@ -365,7 +365,7 @@ api_keys
 
 **T14 — MCP scaffold** `✅ complete`
 
-- `mcp/package.json`: `@pothos/mcp`, `bin: { pothos-mcp: dist/index.js }`, published to npm
+- `mcp/package.json`: `@pothos-wealth/mcp`, `bin: { pothos-mcp: dist/index.js }`, published to npm
 - `mcp/src/index.ts` — MCP server entry point using `StdioServerTransport`, includes agent instructions
 - `mcp/src/client.ts` — HTTP client with `Authorization: Bearer <POTHOS_API_KEY>`, `fmtAmount()`, `fmtDate()` helpers
 - Configure via `.env`: `POTHOS_URL`, `POTHOS_API_KEY`
@@ -397,7 +397,7 @@ api_keys
 
 - `.npmignore` excludes `src/`, `.env*`, `tsconfig.json`, `node_modules/`
 - `build` script compiles TypeScript to `dist/`
-- Published as `@pothos/mcp` on npm
+- Published as `@pothos-wealth/mcp` on npm
 
 ---
 

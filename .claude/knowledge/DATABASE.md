@@ -127,6 +127,7 @@ Enums are implemented as Drizzle `text` columns with an `enum` option. SQLite st
 | month        | integer | 1–12                                        |
 | year         | integer | e.g. 2026                                   |
 | is_recurring | integer | boolean, default true. Auto-carries forward to current month on first view |
+| is_committed | integer | boolean, default false. Remaining unspent balance counts as a guaranteed upcoming expense in the overview |
 | created_at   | integer | Unix timestamp                              |
 | updated_at   | integer | Unix timestamp                              |
 
@@ -159,15 +160,15 @@ Enums are implemented as Drizzle `text` columns with an `enum` option. SQLite st
 | host           | text    | IMAP host, e.g. `imap.gmail.com`                            |
 | port           | integer | IMAP port, default 993                                      |
 | mailbox        | text    | Mailbox to poll, default `"INBOX"`                          |
-| is_active      | integer | boolean, default true. Set to false after 3 auth failures   |
-| last_polled_at | integer | Unix timestamp of last successful poll, nullable            |
-| last_uid       | text    | Last processed email UID (cursor), nullable                 |
-| created_at     | integer | Unix timestamp                                              |
-| updated_at     | integer | Unix timestamp                                              |
+| is_active                  | integer | boolean, default true. Set to false after 3 auth failures   |
+| last_polled_at             | integer | Unix timestamp of last successful poll, nullable            |
+| last_uid                   | text    | Last processed email UID (cursor), nullable                 |
+| consecutive_auth_failures  | integer | Counter reset on success, triggers auto-disable at 3        |
+| created_at                 | integer | Unix timestamp                                              |
+| updated_at                 | integer | Unix timestamp                                              |
 
-> One row per user. `last_uid` replaces the old `gmail_cursors` table — the cursor is stored inline to avoid joins.
-> `password` is encrypted at rest via AES-256-GCM using `ENCRYPTION_KEY` env var.
-> `is_active` is set to false automatically after 3 consecutive IMAP auth failures.
+> One row per user. `password` is encrypted at rest via AES-256-GCM using `ENCRYPTION_KEY` env var.
+> `is_active` is set to false automatically after 3 consecutive IMAP auth failures (`consecutive_auth_failures >= 3`).
 
 ### `llm_settings`
 
@@ -183,7 +184,7 @@ Enums are implemented as Drizzle `text` columns with an `enum` option. SQLite st
 
 > Per-user LLM configuration. Users bring their own API key.
 > `api_key` masked as `"••••" + last4` on GET responses — never returned in plaintext.
-> Provider `"local"` skips LLM entirely; raw emails are left as `"failed"` for the MCP `parse_pending` tool.
+> Provider `"local"` skips LLM entirely; raw emails stay as `"pending"` for the MCP `get_pending_emails` / `submit_parsed_email` tools.
 
 ### `parsed_transactions`
 
@@ -203,7 +204,7 @@ Enums are implemented as Drizzle `text` columns with an `enum` option. SQLite st
 | created_at         | integer | Unix timestamp                                                         |
 | updated_at         | integer | Unix timestamp                                                         |
 
-> Review queue for LLM/regex-parsed emails. All parsed emails land here before becoming real transactions.
+> Review queue for LLM-parsed emails. All parsed emails land here before becoming real transactions.
 > `amount` is stored as a positive integer; the approve handler applies sign (income → positive, expense → negative) when creating the actual transaction.
 > Approve is blocked if `account_id` is null — user must select an account.
 > On approve: creates a transaction via the existing insert logic, sets status=`approved`, sets `pending_message.status=processed`.

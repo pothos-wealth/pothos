@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify"
-import { eq, and, sum, sql, inArray } from "drizzle-orm"
+import { eq, and, sql, inArray } from "drizzle-orm"
 import { z } from "zod"
 import { nanoid } from "nanoid"
 import { db } from "../../db/index.js"
@@ -159,8 +159,8 @@ export async function accountRoutes(app: FastifyInstance) {
 		const updated = db
 			.update(accounts)
 			.set({
-				...(result.data.name && { name: result.data.name }),
-				...(result.data.type && { type: result.data.type }),
+				...(result.data.name !== undefined && { name: result.data.name }),
+				...(result.data.type !== undefined && { type: result.data.type }),
 				updatedAt: now,
 			})
 			.where(eq(accounts.id, id))

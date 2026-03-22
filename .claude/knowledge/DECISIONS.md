@@ -2,7 +2,7 @@
 
 ## Infrastructure & Tooling
 
-**Repo structure** - Single repo, three independent folders: `backend/`, `frontend/`, `mcp/`. No monorepo tooling (no Turborepo). Each folder is its own Node project. The MCP is developed in the monorepo but distributed separately as an npm package (`@pothos/mcp`). This keeps API + MCP changes in the same PR while letting home-PC users install via `npx @pothos/mcp` without cloning the full repo.
+**Repo structure** - Single repo, three independent folders: `backend/`, `frontend/`, `mcp/`. No monorepo tooling (no Turborepo). Each folder is its own Node project. The MCP is developed in the monorepo but distributed separately as an npm package (`@pothos-wealth/mcp`). This keeps API + MCP changes in the same PR while letting home-PC users install via `npx @pothos-wealth/mcp` without cloning the full repo.
 
 **Database** - SQLite via Drizzle ORM. Single file, zero infra, perfect for t2.micro self-hosted setup. Driver: `better-sqlite3` (synchronous, no external deps, battle-tested).
 
@@ -189,7 +189,7 @@
 
 ## MCP Server
 
-**MCP distribution** - Developed in the monorepo under `mcp/` but published to npm as `@pothos/mcp`. Monorepo keeps backend API and MCP changes in sync (same PR). npm distribution lets home-PC users install with `npx @pothos/mcp` without cloning the full repo. `private: true` removed from `mcp/package.json` for publishing.
+**MCP distribution** - Developed in the monorepo under `mcp/` but published to npm as `@pothos-wealth/mcp`. Monorepo keeps backend API and MCP changes in sync (same PR). npm distribution lets home-PC users install with `npx @pothos-wealth/mcp` without cloning the full repo. `private: true` removed from `mcp/package.json` for publishing.
 
 **MCP auth** - The MCP authenticates via API key (`Authorization: Bearer pth_...`). User generates a key in the Settings page and sets it as `POTHOS_API_KEY` in the MCP's `.env`. No expiry, no re-auth logic, no credentials stored in the MCP config. See T13 for full API key design.
 

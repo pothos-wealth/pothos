@@ -47,16 +47,16 @@ export function SpendingChart({ data }: SpendingChartProps) {
 	}))
 
 	return (
-		<Card>
+		<Card className="h-full flex flex-col">
 			<p className="text-sm font-semibold text-fg mb-4">Spending by Category</p>
 
 			{data.length === 0 ? (
-				<div className="h-[180px] flex items-center justify-center">
+				<div className="flex-1 flex items-center justify-center">
 					<p className="text-sm text-fg-muted">No spending data for this month</p>
 				</div>
 			) : (
 				<>
-					<div className="h-[180px]">
+					<div className="flex-1 min-h-[180px]">
 						<ResponsiveContainer width="100%" height="100%">
 							<PieChart>
 								<Pie
