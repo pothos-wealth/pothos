@@ -10,6 +10,16 @@ interface PendingMessage {
 	createdAt: number
 }
 
+interface PendingEmailsResponse {
+	data: PendingMessage[]
+	pagination: {
+		page: number
+		limit: number
+		total: number
+		totalPages: number
+	}
+}
+
 export function registerParseQueueTools(server: McpServer) {
 	server.registerTool(
 		"get_pending_emails",
@@ -27,25 +37,35 @@ export function registerParseQueueTools(server: McpServer) {
 					.optional()
 					.default(10)
 					.describe("Max number of emails to return (default 10)"),
+				page: z
+					.number()
+					.int()
+					.min(1)
+					.optional()
+					.default(1)
+					.describe("Page number for pagination (default 1)"),
 			},
 		},
-		async ({ limit }) => {
+		async ({ limit, page }) => {
 			try {
-				const pending = await apiFetch<PendingMessage[]>("/parse-queue?status=pending")
+				const response = await apiFetch<PendingEmailsResponse>(
+					`/parse-queue?status=pending&limit=${limit}&page=${page}`
+				)
 
-				if (pending.length === 0) {
+				const { data: emails, pagination } = response
+
+				if (emails.length === 0) {
 					return {
 						content: [{ type: "text" as const, text: "No pending emails." }],
 					}
 				}
 
-				const batch = pending.slice(0, limit ?? 10)
-				const remaining = pending.length - batch.length
+				const remaining = pagination.total - (page - 1) * limit - emails.length
 
 				const lines = [
-					`${pending.length} pending email${pending.length !== 1 ? "s" : ""} (showing ${batch.length}):`,
+					`${pagination.total} pending email${pagination.total !== 1 ? "s" : ""} (page ${page}/${pagination.totalPages}, showing ${emails.length}):`,
 				]
-				for (const msg of batch) {
+				for (const msg of emails) {
 					lines.push(`\n--- Email ID: ${msg.id} ---`)
 					lines.push(`Subject: ${msg.subject ?? "(no subject)"}`)
 					lines.push(`Received: ${fmtDate(msg.createdAt)}`)
@@ -53,7 +73,7 @@ export function registerParseQueueTools(server: McpServer) {
 				}
 				if (remaining > 0) {
 					lines.push(
-						`\n${remaining} more email${remaining !== 1 ? "s" : ""} not shown. Call again to get the next batch.`
+						`\n${remaining} more email${remaining !== 1 ? "s" : ""} not shown. Call again with page=${page + 1} to get the next batch.`
 					)
 				}
 

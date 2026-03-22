@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 import { nanoid } from "nanoid"
-import { eq, and, desc, sql } from "drizzle-orm"
+import { eq, and, desc, sql, count } from "drizzle-orm"
 import { db } from "../../db/index.js"
 import { pendingMessages, parsedTransactions, transactions, accounts } from "../../db/schema.js"
 import { authenticate } from "../../middleware/authenticate.js"
@@ -53,7 +53,7 @@ export async function parseQueueRoutes(app: FastifyInstance) {
 			.all()
 
 		const totalResult = db
-			.select({ count: sql`count(*)` })
+			.select({ count: count() })
 			.from(pendingMessages)
 			.where(
 				and(
@@ -131,57 +131,66 @@ export async function parseQueueRoutes(app: FastifyInstance) {
 
 			const signedAmount = type === "income" ? amount : -amount
 
-			const transaction = db
-				.insert(transactions)
+			// Create transaction and mark email processed — atomically
+			const transaction = db.transaction((tx) => {
+				const inserted = tx
+					.insert(transactions)
+					.values({
+						id: nanoid(),
+						userId: request.user.id,
+						accountId,
+						categoryId: categoryId ?? null,
+						type,
+						amount: signedAmount,
+						date,
+						description,
+						notes: notes ?? null,
+						createdAt: now,
+						updatedAt: now,
+					})
+					.returning()
+					.get()
+
+				tx.update(pendingMessages)
+					.set({ status: "processed", updatedAt: now })
+					.where(eq(pendingMessages.id, id))
+					.run()
+
+				return inserted
+			})
+
+			return reply.status(201).send(transaction)
+		}
+
+		// Automated parse (e.g. MCP): send to review queue — atomically
+		const pt = db.transaction((tx) => {
+			const inserted = tx
+				.insert(parsedTransactions)
 				.values({
 					id: nanoid(),
 					userId: request.user.id,
-					accountId,
+					pendingMessageId: id,
+					accountId: accountId ?? null,
 					categoryId: categoryId ?? null,
 					type,
-					amount: signedAmount,
+					amount,
 					date,
 					description,
 					notes: notes ?? null,
+					status: "pending_review",
 					createdAt: now,
 					updatedAt: now,
 				})
 				.returning()
 				.get()
 
-			db.update(pendingMessages)
+			tx.update(pendingMessages)
 				.set({ status: "processed", updatedAt: now })
 				.where(eq(pendingMessages.id, id))
 				.run()
 
-			return reply.status(201).send(transaction)
-		}
-
-		// Automated parse (e.g. MCP): send to review queue
-		const pt = db
-			.insert(parsedTransactions)
-			.values({
-				id: nanoid(),
-				userId: request.user.id,
-				pendingMessageId: id,
-				accountId: accountId ?? null,
-				categoryId: categoryId ?? null,
-				type,
-				amount,
-				date,
-				description,
-				notes: notes ?? null,
-				status: "pending_review",
-				createdAt: now,
-				updatedAt: now,
-			})
-			.returning()
-			.get()
-
-		db.update(pendingMessages)
-			.set({ status: "processed", updatedAt: now })
-			.where(eq(pendingMessages.id, id))
-			.run()
+			return inserted
+		})
 
 		return reply.status(201).send(pt)
 	})

@@ -32,3 +32,5 @@ certbot/
 *.stackdump
 tests/
 .claude/settings.local.json
+
+.mcp.json
