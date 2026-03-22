@@ -15,7 +15,6 @@ const trendsQuerySchema = z.object({
 	months: z.coerce.number().int().min(1).max(24).default(12),
 })
 
-
 export async function reportRoutes(app: FastifyInstance) {
 	// ─── Overview ─────────────────────────────────────────────────────────────
 	// Total income, expenses, and net for a given month.

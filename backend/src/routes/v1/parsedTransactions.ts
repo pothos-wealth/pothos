@@ -215,13 +215,13 @@ export async function parsedTransactionRoutes(app: FastifyInstance) {
 					.values({
 						id: txId,
 						userId: request.user.id,
-						accountId: pt.accountId,
-						categoryId: pt.categoryId ?? null,
+						accountId: pt.accountId!,
+						categoryId: pt.categoryId ?? undefined,
 						type: pt.type,
 						amount: signedAmount,
 						date: pt.date,
 						description: pt.description,
-						notes: pt.notes ?? null,
+						notes: pt.notes ?? undefined,
 						createdAt: now,
 						updatedAt: now,
 					})

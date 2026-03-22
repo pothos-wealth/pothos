@@ -21,7 +21,6 @@ const listQuerySchema = z.object({
 	year: z.coerce.number().int().min(2000).optional(),
 })
 
-
 export async function budgetRoutes(app: FastifyInstance) {
 	// ─── List Budgets ─────────────────────────────────────────────────────────
 
