@@ -157,9 +157,7 @@ export async function parseQueueRoutes(app: FastifyInstance) {
 				}
 
 				if (!toAccount.isActive) {
-					return reply
-						.status(409)
-						.send({ error: "Cannot transfer to a closed account" })
+					return reply.status(409).send({ error: "Cannot transfer to a closed account" })
 				}
 
 				const debitId = nanoid()

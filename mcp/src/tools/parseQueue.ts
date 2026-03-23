@@ -65,10 +65,7 @@ export function registerParseQueueTools(server: McpServer) {
 					}
 				}
 
-				const remaining = Math.max(
-					0,
-					pagination.total - (page - 1) * limit - emails.length
-				)
+				const remaining = Math.max(0, pagination.total - (page - 1) * limit - emails.length)
 
 				const lines = [
 					`${pagination.total} pending email${pagination.total !== 1 ? "s" : ""} (page ${page}/${pagination.totalPages}, showing ${emails.length}):`,
@@ -117,7 +114,9 @@ export function registerParseQueueTools(server: McpServer) {
 					.describe("Transaction amount as a positive decimal (e.g. 45.50)"),
 				date: z
 					.string()
-					.describe("Transaction date in YYYY-MM-DD format. Use today's date if not found in the email."),
+					.describe(
+						"Transaction date in YYYY-MM-DD format. Use today's date if not found in the email."
+					),
 				description: z
 					.string()
 					.min(1)
@@ -126,11 +125,15 @@ export function registerParseQueueTools(server: McpServer) {
 				accountId: z
 					.string()
 					.optional()
-					.describe("Account ID to link the transaction to (from get_accounts). Recommended."),
+					.describe(
+						"Account ID to link the transaction to (from get_accounts). Recommended."
+					),
 				categoryId: z
 					.string()
 					.optional()
-					.describe("Category ID (from get_categories). Leave blank if no category fits."),
+					.describe(
+						"Category ID (from get_categories). Leave blank if no category fits."
+					),
 				notes: z.string().optional().describe("Optional notes or context from the email"),
 			},
 		},

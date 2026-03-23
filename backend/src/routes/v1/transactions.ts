@@ -390,8 +390,7 @@ export async function transactionRoutes(app: FastifyInstance) {
 
 		db.transaction((dbTx) => {
 			// tx1 is the debit (negative amount)
-			dbTx
-				.update(transactions)
+			dbTx.update(transactions)
 				.set({
 					...(amount !== undefined && { amount: tx1.amount < 0 ? -amount : amount }),
 					...(date !== undefined && { date }),
@@ -403,8 +402,7 @@ export async function transactionRoutes(app: FastifyInstance) {
 				.run()
 
 			// tx2 is the paired side (opposite sign)
-			dbTx
-				.update(transactions)
+			dbTx.update(transactions)
 				.set({
 					...(amount !== undefined && { amount: tx2.amount < 0 ? -amount : amount }),
 					...(date !== undefined && { date }),
@@ -416,11 +414,7 @@ export async function transactionRoutes(app: FastifyInstance) {
 				.run()
 		})
 
-		const updated = db
-			.select()
-			.from(transactions)
-			.where(eq(transactions.id, id))
-			.get()
+		const updated = db.select().from(transactions).where(eq(transactions.id, id)).get()
 
 		return reply.send(updated)
 	})

@@ -789,7 +789,10 @@ export default function TransactionsPage() {
 									placeholder="Amount"
 									value={editTransferForm.amount}
 									onChange={(e) =>
-										setEditTransferForm((f) => ({ ...f, amount: e.target.value }))
+										setEditTransferForm((f) => ({
+											...f,
+											amount: e.target.value,
+										}))
 									}
 									className={inputCls}
 								/>
@@ -818,7 +821,10 @@ export default function TransactionsPage() {
 									placeholder="Notes (optional)"
 									value={editTransferForm.notes}
 									onChange={(e) =>
-										setEditTransferForm((f) => ({ ...f, notes: e.target.value }))
+										setEditTransferForm((f) => ({
+											...f,
+											notes: e.target.value,
+										}))
 									}
 									className={inputCls}
 								/>
@@ -829,7 +835,9 @@ export default function TransactionsPage() {
 									<span
 										className={cn(
 											"w-2 h-2 rounded-full shrink-0",
-											editTx && editTx.amount > 0 ? "bg-primary" : "bg-expense"
+											editTx && editTx.amount > 0
+												? "bg-primary"
+												: "bg-expense"
 										)}
 									/>
 									<span className="text-sm text-fg-muted">

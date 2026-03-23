@@ -233,9 +233,7 @@ export async function parsedTransactionRoutes(app: FastifyInstance) {
 				}
 
 				if (!toAccount.isActive) {
-					return reply
-						.status(409)
-						.send({ error: "Cannot transfer to a closed account" })
+					return reply.status(409).send({ error: "Cannot transfer to a closed account" })
 				}
 
 				const debitId = nanoid()
@@ -295,11 +293,7 @@ export async function parsedTransactionRoutes(app: FastifyInstance) {
 							.run()
 					}
 
-					return tx
-						.select()
-						.from(transactions)
-						.where(eq(transactions.id, debitId))
-						.get()
+					return tx.select().from(transactions).where(eq(transactions.id, debitId)).get()
 				})
 
 				return reply.status(201).send(transaction)

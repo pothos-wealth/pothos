@@ -92,18 +92,20 @@ export async function budgetRoutes(app: FastifyInstance) {
 						.get()
 
 					if (!source) return []
-					return [{
-						id: nanoid(),
-						userId: request.user.id,
-						categoryId: cat.id,
-						amount: source.amount,
-						month,
-						year,
-						isRecurring: true as const,
-						isCommitted: source.isCommitted,
-						createdAt: nowTs,
-						updatedAt: nowTs,
-					}]
+					return [
+						{
+							id: nanoid(),
+							userId: request.user.id,
+							categoryId: cat.id,
+							amount: source.amount,
+							month,
+							year,
+							isRecurring: true as const,
+							isCommitted: source.isCommitted,
+							createdAt: nowTs,
+							updatedAt: nowTs,
+						},
+					]
 				})
 
 				if (toInsert.length > 0) {
