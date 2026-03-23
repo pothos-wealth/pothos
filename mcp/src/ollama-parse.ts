@@ -71,7 +71,8 @@ function buildPrompt(
 	categories: { id: string; name: string; type: string }[],
 	currency: string
 ): string {
-	return `You are a financial transaction parser. The user's currency is ${currency}.
+	const today = new Date().toISOString().slice(0, 10)
+	return `You are a financial transaction parser. Today's date is ${today}. The user's currency is ${currency}.
 User's bank accounts: ${JSON.stringify(accounts)}
 Available categories: ${JSON.stringify(categories)}
 
@@ -79,7 +80,7 @@ Parse this bank notification email and return ONLY valid JSON (no markdown, no e
 {
   "type": "income" or "expense",
   "amount": <positive integer in minor units — multiply the amount by 100>,
-  "date": <unix timestamp in seconds>,
+  "date": "<transaction date as YYYY-MM-DD>",
   "description": "<merchant or ref, max 60 chars>",
   "accountId": "<id from accounts list or null>",
   "categoryId": "<id from categories list or null>",
@@ -89,6 +90,7 @@ Parse this bank notification email and return ONLY valid JSON (no markdown, no e
 Rules:
 - "debited"/"spent"/"withdrawal"/"debit" → "expense"
 - "credited"/"received"/"credit" → "income"
+- Dates in the email are typically MM-DD-YY — convert to YYYY-MM-DD in your output
 - Match account by last 4 digits (e.g. "XX1234") against account names
 - Return null for accountId/categoryId if unsure
 - If this is not a bank transaction notification, return {"not_transaction": true}
@@ -140,13 +142,17 @@ function validateResult(raw: unknown): ParsedResult | null {
 	if (!("type" in obj) || (obj.type !== "income" && obj.type !== "expense")) return null
 	if (typeof obj.amount !== "number" || !Number.isInteger(obj.amount) || obj.amount <= 0)
 		return null
-	if (typeof obj.date !== "number" || !Number.isInteger(obj.date)) return null
 	if (typeof obj.description !== "string" || obj.description.trim() === "") return null
+
+	// Accept YYYY-MM-DD string and convert to Unix timestamp
+	if (typeof obj.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(obj.date)) return null
+	const dateTs = Math.floor(new Date(obj.date).getTime() / 1000)
+	if (isNaN(dateTs)) return null
 
 	return {
 		type: obj.type,
 		amount: obj.amount,
-		date: obj.date,
+		date: dateTs,
 		description: obj.description.slice(0, 60),
 		accountId: typeof obj.accountId === "string" ? obj.accountId : null,
 		categoryId: typeof obj.categoryId === "string" ? obj.categoryId : null,

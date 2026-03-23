@@ -64,6 +64,13 @@
 			"when": 1774092927621,
 			"tag": "0008_add_api_keys",
 			"breakpoints": true
+		},
+		{
+			"idx": 9,
+			"version": "6",
+			"when": 1774265502424,
+			"tag": "0009_add_transfer_to_parsed_transactions",
+			"breakpoints": true
 		}
 	]
 }

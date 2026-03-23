@@ -238,8 +238,9 @@ export const parsedTransactions = sqliteTable("parsed_transactions", {
 		onDelete: "set null",
 	}),
 	accountId: text("account_id").references(() => accounts.id, { onDelete: "set null" }),
+	toAccountId: text("to_account_id").references(() => accounts.id, { onDelete: "set null" }),
 	categoryId: text("category_id").references(() => categories.id, { onDelete: "set null" }),
-	type: text("type", { enum: ["income", "expense"] }).notNull(),
+	type: text("type", { enum: ["income", "expense", "transfer"] }).notNull(),
 	amount: integer("amount").notNull(), // always positive, minor units
 	date: integer("date").notNull(),
 	description: text("description").notNull(),

@@ -1,0 +1,1 @@
+ALTER TABLE `parsed_transactions` ADD `to_account_id` text REFERENCES accounts(id);

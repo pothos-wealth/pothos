@@ -194,17 +194,32 @@ export default function TransactionsPage() {
 	async function handleAddSubmit(e: React.FormEvent) {
 		e.preventDefault()
 		setError("")
-		if (!txForm.accountId) {
-			setError("Please select an account.")
-			return
-		}
-		if (!txForm.amount || Number(txForm.amount) <= 0) {
-			setError("Please enter a valid amount.")
-			return
-		}
-		if (!txForm.description.trim()) {
-			setError("Description is required.")
-			return
+		if (addTab === "transaction") {
+			if (!txForm.accountId) {
+				setError("Please select an account.")
+				return
+			}
+			if (!txForm.amount || Number(txForm.amount) <= 0) {
+				setError("Please enter a valid amount.")
+				return
+			}
+			if (!txForm.description.trim()) {
+				setError("Description is required.")
+				return
+			}
+		} else {
+			if (!transferForm.fromAccountId || !transferForm.toAccountId) {
+				setError("Please select both accounts.")
+				return
+			}
+			if (!transferForm.amount || Number(transferForm.amount) <= 0) {
+				setError("Please enter a valid amount.")
+				return
+			}
+			if (!transferForm.description.trim()) {
+				setError("Description is required.")
+				return
+			}
 		}
 		setSubmitting(true)
 		try {
