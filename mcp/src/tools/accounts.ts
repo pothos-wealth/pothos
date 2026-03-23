@@ -33,14 +33,20 @@ export function registerAccountTools(server: McpServer) {
 				} else {
 					lines.push("Active accounts:")
 					for (const a of active) {
-						lines.push(`  - ${a.name} (${a.type}): ${fmtAmount(a.balance)} [id: ${a.id}]`)
+						lines.push(
+							`  - ${a.name} (${a.type}): ${fmtAmount(a.balance)} [id: ${a.id}]`
+						)
 					}
 				}
 
 				if (closed.length > 0) {
-					lines.push("\nClosed accounts (included in net worth, not usable for transactions):")
+					lines.push(
+						"\nClosed accounts (included in net worth, not usable for transactions):"
+					)
 					for (const a of closed) {
-						lines.push(`  - ${a.name} (${a.type}): ${fmtAmount(a.balance)} [id: ${a.id}]`)
+						lines.push(
+							`  - ${a.name} (${a.type}): ${fmtAmount(a.balance)} [id: ${a.id}]`
+						)
 					}
 				}
 

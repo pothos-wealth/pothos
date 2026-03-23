@@ -117,10 +117,7 @@ export function registerTransactionTools(server: McpServer) {
 			inputSchema: {
 				accountId: z.string().describe("ID of the account"),
 				type: z.enum(["income", "expense"]).describe("Transaction type"),
-				amount: z
-					.number()
-					.positive()
-					.describe("Amount as a positive decimal (e.g. 45.50)"),
+				amount: z.number().positive().describe("Amount as a positive decimal (e.g. 45.50)"),
 				date: z.string().describe("Transaction date (YYYY-MM-DD)"),
 				description: z.string().min(1).describe("Merchant name or description"),
 				categoryId: z.string().optional().describe("Category ID (optional)"),

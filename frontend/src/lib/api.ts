@@ -162,6 +162,19 @@ export const api = {
 				method: "PUT",
 				body: JSON.stringify(data),
 			}),
+		updateTransfer: (
+			id: string,
+			data: {
+				amount?: number
+				date?: number
+				description?: string
+				notes?: string | null
+			}
+		) =>
+			apiFetch<Transaction>(`/transactions/transfer/${id}`, {
+				method: "PUT",
+				body: JSON.stringify(data),
+			}),
 		delete: (id: string) => apiFetch<void>(`/transactions/${id}`, { method: "DELETE" }),
 	},
 	user: {

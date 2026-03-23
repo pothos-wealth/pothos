@@ -55,6 +55,8 @@ export interface Transaction {
 	id: string
 	accountId: string
 	categoryId: string | null
+	transferAccountId: string | null
+	transferTransactionId: string | null
 	type: "income" | "expense" | "transfer"
 	amount: number
 	date: number

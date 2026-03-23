@@ -263,8 +263,7 @@ export default function InboxPage() {
 				date: toUnix(parseForm.date),
 				description: parseForm.description,
 				accountId: parseForm.accountId || null,
-				toAccountId:
-					parseForm.type === "transfer" ? parseForm.toAccountId || null : null,
+				toAccountId: parseForm.type === "transfer" ? parseForm.toAccountId || null : null,
 				categoryId: parseForm.type === "transfer" ? null : parseForm.categoryId || null,
 				notes: parseForm.notes || null,
 				bypassReview: true,
@@ -675,7 +674,9 @@ export default function InboxPage() {
 								<div className="flex gap-2">
 									<div className="flex flex-col gap-1.5 flex-1">
 										<label className="text-sm font-medium text-fg">
-											{parseForm.type === "transfer" ? "From Account" : "Account"}{" "}
+											{parseForm.type === "transfer"
+												? "From Account"
+												: "Account"}{" "}
 											<span className="text-expense">*</span>
 										</label>
 										<select
@@ -718,7 +719,9 @@ export default function InboxPage() {
 												<option value="">Select account</option>
 												{accounts
 													.filter(
-														(a) => a.isActive && a.id !== parseForm.accountId
+														(a) =>
+															a.isActive &&
+															a.id !== parseForm.accountId
 													)
 													.map((a) => (
 														<option key={a.id} value={a.id}>
@@ -825,7 +828,10 @@ export default function InboxPage() {
 									onChange={(e) =>
 										setEditForm({
 											...editForm,
-											type: e.target.value as "income" | "expense" | "transfer",
+											type: e.target.value as
+												| "income"
+												| "expense"
+												| "transfer",
 										})
 									}
 									className={`${inputCls} w-full`}
@@ -868,7 +874,10 @@ export default function InboxPage() {
 									<select
 										value={editForm.toAccountId}
 										onChange={(e) =>
-											setEditForm({ ...editForm, toAccountId: e.target.value })
+											setEditForm({
+												...editForm,
+												toAccountId: e.target.value,
+											})
 										}
 										className={`${inputCls} w-full`}
 										required
@@ -941,7 +950,8 @@ export default function InboxPage() {
 										<option value="">No category</option>
 										{categories
 											.filter(
-												(c) => c.type === editForm.type || c.type === "neutral"
+												(c) =>
+													c.type === editForm.type || c.type === "neutral"
 											)
 											.map((c) => (
 												<option key={c.id} value={c.id}>
