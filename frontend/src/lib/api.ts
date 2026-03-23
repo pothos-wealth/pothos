@@ -221,7 +221,10 @@ export const api = {
 			apiFetch<LlmSettings>("/llm/settings", { method: "PUT", body: JSON.stringify(data) }),
 	},
 	parseQueue: {
-		list: () => apiFetch<PendingMessage[]>("/parse-queue"),
+		list: () =>
+			apiFetch<{ data: PendingMessage[]; pagination: unknown }>("/parse-queue").then(
+				(r) => r.data
+			),
 		submit: (
 			id: string,
 			data: {
