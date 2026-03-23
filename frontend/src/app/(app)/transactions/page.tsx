@@ -477,9 +477,7 @@ export default function TransactionsPage() {
 											</p>
 											<p className="text-xs text-fg-muted">
 												{isTransfer
-													? tx.amount < 0
-														? `To ${getAccountName(tx.transferAccountId ?? "")}`
-														: `From ${getAccountName(tx.transferAccountId ?? "")}`
+													? "Transfer"
 													: getCategoryName(tx.categoryId, categories)}
 												{" · "}
 												{getAccountName(tx.accountId)}
@@ -496,7 +494,7 @@ export default function TransactionsPage() {
 															: "text-fg"
 												)}
 											>
-												{isTransfer ? "" : isIncome ? "+" : "-"}
+												{isIncome ? "+" : "-"}
 												{formatCurrency(Math.abs(tx.amount))}
 											</p>
 											<p className="text-xs text-fg-muted">
