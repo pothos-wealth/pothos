@@ -228,11 +228,12 @@ export const api = {
 		submit: (
 			id: string,
 			data: {
-				type: "income" | "expense"
+				type: "income" | "expense" | "transfer"
 				amount: number
 				date: number
 				description: string
 				accountId?: string | null
+				toAccountId?: string | null
 				categoryId?: string | null
 				notes?: string | null
 				bypassReview?: boolean
@@ -263,6 +264,7 @@ export const api = {
 					| "date"
 					| "description"
 					| "accountId"
+					| "toAccountId"
 					| "categoryId"
 					| "notes"
 				>

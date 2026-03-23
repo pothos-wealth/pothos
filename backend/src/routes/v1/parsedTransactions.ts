@@ -19,11 +19,12 @@ const listQuerySchema = z.object({
 })
 
 const updateSchema = z.object({
-	type: z.enum(["income", "expense"]).optional(),
+	type: z.enum(["income", "expense", "transfer"]).optional(),
 	amount: z.number().int().positive().optional(),
 	date: z.number().int().optional(),
 	description: z.string().min(1).optional(),
 	accountId: z.string().nullable().optional(),
+	toAccountId: z.string().nullable().optional(),
 	categoryId: z.string().nullable().optional(),
 	notes: z.string().nullable().optional(),
 })
@@ -129,7 +130,8 @@ export async function parsedTransactionRoutes(app: FastifyInstance) {
 		}
 
 		const now = Math.floor(Date.now() / 1000)
-		const { type, amount, date, description, accountId, categoryId, notes } = result.data
+		const { type, amount, date, description, accountId, toAccountId, categoryId, notes } =
+			result.data
 
 		const updated = db
 			.update(parsedTransactions)
@@ -139,6 +141,7 @@ export async function parsedTransactionRoutes(app: FastifyInstance) {
 				...(date !== undefined && { date }),
 				...(description !== undefined && { description }),
 				...(accountId !== undefined && { accountId }),
+				...(toAccountId !== undefined && { toAccountId }),
 				...(categoryId !== undefined && { categoryId }),
 				...(notes !== undefined && { notes }),
 				updatedAt: now,
@@ -185,6 +188,18 @@ export async function parsedTransactionRoutes(app: FastifyInstance) {
 					.send({ error: "An account must be selected before approving" })
 			}
 
+			if (pt.type === "transfer" && !pt.toAccountId) {
+				return reply
+					.status(400)
+					.send({ error: "A destination account must be selected for transfers" })
+			}
+
+			if (pt.type === "transfer" && pt.accountId === pt.toAccountId) {
+				return reply
+					.status(400)
+					.send({ error: "Source and destination accounts must be different" })
+			}
+
 			// Verify account belongs to user and is active
 			const account = db
 				.select()
@@ -203,6 +218,93 @@ export async function parsedTransactionRoutes(app: FastifyInstance) {
 			}
 
 			const now = Math.floor(Date.now() / 1000)
+
+			if (pt.type === "transfer") {
+				const toAccount = db
+					.select()
+					.from(accounts)
+					.where(
+						and(eq(accounts.id, pt.toAccountId!), eq(accounts.userId, request.user.id))
+					)
+					.get()
+
+				if (!toAccount) {
+					return reply.status(404).send({ error: "Destination account not found" })
+				}
+
+				if (!toAccount.isActive) {
+					return reply
+						.status(409)
+						.send({ error: "Cannot transfer to a closed account" })
+				}
+
+				const debitId = nanoid()
+				const creditId = nanoid()
+
+				const transaction = db.transaction((tx) => {
+					tx.insert(transactions)
+						.values({
+							id: debitId,
+							userId: request.user.id,
+							accountId: pt.accountId!,
+							categoryId: null,
+							transferAccountId: pt.toAccountId!,
+							transferTransactionId: creditId,
+							type: "transfer",
+							amount: -pt.amount,
+							date: pt.date,
+							description: pt.description,
+							notes: pt.notes ?? null,
+							createdAt: now,
+							updatedAt: now,
+						})
+						.run()
+
+					tx.insert(transactions)
+						.values({
+							id: creditId,
+							userId: request.user.id,
+							accountId: pt.toAccountId!,
+							categoryId: null,
+							transferAccountId: pt.accountId!,
+							transferTransactionId: debitId,
+							type: "transfer",
+							amount: pt.amount,
+							date: pt.date,
+							description: pt.description,
+							notes: pt.notes ?? null,
+							createdAt: now,
+							updatedAt: now,
+						})
+						.run()
+
+					tx.update(parsedTransactions)
+						.set({ status: "approved", updatedAt: now })
+						.where(eq(parsedTransactions.id, id))
+						.run()
+
+					if (pt.pendingMessageId) {
+						tx.update(pendingMessages)
+							.set({ status: "processed", updatedAt: now })
+							.where(
+								and(
+									eq(pendingMessages.id, pt.pendingMessageId),
+									eq(pendingMessages.status, "pending")
+								)
+							)
+							.run()
+					}
+
+					return tx
+						.select()
+						.from(transactions)
+						.where(eq(transactions.id, debitId))
+						.get()
+				})
+
+				return reply.status(201).send(transaction)
+			}
+
 			const txId = nanoid()
 
 			// Apply sign: income positive, expense negative

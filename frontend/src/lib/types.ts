@@ -184,8 +184,9 @@ export interface ParsedTransaction {
 	userId: string
 	pendingMessageId: string | null
 	accountId: string | null
+	toAccountId: string | null
 	categoryId: string | null
-	type: "income" | "expense"
+	type: "income" | "expense" | "transfer"
 	amount: number
 	date: number
 	description: string

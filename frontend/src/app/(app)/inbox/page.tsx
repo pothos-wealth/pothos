@@ -11,6 +11,7 @@ import {
 	Inbox,
 	TrendingDown,
 	TrendingUp,
+	ArrowLeftRight,
 } from "lucide-react"
 import { Card } from "@/components/ui/Card"
 import { Modal } from "@/components/ui/Modal"
@@ -31,8 +32,9 @@ import type {
 type InboxTab = "pending_review" | "unprocessed" | "approved" | "rejected"
 
 interface EditForm {
-	type: "income" | "expense"
+	type: "income" | "expense" | "transfer"
 	accountId: string
+	toAccountId: string
 	categoryId: string
 	amount: string
 	date: string
@@ -41,8 +43,9 @@ interface EditForm {
 }
 
 interface ParseForm {
-	type: "income" | "expense"
+	type: "income" | "expense" | "transfer"
 	accountId: string
+	toAccountId: string
 	categoryId: string
 	amount: string
 	date: string
@@ -65,6 +68,7 @@ function fromUnix(ts: number) {
 const defaultEditForm = (pt: ParsedTransaction): EditForm => ({
 	type: pt.type,
 	accountId: pt.accountId ?? "",
+	toAccountId: pt.toAccountId ?? "",
 	categoryId: pt.categoryId ?? "",
 	amount: (pt.amount / 100).toFixed(2),
 	date: fromUnix(pt.date),
@@ -75,6 +79,7 @@ const defaultEditForm = (pt: ParsedTransaction): EditForm => ({
 const defaultParseForm = (msg: PendingMessage): ParseForm => ({
 	type: "expense",
 	accountId: "",
+	toAccountId: "",
 	categoryId: "",
 	amount: "",
 	date: todayISO(),
@@ -217,7 +222,8 @@ export default function InboxPage() {
 				date: toUnix(editForm.date),
 				description: editForm.description,
 				accountId: editForm.accountId || null,
-				categoryId: editForm.categoryId || null,
+				toAccountId: editForm.type === "transfer" ? editForm.toAccountId || null : null,
+				categoryId: editForm.type === "transfer" ? null : editForm.categoryId || null,
 				notes: editForm.notes || null,
 			})
 			setEditItem(null)
@@ -257,7 +263,9 @@ export default function InboxPage() {
 				date: toUnix(parseForm.date),
 				description: parseForm.description,
 				accountId: parseForm.accountId || null,
-				categoryId: parseForm.categoryId || null,
+				toAccountId:
+					parseForm.type === "transfer" ? parseForm.toAccountId || null : null,
+				categoryId: parseForm.type === "transfer" ? null : parseForm.categoryId || null,
 				notes: parseForm.notes || null,
 				bypassReview: true,
 			})
@@ -591,6 +599,19 @@ export default function InboxPage() {
 									>
 										<TrendingUp size={15} /> Income
 									</button>
+									<button
+										type="button"
+										onClick={() =>
+											setParseForm({ ...parseForm, type: "transfer" })
+										}
+										className={`flex-1 py-2.5 text-sm font-semibold flex items-center justify-center gap-2 transition-colors duration-150 ${
+											parseForm.type === "transfer"
+												? "bg-primary text-white"
+												: "text-fg-muted hover:bg-bg-3"
+										}`}
+									>
+										<ArrowLeftRight size={15} /> Transfer
+									</button>
 								</div>
 
 								{/* Amount + Date */}
@@ -650,11 +671,12 @@ export default function InboxPage() {
 									/>
 								</div>
 
-								{/* Account + Category */}
+								{/* Account + To Account / Category */}
 								<div className="flex gap-2">
 									<div className="flex flex-col gap-1.5 flex-1">
 										<label className="text-sm font-medium text-fg">
-											Account <span className="text-expense">*</span>
+											{parseForm.type === "transfer" ? "From Account" : "Account"}{" "}
+											<span className="text-expense">*</span>
 										</label>
 										<select
 											required
@@ -677,35 +699,65 @@ export default function InboxPage() {
 												))}
 										</select>
 									</div>
-									<div className="flex flex-col gap-1.5 flex-1">
-										<label className="text-sm font-medium text-fg">
-											Category
-										</label>
-										<select
-											value={parseForm.categoryId}
-											onChange={(e) =>
-												setParseForm({
-													...parseForm,
-													categoryId: e.target.value,
-												})
-											}
-											className={`${inputCls} w-full`}
-										>
-											<option value="">None</option>
-											{categories
-												.filter(
-													(c) =>
-														c.type === parseForm.type ||
-														c.type === "neutral"
-												)
-												.map((c) => (
-													<option key={c.id} value={c.id}>
-														{c.icon ? `${c.icon} ` : ""}
-														{c.name}
-													</option>
-												))}
-										</select>
-									</div>
+									{parseForm.type === "transfer" ? (
+										<div className="flex flex-col gap-1.5 flex-1">
+											<label className="text-sm font-medium text-fg">
+												To Account <span className="text-expense">*</span>
+											</label>
+											<select
+												required
+												value={parseForm.toAccountId}
+												onChange={(e) =>
+													setParseForm({
+														...parseForm,
+														toAccountId: e.target.value,
+													})
+												}
+												className={`${inputCls} w-full`}
+											>
+												<option value="">Select account</option>
+												{accounts
+													.filter(
+														(a) => a.isActive && a.id !== parseForm.accountId
+													)
+													.map((a) => (
+														<option key={a.id} value={a.id}>
+															{a.name}
+														</option>
+													))}
+											</select>
+										</div>
+									) : (
+										<div className="flex flex-col gap-1.5 flex-1">
+											<label className="text-sm font-medium text-fg">
+												Category
+											</label>
+											<select
+												value={parseForm.categoryId}
+												onChange={(e) =>
+													setParseForm({
+														...parseForm,
+														categoryId: e.target.value,
+													})
+												}
+												className={`${inputCls} w-full`}
+											>
+												<option value="">None</option>
+												{categories
+													.filter(
+														(c) =>
+															c.type === parseForm.type ||
+															c.type === "neutral"
+													)
+													.map((c) => (
+														<option key={c.id} value={c.id}>
+															{c.icon ? `${c.icon} ` : ""}
+															{c.name}
+														</option>
+													))}
+											</select>
+										</div>
+									)}
 								</div>
 
 								{/* Notes */}
@@ -773,19 +825,21 @@ export default function InboxPage() {
 									onChange={(e) =>
 										setEditForm({
 											...editForm,
-											type: e.target.value as "income" | "expense",
+											type: e.target.value as "income" | "expense" | "transfer",
 										})
 									}
 									className={`${inputCls} w-full`}
 								>
 									<option value="expense">Expense</option>
 									<option value="income">Income</option>
+									<option value="transfer">Transfer</option>
 								</select>
 							</div>
 
 							<div className="flex flex-col gap-1.5">
 								<label className="text-sm font-medium text-fg">
-									Account <span className="text-expense">*</span>
+									{editForm.type === "transfer" ? "From Account" : "Account"}{" "}
+									<span className="text-expense">*</span>
 								</label>
 								<select
 									value={editForm.accountId}
@@ -805,6 +859,33 @@ export default function InboxPage() {
 										))}
 								</select>
 							</div>
+
+							{editForm.type === "transfer" && (
+								<div className="flex flex-col gap-1.5">
+									<label className="text-sm font-medium text-fg">
+										To Account <span className="text-expense">*</span>
+									</label>
+									<select
+										value={editForm.toAccountId}
+										onChange={(e) =>
+											setEditForm({ ...editForm, toAccountId: e.target.value })
+										}
+										className={`${inputCls} w-full`}
+										required
+									>
+										<option value="">Select account</option>
+										{accounts
+											.filter(
+												(a) => a.isActive && a.id !== editForm.accountId
+											)
+											.map((a) => (
+												<option key={a.id} value={a.id}>
+													{a.name}
+												</option>
+											))}
+									</select>
+								</div>
+							)}
 
 							<div className="flex flex-col gap-1.5">
 								<label className="text-sm font-medium text-fg">Amount</label>
@@ -847,28 +928,30 @@ export default function InboxPage() {
 								/>
 							</div>
 
-							<div className="flex flex-col gap-1.5">
-								<label className="text-sm font-medium text-fg">Category</label>
-								<select
-									value={editForm.categoryId}
-									onChange={(e) =>
-										setEditForm({ ...editForm, categoryId: e.target.value })
-									}
-									className={`${inputCls} w-full`}
-								>
-									<option value="">No category</option>
-									{categories
-										.filter(
-											(c) => c.type === editForm.type || c.type === "neutral"
-										)
-										.map((c) => (
-											<option key={c.id} value={c.id}>
-												{c.icon ? `${c.icon} ` : ""}
-												{c.name}
-											</option>
-										))}
-								</select>
-							</div>
+							{editForm.type !== "transfer" && (
+								<div className="flex flex-col gap-1.5">
+									<label className="text-sm font-medium text-fg">Category</label>
+									<select
+										value={editForm.categoryId}
+										onChange={(e) =>
+											setEditForm({ ...editForm, categoryId: e.target.value })
+										}
+										className={`${inputCls} w-full`}
+									>
+										<option value="">No category</option>
+										{categories
+											.filter(
+												(c) => c.type === editForm.type || c.type === "neutral"
+											)
+											.map((c) => (
+												<option key={c.id} value={c.id}>
+													{c.icon ? `${c.icon} ` : ""}
+													{c.name}
+												</option>
+											))}
+									</select>
+								</div>
+							)}
 
 							<div className="flex flex-col gap-1.5">
 								<label className="text-sm font-medium text-fg">Notes</label>

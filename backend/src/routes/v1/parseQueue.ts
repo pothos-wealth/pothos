@@ -7,11 +7,12 @@ import { pendingMessages, parsedTransactions, transactions, accounts } from "../
 import { authenticate } from "../../middleware/authenticate.js"
 
 const submitSchema = z.object({
-	type: z.enum(["income", "expense"]),
+	type: z.enum(["income", "expense", "transfer"]),
 	amount: z.number().int().positive("Amount must be positive"),
 	date: z.number().int(),
 	description: z.string().min(1, "Description is required").max(200),
 	accountId: z.string().nullable().optional(),
+	toAccountId: z.string().nullable().optional(),
 	categoryId: z.string().nullable().optional(),
 	notes: z.string().nullable().optional(),
 	bypassReview: z.boolean().optional().default(false),
@@ -97,14 +98,35 @@ export async function parseQueueRoutes(app: FastifyInstance) {
 			return reply.status(409).send({ error: "Message has already been processed" })
 		}
 
-		const { type, amount, date, description, accountId, categoryId, notes, bypassReview } =
-			result.data
+		const {
+			type,
+			amount,
+			date,
+			description,
+			accountId,
+			toAccountId,
+			categoryId,
+			notes,
+			bypassReview,
+		} = result.data
 		const now = Math.floor(Date.now() / 1000)
 
 		if (bypassReview) {
 			// Manual parse: user has already verified the data, create transaction directly
 			if (!accountId) {
 				return reply.status(400).send({ error: "An account must be selected" })
+			}
+
+			if (type === "transfer" && !toAccountId) {
+				return reply
+					.status(400)
+					.send({ error: "A destination account must be selected for transfers" })
+			}
+
+			if (type === "transfer" && accountId === toAccountId) {
+				return reply
+					.status(400)
+					.send({ error: "Source and destination accounts must be different" })
 			}
 
 			const account = db
@@ -121,6 +143,74 @@ export async function parseQueueRoutes(app: FastifyInstance) {
 				return reply
 					.status(409)
 					.send({ error: "Cannot add transactions to a closed account" })
+			}
+
+			if (type === "transfer") {
+				const toAccount = db
+					.select()
+					.from(accounts)
+					.where(and(eq(accounts.id, toAccountId!), eq(accounts.userId, request.user.id)))
+					.get()
+
+				if (!toAccount) {
+					return reply.status(404).send({ error: "Destination account not found" })
+				}
+
+				if (!toAccount.isActive) {
+					return reply
+						.status(409)
+						.send({ error: "Cannot transfer to a closed account" })
+				}
+
+				const debitId = nanoid()
+				const creditId = nanoid()
+
+				const transaction = db.transaction((tx) => {
+					tx.insert(transactions)
+						.values({
+							id: debitId,
+							userId: request.user.id,
+							accountId,
+							categoryId: null,
+							transferAccountId: toAccountId!,
+							transferTransactionId: creditId,
+							type: "transfer",
+							amount: -amount,
+							date,
+							description,
+							notes: notes ?? null,
+							createdAt: now,
+							updatedAt: now,
+						})
+						.run()
+
+					tx.insert(transactions)
+						.values({
+							id: creditId,
+							userId: request.user.id,
+							accountId: toAccountId!,
+							categoryId: null,
+							transferAccountId: accountId,
+							transferTransactionId: debitId,
+							type: "transfer",
+							amount,
+							date,
+							description,
+							notes: notes ?? null,
+							createdAt: now,
+							updatedAt: now,
+						})
+						.run()
+
+					tx.update(pendingMessages)
+						.set({ status: "processed", updatedAt: now })
+						.where(eq(pendingMessages.id, id))
+						.run()
+
+					return tx.select().from(transactions).where(eq(transactions.id, debitId)).get()
+				})
+
+				return reply.status(201).send(transaction)
 			}
 
 			const signedAmount = type === "income" ? amount : -amount
@@ -165,6 +255,7 @@ export async function parseQueueRoutes(app: FastifyInstance) {
 					userId: request.user.id,
 					pendingMessageId: id,
 					accountId: accountId ?? null,
+					toAccountId: toAccountId ?? null,
 					categoryId: categoryId ?? null,
 					type,
 					amount,
