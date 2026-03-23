@@ -477,7 +477,9 @@ export default function TransactionsPage() {
 											</p>
 											<p className="text-xs text-fg-muted">
 												{isTransfer
-													? "Transfer"
+													? tx.amount < 0
+														? `To ${getAccountName(tx.transferAccountId ?? "")}`
+														: `From ${getAccountName(tx.transferAccountId ?? "")}`
 													: getCategoryName(tx.categoryId, categories)}
 												{" · "}
 												{getAccountName(tx.accountId)}
