@@ -196,7 +196,9 @@ async function main() {
 	const currency = settings.currency
 
 	// Fetch pending emails
-	const pending = await apiFetch<PendingMessage[]>("/parse-queue?status=pending")
+	const { data: pending } = await apiFetch<{ data: PendingMessage[]; pagination: unknown }>(
+		"/parse-queue?status=pending"
+	)
 
 	if (pending.length === 0) {
 		console.log("No pending emails to parse.")
