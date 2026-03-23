@@ -496,7 +496,7 @@ export default function TransactionsPage() {
 															: "text-fg"
 												)}
 											>
-												{isTransfer ? "" : isIncome ? "+" : "-"}
+												{isIncome ? "+" : "-"}
 												{formatCurrency(Math.abs(tx.amount))}
 											</p>
 											<p className="text-xs text-fg-muted">
