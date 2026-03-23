@@ -73,7 +73,7 @@ export async function transactionRoutes(app: FastifyInstance) {
 			.select()
 			.from(transactions)
 			.where(and(...conditions))
-			.orderBy(desc(transactions.date))
+			.orderBy(desc(transactions.date), desc(transactions.createdAt))
 			.limit(limit)
 			.offset(offset)
 			.all()
@@ -335,6 +335,91 @@ export async function transactionRoutes(app: FastifyInstance) {
 			})
 			.where(eq(transactions.id, id))
 			.returning()
+			.get()
+
+		return reply.send(updated)
+	})
+
+	// ─── Update Transfer ─────────────────────────────────────────────────────
+
+	app.put("/transactions/transfer/:id", { preHandler: authenticate }, async (request, reply) => {
+		const { id } = request.params as { id: string }
+
+		const result = z
+			.object({
+				amount: z.number().int().positive().optional(),
+				date: z.number().int().optional(),
+				description: z.string().min(1).optional(),
+				notes: z.string().nullable().optional(),
+			})
+			.safeParse(request.body)
+
+		if (!result.success) {
+			return reply
+				.status(400)
+				.send({ error: "Validation error", details: result.error.flatten() })
+		}
+
+		const tx1 = db
+			.select()
+			.from(transactions)
+			.where(and(eq(transactions.id, id), eq(transactions.userId, request.user.id)))
+			.get()
+
+		if (!tx1) return reply.status(404).send({ error: "Transaction not found" })
+		if (tx1.type !== "transfer")
+			return reply.status(409).send({ error: "Transaction is not a transfer" })
+		if (!tx1.transferTransactionId)
+			return reply.status(409).send({ error: "Paired transfer transaction not found" })
+
+		const tx2 = db
+			.select()
+			.from(transactions)
+			.where(
+				and(
+					eq(transactions.id, tx1.transferTransactionId),
+					eq(transactions.userId, request.user.id)
+				)
+			)
+			.get()
+
+		if (!tx2) return reply.status(404).send({ error: "Paired transfer transaction not found" })
+
+		const now = Math.floor(Date.now() / 1000)
+		const { amount, date, description, notes } = result.data
+
+		db.transaction((dbTx) => {
+			// tx1 is the debit (negative amount)
+			dbTx
+				.update(transactions)
+				.set({
+					...(amount !== undefined && { amount: tx1.amount < 0 ? -amount : amount }),
+					...(date !== undefined && { date }),
+					...(description !== undefined && { description }),
+					...(notes !== undefined && { notes }),
+					updatedAt: now,
+				})
+				.where(eq(transactions.id, id))
+				.run()
+
+			// tx2 is the paired side (opposite sign)
+			dbTx
+				.update(transactions)
+				.set({
+					...(amount !== undefined && { amount: tx2.amount < 0 ? -amount : amount }),
+					...(date !== undefined && { date }),
+					...(description !== undefined && { description }),
+					...(notes !== undefined && { notes }),
+					updatedAt: now,
+				})
+				.where(eq(transactions.id, tx1.transferTransactionId!))
+				.run()
+		})
+
+		const updated = db
+			.select()
+			.from(transactions)
+			.where(eq(transactions.id, id))
 			.get()
 
 		return reply.send(updated)

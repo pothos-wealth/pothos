@@ -16,6 +16,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
 	const dialogRef = useRef<HTMLDivElement>(null)
 	const previousFocusRef = useRef<HTMLElement | null>(null)
 	const onCloseRef = useRef(onClose)
+	const mouseDownOnBackdrop = useRef(false)
 	onCloseRef.current = onClose
 
 	// Save and restore focus around modal lifecycle
@@ -77,8 +78,12 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
 	return (
 		<div
 			className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
-			onClick={(e) => {
-				if (e.target === e.currentTarget) onClose()
+			onMouseDown={(e) => {
+				mouseDownOnBackdrop.current = e.target === e.currentTarget
+			}}
+			onMouseUp={(e) => {
+				if (mouseDownOnBackdrop.current && e.target === e.currentTarget) onClose()
+				mouseDownOnBackdrop.current = false
 			}}
 		>
 			<div

@@ -101,6 +101,12 @@ export default function TransactionsPage() {
 	// Edit modal
 	const [editTx, setEditTx] = useState<Transaction | null>(null)
 	const [editForm, setEditForm] = useState<Partial<TxForm>>({})
+	const [editTransferForm, setEditTransferForm] = useState<{
+		amount: string
+		date: string
+		description: string
+		notes: string
+	}>({ amount: "", date: "", description: "", notes: "" })
 
 	const [submitting, setSubmitting] = useState(false)
 	const [error, setError] = useState("")
@@ -179,15 +185,23 @@ export default function TransactionsPage() {
 	}
 
 	function openEdit(tx: Transaction) {
-		if (tx.type === "transfer") return
 		setEditTx(tx)
-		setEditForm({
-			categoryId: tx.categoryId ?? "",
-			amount: (Math.abs(tx.amount) / 100).toFixed(2),
-			date: fromUnix(tx.date),
-			description: tx.description,
-			notes: tx.notes ?? "",
-		})
+		if (tx.type === "transfer") {
+			setEditTransferForm({
+				amount: (Math.abs(tx.amount) / 100).toFixed(2),
+				date: fromUnix(tx.date),
+				description: tx.description,
+				notes: tx.notes ?? "",
+			})
+		} else {
+			setEditForm({
+				categoryId: tx.categoryId ?? "",
+				amount: (Math.abs(tx.amount) / 100).toFixed(2),
+				date: fromUnix(tx.date),
+				description: tx.description,
+				notes: tx.notes ?? "",
+			})
+		}
 		setError("")
 	}
 
@@ -257,13 +271,24 @@ export default function TransactionsPage() {
 		setError("")
 		setSubmitting(true)
 		try {
-			await api.transactions.update(editTx.id, {
-				categoryId: editForm.categoryId || undefined,
-				amount: editForm.amount ? Math.round(Number(editForm.amount) * 100) : undefined,
-				date: editForm.date ? toUnix(editForm.date) : undefined,
-				description: editForm.description,
-				notes: editForm.notes || undefined,
-			})
+			if (editTx.type === "transfer") {
+				await api.transactions.updateTransfer(editTx.id, {
+					amount: editTransferForm.amount
+						? Math.round(Number(editTransferForm.amount) * 100)
+						: undefined,
+					date: editTransferForm.date ? toUnix(editTransferForm.date) : undefined,
+					description: editTransferForm.description || undefined,
+					notes: editTransferForm.notes || null,
+				})
+			} else {
+				await api.transactions.update(editTx.id, {
+					categoryId: editForm.categoryId || undefined,
+					amount: editForm.amount ? Math.round(Number(editForm.amount) * 100) : undefined,
+					date: editForm.date ? toUnix(editForm.date) : undefined,
+					description: editForm.description,
+					notes: editForm.notes || undefined,
+				})
+			}
 			setEditTx(null)
 			load()
 		} catch (err) {
@@ -452,7 +477,9 @@ export default function TransactionsPage() {
 											</p>
 											<p className="text-xs text-fg-muted">
 												{isTransfer
-													? "Transfer"
+													? tx.amount < 0
+														? `To ${getAccountName(tx.transferAccountId ?? "")}`
+														: `From ${getAccountName(tx.transferAccountId ?? "")}`
 													: getCategoryName(tx.categoryId, categories)}
 												{" · "}
 												{getAccountName(tx.accountId)}
@@ -745,67 +772,129 @@ export default function TransactionsPage() {
 								{error}
 							</div>
 						)}
-						{/* Read-only context row */}
-						<div className="flex items-center gap-2 bg-bg border border-border rounded-xl px-3 py-2.5">
-							<span
-								className={cn(
-									"w-2 h-2 rounded-full shrink-0",
-									editTx && editTx.amount > 0 ? "bg-primary" : "bg-expense"
-								)}
-							/>
-							<span className="text-sm text-fg-muted">
-								{editTx && editTx.amount > 0 ? "Income" : "Expense"} ·{" "}
-								{getAccountName(editTx?.accountId ?? "")}
-							</span>
-						</div>
-						<select
-							value={editForm.categoryId ?? ""}
-							onChange={(e) =>
-								setEditForm((f) => ({ ...f, categoryId: e.target.value }))
-							}
-							className={inputCls}
-						>
-							<option value="">No category</option>
-							{categories
-								.filter((c) => c.type === editTx?.type || c.type === "neutral")
-								.map((c) => (
-									<option key={c.id} value={c.id}>
-										{c.name}
-									</option>
-								))}
-						</select>
-						<input
-							type="number"
-							min="0.01"
-							step="0.01"
-							required
-							placeholder="Amount"
-							value={editForm.amount ?? ""}
-							onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
-							className={inputCls}
-						/>
-						<input
-							type="date"
-							required
-							value={editForm.date ?? ""}
-							onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))}
-							className={inputCls}
-						/>
-						<input
-							required
-							placeholder="Description"
-							value={editForm.description ?? ""}
-							onChange={(e) =>
-								setEditForm((f) => ({ ...f, description: e.target.value }))
-							}
-							className={inputCls}
-						/>
-						<input
-							placeholder="Notes (optional)"
-							value={editForm.notes ?? ""}
-							onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
-							className={inputCls}
-						/>
+						{editTx?.type === "transfer" ? (
+							<>
+								<div className="flex items-center gap-2 bg-bg border border-border rounded-xl px-3 py-2.5">
+									<ArrowLeftRight size={14} className="text-fg-muted shrink-0" />
+									<span className="text-sm text-fg-muted">
+										Transfer · {getAccountName(editTx.accountId)} →{" "}
+										{getAccountName(editTx.transferAccountId ?? "")}
+									</span>
+								</div>
+								<input
+									type="number"
+									min="0.01"
+									step="0.01"
+									required
+									placeholder="Amount"
+									value={editTransferForm.amount}
+									onChange={(e) =>
+										setEditTransferForm((f) => ({ ...f, amount: e.target.value }))
+									}
+									className={inputCls}
+								/>
+								<input
+									type="date"
+									required
+									value={editTransferForm.date}
+									onChange={(e) =>
+										setEditTransferForm((f) => ({ ...f, date: e.target.value }))
+									}
+									className={inputCls}
+								/>
+								<input
+									required
+									placeholder="Description"
+									value={editTransferForm.description}
+									onChange={(e) =>
+										setEditTransferForm((f) => ({
+											...f,
+											description: e.target.value,
+										}))
+									}
+									className={inputCls}
+								/>
+								<input
+									placeholder="Notes (optional)"
+									value={editTransferForm.notes}
+									onChange={(e) =>
+										setEditTransferForm((f) => ({ ...f, notes: e.target.value }))
+									}
+									className={inputCls}
+								/>
+							</>
+						) : (
+							<>
+								<div className="flex items-center gap-2 bg-bg border border-border rounded-xl px-3 py-2.5">
+									<span
+										className={cn(
+											"w-2 h-2 rounded-full shrink-0",
+											editTx && editTx.amount > 0 ? "bg-primary" : "bg-expense"
+										)}
+									/>
+									<span className="text-sm text-fg-muted">
+										{editTx && editTx.amount > 0 ? "Income" : "Expense"} ·{" "}
+										{getAccountName(editTx?.accountId ?? "")}
+									</span>
+								</div>
+								<select
+									value={editForm.categoryId ?? ""}
+									onChange={(e) =>
+										setEditForm((f) => ({ ...f, categoryId: e.target.value }))
+									}
+									className={inputCls}
+								>
+									<option value="">No category</option>
+									{categories
+										.filter(
+											(c) => c.type === editTx?.type || c.type === "neutral"
+										)
+										.map((c) => (
+											<option key={c.id} value={c.id}>
+												{c.name}
+											</option>
+										))}
+								</select>
+								<input
+									type="number"
+									min="0.01"
+									step="0.01"
+									required
+									placeholder="Amount"
+									value={editForm.amount ?? ""}
+									onChange={(e) =>
+										setEditForm((f) => ({ ...f, amount: e.target.value }))
+									}
+									className={inputCls}
+								/>
+								<input
+									type="date"
+									required
+									value={editForm.date ?? ""}
+									onChange={(e) =>
+										setEditForm((f) => ({ ...f, date: e.target.value }))
+									}
+									className={inputCls}
+								/>
+								<input
+									required
+									placeholder="Description"
+									value={editForm.description ?? ""}
+									onChange={(e) =>
+										setEditForm((f) => ({ ...f, description: e.target.value }))
+									}
+									className={inputCls}
+								/>
+								<input
+									placeholder="Notes (optional)"
+									value={editForm.notes ?? ""}
+									onChange={(e) =>
+										setEditForm((f) => ({ ...f, notes: e.target.value }))
+									}
+									className={inputCls}
+								/>
+							</>
+						)}
 
 						<div className="flex gap-2 mt-1">
 							<button
