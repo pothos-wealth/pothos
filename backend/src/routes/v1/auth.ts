@@ -238,7 +238,12 @@ export async function authRoutes(app: FastifyInstance) {
 			})
 
 			return reply
-				.clearCookie("session_id", { path: "/" })
+				.setCookie("session_id", "", {
+					path: "/",
+					expires: new Date(0),
+					httpOnly: true,
+					sameSite: "strict",
+				})
 				.send({ message: "Password changed successfully" })
 		}
 	)

@@ -163,7 +163,7 @@ export async function accountRoutes(app: FastifyInstance) {
 				...(result.data.type !== undefined && { type: result.data.type }),
 				updatedAt: now,
 			})
-			.where(eq(accounts.id, id))
+			.where(and(eq(accounts.id, id), eq(accounts.userId, request.user.id)))
 			.returning()
 			.get()
 
@@ -201,7 +201,7 @@ export async function accountRoutes(app: FastifyInstance) {
 			})
 		}
 
-		db.delete(accounts).where(eq(accounts.id, id)).run()
+		db.delete(accounts).where(and(eq(accounts.id, id), eq(accounts.userId, request.user.id))).run()
 
 		return reply.status(204).send()
 	})
@@ -238,7 +238,7 @@ export async function accountRoutes(app: FastifyInstance) {
 		const updated = db
 			.update(accounts)
 			.set({ isActive: false, updatedAt: now })
-			.where(eq(accounts.id, id))
+			.where(and(eq(accounts.id, id), eq(accounts.userId, request.user.id)))
 			.returning()
 			.get()
 
@@ -272,7 +272,7 @@ export async function accountRoutes(app: FastifyInstance) {
 		const updated = db
 			.update(accounts)
 			.set({ isActive: true, updatedAt: now })
-			.where(eq(accounts.id, id))
+			.where(and(eq(accounts.id, id), eq(accounts.userId, request.user.id)))
 			.returning()
 			.get()
 

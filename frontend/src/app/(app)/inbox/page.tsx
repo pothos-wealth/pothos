@@ -58,7 +58,7 @@ function todayISO() {
 }
 
 function toUnix(dateStr: string) {
-	return Math.floor(new Date(dateStr).getTime() / 1000)
+	return Math.floor(new Date(`${dateStr}T00:00:00`).getTime() / 1000)
 }
 
 function fromUnix(ts: number) {

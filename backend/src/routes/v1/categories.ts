@@ -161,7 +161,7 @@ export async function categoryRoutes(app: FastifyInstance) {
 			})
 		}
 
-		db.delete(categories).where(eq(categories.id, id)).run()
+		db.delete(categories).where(and(eq(categories.id, id), eq(categories.userId, request.user.id))).run()
 
 		return reply.status(204).send()
 	})
