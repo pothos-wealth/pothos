@@ -333,7 +333,7 @@ export async function transactionRoutes(app: FastifyInstance) {
 				...(result.data.notes !== undefined && { notes: result.data.notes }),
 				updatedAt: now,
 			})
-			.where(eq(transactions.id, id))
+			.where(and(eq(transactions.id, id), eq(transactions.userId, request.user.id)))
 			.returning()
 			.get()
 
@@ -398,7 +398,7 @@ export async function transactionRoutes(app: FastifyInstance) {
 					...(notes !== undefined && { notes }),
 					updatedAt: now,
 				})
-				.where(eq(transactions.id, id))
+				.where(and(eq(transactions.id, id), eq(transactions.userId, request.user.id)))
 				.run()
 
 			// tx2 is the paired side (opposite sign)
@@ -410,7 +410,7 @@ export async function transactionRoutes(app: FastifyInstance) {
 					...(notes !== undefined && { notes }),
 					updatedAt: now,
 				})
-				.where(eq(transactions.id, tx1.transferTransactionId!))
+				.where(and(eq(transactions.id, tx1.transferTransactionId!), eq(transactions.userId, request.user.id)))
 				.run()
 		})
 
@@ -451,7 +451,7 @@ export async function transactionRoutes(app: FastifyInstance) {
 					.run()
 			})
 		} else {
-			db.delete(transactions).where(eq(transactions.id, id)).run()
+			db.delete(transactions).where(and(eq(transactions.id, id), eq(transactions.userId, request.user.id))).run()
 		}
 
 		return reply.status(204).send()

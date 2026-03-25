@@ -268,7 +268,7 @@ export async function budgetRoutes(app: FastifyInstance) {
 			return reply.status(404).send({ error: "Budget not found" })
 		}
 
-		db.delete(budgets).where(eq(budgets.id, id)).run()
+		db.delete(budgets).where(and(eq(budgets.id, id), eq(budgets.userId, request.user.id))).run()
 
 		return reply.status(204).send()
 	})

@@ -63,13 +63,18 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
 	}, [open])
 
 	useEffect(() => {
-		if (open) {
-			document.body.style.overflow = "hidden"
-		} else {
-			document.body.style.overflow = ""
-		}
+		if (!open) return
+		const scrollY = window.scrollY
+		document.body.style.position = "fixed"
+		document.body.style.top = `-${scrollY}px`
+		document.body.style.width = "100%"
+		document.body.style.overflow = "hidden"
 		return () => {
+			document.body.style.position = ""
+			document.body.style.top = ""
+			document.body.style.width = ""
 			document.body.style.overflow = ""
+			window.scrollTo(0, scrollY)
 		}
 	}, [open])
 
@@ -89,7 +94,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
 			<div
 				ref={dialogRef}
 				className={cn(
-					"bg-bg-2 border border-border rounded-2xl p-6 w-full max-w-md mx-4 shadow-xl max-h-[90vh] overflow-y-auto",
+					"bg-bg-2 border border-border rounded-2xl p-6 w-full max-w-md mx-4 shadow-xl max-h-[90vh] overflow-y-auto overscroll-contain",
 					className
 				)}
 			>
