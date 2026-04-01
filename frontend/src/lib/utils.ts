@@ -84,7 +84,7 @@ const MONTH_NAMES_SHORT = [
 export function formatDate(timestamp: number): string {
 	const date = new Date(timestamp * 1000)
 	const now = new Date()
-	const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+	const todayUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
 	const yesterdayUTC = todayUTC - 86400000
 	const txDayUTC = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
 
