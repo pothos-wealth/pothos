@@ -79,7 +79,7 @@ export async function fetchNewEmails(
 			searchCriteria = { uid: `${nextUid}:*` }
 		} else {
 			const since = new Date()
-			since.setDate(since.getDate() - 90)
+			since.setUTCDate(since.getUTCDate() - 90)
 			searchCriteria = { since }
 		}
 

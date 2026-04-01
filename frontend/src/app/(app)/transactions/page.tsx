@@ -50,12 +50,11 @@ function firstOfMonthISO() {
 }
 
 function toUnix(dateStr: string) {
-	// No timezone suffix → parsed as local midnight, not UTC midnight
-	return Math.floor(new Date(`${dateStr}T00:00:00`).getTime() / 1000)
+	return Math.floor(new Date(`${dateStr}T00:00:00Z`).getTime() / 1000)
 }
 
 function fromUnix(ts: number) {
-	return localDateISO(new Date(ts * 1000))
+	return new Date(ts * 1000).toISOString().slice(0, 10)
 }
 
 export default function TransactionsPage() {
