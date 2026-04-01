@@ -84,12 +84,11 @@ const MONTH_NAMES_SHORT = [
 export function formatDate(timestamp: number): string {
 	const date = new Date(timestamp * 1000)
 	const now = new Date()
-	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-	const yesterday = new Date(today)
-	yesterday.setDate(yesterday.getDate() - 1)
-	const txDay = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+	const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+	const yesterdayUTC = todayUTC - 86400000
+	const txDayUTC = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
 
-	if (txDay.getTime() === today.getTime()) return "Today"
-	if (txDay.getTime() === yesterday.getTime()) return "Yesterday"
-	return `${MONTH_NAMES_SHORT[date.getMonth()]} ${date.getDate()}`
+	if (txDayUTC === todayUTC) return "Today"
+	if (txDayUTC === yesterdayUTC) return "Yesterday"
+	return `${MONTH_NAMES_SHORT[date.getUTCMonth()]} ${date.getUTCDate()}`
 }

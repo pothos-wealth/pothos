@@ -35,11 +35,11 @@ export async function budgetRoutes(app: FastifyInstance) {
 		}
 
 		const now = new Date()
-		const month = result.data.month ?? now.getMonth() + 1
-		const year = result.data.year ?? now.getFullYear()
+		const month = result.data.month ?? now.getUTCMonth() + 1
+		const year = result.data.year ?? now.getUTCFullYear()
 		const { start, end } = getMonthBounds(month, year)
 
-		const isCurrentMonth = month === now.getMonth() + 1 && year === now.getFullYear()
+		const isCurrentMonth = month === now.getUTCMonth() + 1 && year === now.getUTCFullYear()
 
 		let rows = db
 			.select()
@@ -268,7 +268,9 @@ export async function budgetRoutes(app: FastifyInstance) {
 			return reply.status(404).send({ error: "Budget not found" })
 		}
 
-		db.delete(budgets).where(and(eq(budgets.id, id), eq(budgets.userId, request.user.id))).run()
+		db.delete(budgets)
+			.where(and(eq(budgets.id, id), eq(budgets.userId, request.user.id)))
+			.run()
 
 		return reply.status(204).send()
 	})

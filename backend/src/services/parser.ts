@@ -39,7 +39,9 @@ function buildPrompt(
 	userCategories: UserCategory[],
 	currency: string
 ): string {
+	const todayUTC = new Date().toISOString().slice(0, 10)
 	return `You are a financial transaction parser. The user's currency is ${currency}.
+Today's date (UTC): ${todayUTC}
 User's bank accounts: ${JSON.stringify(userAccounts)}
 Available categories: ${JSON.stringify(userCategories)}
 
@@ -47,7 +49,7 @@ Parse this bank notification email and return ONLY valid JSON (no markdown, no e
 {
   "type": "income" or "expense",
   "amount": <positive integer in minor units — multiply the amount by 100>,
-  "date": <unix timestamp in seconds>,
+  "date": <unix timestamp in seconds — use midnight UTC (00:00:00 UTC) for the transaction date>,
   "description": "<merchant or ref, max 60 chars>",
   "accountId": "<id from accounts list or null>",
   "categoryId": "<id from categories list or null>",
@@ -59,6 +61,7 @@ Rules:
 - "credited"/"received"/"credit" → "income"
 - Match account by last 4 digits (e.g. "XX1234") against account names
 - Return null for accountId/categoryId if unsure
+- For the date: parse it from the email; if absent, use today (${todayUTC}). Always use midnight UTC (00:00:00 UTC) — e.g. ${todayUTC}T00:00:00Z
 - If this is not a bank transaction notification, return {"not_transaction": true}
 
 Email:

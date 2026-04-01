@@ -54,11 +54,12 @@ interface ParseForm {
 }
 
 function todayISO() {
-	return new Date().toISOString().slice(0, 10)
+	const d = new Date()
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
 }
 
 function toUnix(dateStr: string) {
-	return Math.floor(new Date(`${dateStr}T00:00:00`).getTime() / 1000)
+	return Math.floor(new Date(`${dateStr}T00:00:00Z`).getTime() / 1000)
 }
 
 function fromUnix(ts: number) {

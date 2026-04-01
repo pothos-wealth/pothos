@@ -201,7 +201,9 @@ export async function accountRoutes(app: FastifyInstance) {
 			})
 		}
 
-		db.delete(accounts).where(and(eq(accounts.id, id), eq(accounts.userId, request.user.id))).run()
+		db.delete(accounts)
+			.where(and(eq(accounts.id, id), eq(accounts.userId, request.user.id)))
+			.run()
 
 		return reply.status(204).send()
 	})

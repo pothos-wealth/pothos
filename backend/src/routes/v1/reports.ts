@@ -31,8 +31,8 @@ export async function reportRoutes(app: FastifyInstance) {
 		}
 
 		const now = new Date()
-		const month = result.data.month ?? now.getMonth() + 1
-		const year = result.data.year ?? now.getFullYear()
+		const month = result.data.month ?? now.getUTCMonth() + 1
+		const year = result.data.year ?? now.getUTCFullYear()
 		const { start, end } = getMonthBounds(month, year)
 
 		const baseConditions = and(
@@ -121,8 +121,8 @@ export async function reportRoutes(app: FastifyInstance) {
 		}
 
 		const now = new Date()
-		const month = result.data.month ?? now.getMonth() + 1
-		const year = result.data.year ?? now.getFullYear()
+		const month = result.data.month ?? now.getUTCMonth() + 1
+		const year = result.data.year ?? now.getUTCFullYear()
 		const { start, end } = getMonthBounds(month, year)
 
 		const rows = db
@@ -178,9 +178,9 @@ export async function reportRoutes(app: FastifyInstance) {
 		const periods: { month: number; year: number; start: number; end: number }[] = []
 
 		for (let i = months - 1; i >= 0; i--) {
-			const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
-			const month = date.getMonth() + 1
-			const year = date.getFullYear()
+			const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))
+			const month = date.getUTCMonth() + 1
+			const year = date.getUTCFullYear()
 			const { start, end } = getMonthBounds(month, year)
 			periods.push({ month, year, start, end })
 		}

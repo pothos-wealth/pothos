@@ -410,7 +410,12 @@ export async function transactionRoutes(app: FastifyInstance) {
 					...(notes !== undefined && { notes }),
 					updatedAt: now,
 				})
-				.where(and(eq(transactions.id, tx1.transferTransactionId!), eq(transactions.userId, request.user.id)))
+				.where(
+					and(
+						eq(transactions.id, tx1.transferTransactionId!),
+						eq(transactions.userId, request.user.id)
+					)
+				)
 				.run()
 		})
 
@@ -451,7 +456,9 @@ export async function transactionRoutes(app: FastifyInstance) {
 					.run()
 			})
 		} else {
-			db.delete(transactions).where(and(eq(transactions.id, id), eq(transactions.userId, request.user.id))).run()
+			db.delete(transactions)
+				.where(and(eq(transactions.id, id), eq(transactions.userId, request.user.id)))
+				.run()
 		}
 
 		return reply.status(204).send()
