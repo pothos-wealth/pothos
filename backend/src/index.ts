@@ -26,10 +26,11 @@ const PORT = parseInt(process.env.PORT ?? "3001", 10)
 const NODE_ENV = process.env.NODE_ENV ?? "development"
 
 const RATE_LIMIT_GLOBAL_MAX = parseInt(process.env.RATE_LIMIT_GLOBAL_MAX ?? "100", 10)
+const LOG_LEVEL = process.env.LOG_LEVEL ?? (NODE_ENV === "development" ? "info" : "warn")
 
 const app = Fastify({
 	logger: {
-		level: NODE_ENV === "development" ? "info" : "warn",
+		level: LOG_LEVEL,
 		transport:
 			NODE_ENV === "development"
 				? {
