@@ -10,7 +10,8 @@ interface BudgetProgressProps {
 
 export function BudgetProgress({ budgets, categories, limit }: BudgetProgressProps) {
 	const formatCurrency = useCurrencyFormatter()
-	const visible = limit ? budgets.slice(0, limit) : budgets
+	const sorted = [...budgets].sort((a, b) => b.amount - a.amount)
+	const visible = limit ? sorted.slice(0, limit) : sorted
 	const hidden = limit ? Math.max(0, budgets.length - limit) : 0
 
 	return (

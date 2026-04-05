@@ -41,10 +41,12 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
 export function SpendingChart({ data }: SpendingChartProps) {
 	const formatCurrency = useCurrencyFormatter()
 
-	const chartData = data.map((d) => ({
-		...d,
-		name: d.categoryName,
-	}))
+	const chartData = [...data]
+		.sort((a, b) => b.total - a.total)
+		.map((d) => ({
+			...d,
+			name: d.categoryName,
+		}))
 
 	return (
 		<Card className="h-full flex flex-col">
@@ -83,7 +85,7 @@ export function SpendingChart({ data }: SpendingChartProps) {
 					</div>
 
 					<div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-4">
-						{data.map((entry) => (
+						{chartData.map((entry) => (
 							<div
 								key={entry.categoryName}
 								className="flex items-center justify-between gap-2"
