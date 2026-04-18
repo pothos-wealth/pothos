@@ -894,7 +894,7 @@ export default function TransactionsPage() {
 									onChange={(description) =>
 										setEditForm((f) => ({ ...f, description }))
 									}
-									txType={editTx?.type === "transfer" ? "transfer" : editTx?.type}
+									txType={editTx?.type}
 									className={inputCls}
 								/>
 								<input
