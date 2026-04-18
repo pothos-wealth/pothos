@@ -18,6 +18,7 @@ import { Modal } from "@/components/ui/Modal"
 import { ConfirmModal } from "@/components/ui/ConfirmModal"
 import { Skeleton } from "@/components/ui/Skeleton"
 import { PageTransition } from "@/components/ui/PageTransition"
+import { DescriptionAutocompleteInput } from "@/components/ui/DescriptionAutocompleteInput"
 import { api } from "@/lib/api"
 import { useCurrencyFormatter, formatDate } from "@/lib/utils"
 import { useInboxCount } from "@/lib/inbox-count-context"
@@ -656,16 +657,16 @@ export default function InboxPage() {
 									<label className="text-sm font-medium text-fg">
 										Description
 									</label>
-									<input
-										type="text"
+									<DescriptionAutocompleteInput
 										required
 										value={parseForm.description}
-										onChange={(e) =>
+										onChange={(description) =>
 											setParseForm({
 												...parseForm,
-												description: e.target.value,
+												description,
 											})
 										}
+										txType={parseForm.type}
 										placeholder="Merchant or reference"
 										className={`${inputCls} w-full`}
 									/>
@@ -927,13 +928,13 @@ export default function InboxPage() {
 
 							<div className="flex flex-col gap-1.5">
 								<label className="text-sm font-medium text-fg">Description</label>
-								<input
-									type="text"
+								<DescriptionAutocompleteInput
 									required
 									value={editForm.description}
-									onChange={(e) =>
-										setEditForm({ ...editForm, description: e.target.value })
+									onChange={(description) =>
+										setEditForm({ ...editForm, description })
 									}
+									txType={editForm.type}
 									className={`${inputCls} w-full`}
 								/>
 							</div>

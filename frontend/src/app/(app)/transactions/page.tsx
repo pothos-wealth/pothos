@@ -8,6 +8,7 @@ import { Modal } from "@/components/ui/Modal"
 import { ConfirmModal } from "@/components/ui/ConfirmModal"
 import { Skeleton } from "@/components/ui/Skeleton"
 import { PageTransition } from "@/components/ui/PageTransition"
+import { DescriptionAutocompleteInput } from "@/components/ui/DescriptionAutocompleteInput"
 import { api } from "@/lib/api"
 import { useCurrency } from "@/lib/currency-context"
 import { cn, useCurrencyFormatter, formatDate, getCategoryName } from "@/lib/utils"
@@ -652,13 +653,14 @@ export default function TransactionsPage() {
 									}
 									className={inputCls}
 								/>
-								<input
+								<DescriptionAutocompleteInput
 									required
 									placeholder="Description"
 									value={txForm.description}
-									onChange={(e) =>
-										setTxForm((f) => ({ ...f, description: e.target.value }))
+									onChange={(description) =>
+										setTxForm((f) => ({ ...f, description }))
 									}
+									txType={txForm.type}
 									className={inputCls}
 								/>
 								<input
@@ -729,16 +731,17 @@ export default function TransactionsPage() {
 									}
 									className={inputCls}
 								/>
-								<input
+								<DescriptionAutocompleteInput
 									required
 									placeholder="Description"
 									value={transferForm.description}
-									onChange={(e) =>
+									onChange={(description) =>
 										setTransferForm((f) => ({
 											...f,
-											description: e.target.value,
+											description,
 										}))
 									}
+									txType="transfer"
 									className={inputCls}
 								/>
 							</>
@@ -804,16 +807,17 @@ export default function TransactionsPage() {
 									}
 									className={inputCls}
 								/>
-								<input
+								<DescriptionAutocompleteInput
 									required
 									placeholder="Description"
 									value={editTransferForm.description}
-									onChange={(e) =>
+									onChange={(description) =>
 										setEditTransferForm((f) => ({
 											...f,
-											description: e.target.value,
+											description,
 										}))
 									}
+									txType="transfer"
 									className={inputCls}
 								/>
 								<input
@@ -883,13 +887,14 @@ export default function TransactionsPage() {
 									}
 									className={inputCls}
 								/>
-								<input
+								<DescriptionAutocompleteInput
 									required
 									placeholder="Description"
 									value={editForm.description ?? ""}
-									onChange={(e) =>
-										setEditForm((f) => ({ ...f, description: e.target.value }))
+									onChange={(description) =>
+										setEditForm((f) => ({ ...f, description }))
 									}
+									txType={editTx?.type === "transfer" ? "transfer" : editTx?.type}
 									className={inputCls}
 								/>
 								<input

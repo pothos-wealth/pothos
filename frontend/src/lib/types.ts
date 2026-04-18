@@ -64,6 +64,8 @@ export interface Transaction {
 	notes: string | null
 }
 
+export type TransactionType = Transaction["type"]
+
 export interface TransactionList {
 	data: Transaction[]
 	pagination: {
@@ -209,4 +211,8 @@ export interface ParsedTransactionList {
 		total: number
 		totalPages: number
 	}
+}
+
+export interface DescriptionSuggestionResponse {
+	suggestions: string[]
 }

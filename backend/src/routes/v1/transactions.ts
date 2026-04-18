@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify"
-import { eq, and, gte, lte, desc, sql, like } from "drizzle-orm"
+import { eq, and, gte, lte, desc, sql, like, ne, asc } from "drizzle-orm"
 import { z } from "zod"
 import { nanoid } from "nanoid"
 import { db } from "../../db/index.js"
@@ -42,6 +42,12 @@ const listQuerySchema = z.object({
 	search: z.string().max(100).optional(),
 	page: z.coerce.number().int().min(1).default(1),
 	limit: z.coerce.number().int().min(1).max(100).default(20),
+})
+
+const descriptionSuggestionQuerySchema = z.object({
+	q: z.string().max(100).default(""),
+	type: z.enum(["income", "expense", "transfer"]).optional(),
+	limit: z.coerce.number().int().min(1).max(10).default(5),
 })
 
 export async function transactionRoutes(app: FastifyInstance) {
@@ -96,6 +102,71 @@ export async function transactionRoutes(app: FastifyInstance) {
 			},
 		})
 	})
+
+	// ─── Description Suggestions ──────────────────────────────────────────────
+
+	app.get(
+		"/transactions/description-suggestions",
+		{ preHandler: authenticate },
+		async (request, reply) => {
+			const result = descriptionSuggestionQuerySchema.safeParse(request.query)
+
+			if (!result.success) {
+				return reply.status(400).send({
+					error: "Validation error",
+					details: result.error.flatten(),
+				})
+			}
+
+			const q = result.data.q.trim()
+			if (!q) {
+				return reply.send({ suggestions: [] })
+			}
+
+			const qLower = q.toLowerCase()
+			const containsPattern = `%${qLower}%`
+			const prefixPattern = `${qLower}%`
+
+			const conditions = [
+				eq(transactions.userId, request.user.id),
+				ne(transactions.description, ""),
+				sql`lower(${transactions.description}) like ${containsPattern}`,
+			]
+
+			if (result.data.type) {
+				conditions.push(eq(transactions.type, result.data.type))
+			}
+
+			const rows = db
+				.select({
+					description: transactions.description,
+					usageCount: sql<number>`count(*)`,
+					lastUsedAt: sql<number>`max(${transactions.createdAt})`,
+					prefixRank: sql<number>`case
+						when lower(${transactions.description}) like ${prefixPattern} then 0
+						else 1
+					end`,
+				})
+				.from(transactions)
+				.where(and(...conditions))
+				.groupBy(transactions.description)
+				.orderBy(
+					asc(sql`case
+						when lower(${transactions.description}) like ${prefixPattern} then 0
+						else 1
+					end`),
+					desc(sql`max(${transactions.createdAt})`),
+					desc(sql`count(*)`),
+					asc(transactions.description)
+				)
+				.limit(result.data.limit)
+				.all()
+
+			return reply.send({
+				suggestions: rows.map((row) => row.description),
+			})
+		}
+	)
 
 	// ─── Create Transaction ───────────────────────────────────────────────────
 
