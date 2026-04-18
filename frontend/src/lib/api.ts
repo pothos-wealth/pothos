@@ -19,6 +19,7 @@ import type {
 	ParsedTransaction,
 	ParsedTransactionList,
 	PendingMessage,
+	DescriptionSuggestionResponse,
 } from "./types"
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
@@ -125,6 +126,20 @@ export const api = {
 				Object.entries(params).map(([k, v]) => [k, String(v)])
 			).toString()
 			return apiFetch<TransactionList>(`/transactions?${qs}`)
+		},
+		descriptionSuggestions: (params: {
+			q: string
+			type?: "income" | "expense" | "transfer"
+			limit?: number
+		}) => {
+			const qs = new URLSearchParams(
+				Object.entries(params)
+					.filter(([, v]) => v !== undefined)
+					.map(([k, v]) => [k, String(v)])
+			).toString()
+			return apiFetch<DescriptionSuggestionResponse>(
+				`/transactions/description-suggestions?${qs}`
+			)
 		},
 		create: (data: {
 			accountId: string
