@@ -13,6 +13,8 @@ const monthQuerySchema = z.object({
 
 const trendsQuerySchema = z.object({
 	months: z.coerce.number().int().min(1).max(24).default(12),
+	month: z.coerce.number().int().min(1).max(12).optional(),
+	year: z.coerce.number().int().min(2000).optional(),
 })
 
 export async function reportRoutes(app: FastifyInstance) {
@@ -175,10 +177,12 @@ export async function reportRoutes(app: FastifyInstance) {
 
 		// Build the list of months to cover, going backwards from current month
 		const now = new Date()
+		const anchorMonth = result.data.month ?? now.getUTCMonth() + 1
+		const anchorYear = result.data.year ?? now.getUTCFullYear()
 		const periods: { month: number; year: number; start: number; end: number }[] = []
 
 		for (let i = months - 1; i >= 0; i--) {
-			const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))
+			const date = new Date(Date.UTC(anchorYear, anchorMonth - 1 - i, 1))
 			const month = date.getUTCMonth() + 1
 			const year = date.getUTCFullYear()
 			const { start, end } = getMonthBounds(month, year)

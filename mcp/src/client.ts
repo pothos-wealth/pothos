@@ -41,7 +41,31 @@ export function fmtAmount(minorUnits: number): number {
 	return Math.round(minorUnits) / 100
 }
 
-export function fmtDate(unixTs: number): string {
+const MONTHS_SHORT = [
+	"Jan",
+	"Feb",
+	"Mar",
+	"Apr",
+	"May",
+	"Jun",
+	"Jul",
+	"Aug",
+	"Sep",
+	"Oct",
+	"Nov",
+	"Dec",
+]
+
+export function calendarDateToUnix(dateValue: string): number {
+	return Math.floor(new Date(`${dateValue}T00:00:00Z`).getTime() / 1000)
+}
+
+export function fmtCalendarDate(unixTs: number): string {
+	const date = new Date(unixTs * 1000)
+	return `${MONTHS_SHORT[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}`
+}
+
+export function fmtTimestampDate(unixTs: number): string {
 	return new Date(unixTs * 1000).toLocaleDateString("en-US", {
 		year: "numeric",
 		month: "short",

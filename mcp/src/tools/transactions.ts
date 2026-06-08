@@ -1,6 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { z } from "zod"
-import { apiFetch, fmtAmount, fmtDate, PothosApiError } from "../client.js"
+import {
+	apiFetch,
+	fmtAmount,
+	fmtCalendarDate,
+	calendarDateToUnix,
+	PothosApiError,
+} from "../client.js"
 
 interface Transaction {
 	id: string
@@ -22,10 +28,6 @@ interface TransactionList {
 interface Account {
 	id: string
 	name: string
-}
-
-function dateToUnix(dateStr: string): number {
-	return Math.floor(new Date(`${dateStr}T00:00:00`).getTime() / 1000)
 }
 
 export function registerTransactionTools(server: McpServer) {
@@ -62,8 +64,8 @@ export function registerTransactionTools(server: McpServer) {
 				const params = new URLSearchParams()
 				if (accountId) params.set("accountId", accountId)
 				if (type) params.set("type", type)
-				if (startDate) params.set("startDate", String(dateToUnix(startDate)))
-				if (endDate) params.set("endDate", String(dateToUnix(endDate)))
+				if (startDate) params.set("startDate", String(calendarDateToUnix(startDate)))
+				if (endDate) params.set("endDate", String(calendarDateToUnix(endDate) + 86399))
 				if (search) params.set("search", search)
 				params.set("limit", String(limit ?? 20))
 				params.set("page", String(page ?? 1))
@@ -86,7 +88,7 @@ export function registerTransactionTools(server: McpServer) {
 					const account = accountMap[t.accountId] ?? t.accountId
 					const sign = t.amount > 0 ? "+" : ""
 					const parts = [
-						fmtDate(t.date),
+						fmtCalendarDate(t.date),
 						t.description,
 						`${t.type} ${sign}${fmtAmount(t.amount)}`,
 						`[${account}]`,
@@ -132,7 +134,7 @@ export function registerTransactionTools(server: McpServer) {
 						accountId,
 						type,
 						amount: Math.round(amount * 100),
-						date: dateToUnix(date),
+						date: calendarDateToUnix(date),
 						description,
 						categoryId: categoryId ?? null,
 						notes: notes ?? null,
@@ -144,7 +146,7 @@ export function registerTransactionTools(server: McpServer) {
 						{
 							type: "text" as const,
 							text:
-								`Transaction created: "${tx.description}" — ${tx.type} — ${fmtAmount(Math.abs(tx.amount))} on ${fmtDate(tx.date)}.\n` +
+								`Transaction created: "${tx.description}" — ${tx.type} — ${fmtAmount(Math.abs(tx.amount))} on ${fmtCalendarDate(tx.date)}.\n` +
 								`Transaction ID: ${tx.id}`,
 						},
 					],
@@ -179,7 +181,7 @@ export function registerTransactionTools(server: McpServer) {
 		},
 		async ({ fromAccountId, toAccountId, amount, date, description }) => {
 			try {
-				const unixTs = dateToUnix(date)
+				const unixTs = calendarDateToUnix(date)
 
 				await apiFetch("/transactions/transfer", {
 					method: "POST",
@@ -196,7 +198,7 @@ export function registerTransactionTools(server: McpServer) {
 					content: [
 						{
 							type: "text" as const,
-							text: `Transfer of ${fmtAmount(Math.round(amount * 100))} on ${fmtDate(unixTs)} created successfully.`,
+							text: `Transfer of ${fmtAmount(Math.round(amount * 100))} on ${fmtCalendarDate(unixTs)} created successfully.`,
 						},
 					],
 				}

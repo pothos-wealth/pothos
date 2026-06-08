@@ -1294,9 +1294,22 @@ paths:
             minimum: 1
             maximum: 24
             default: 12
+        - name: month
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+          description: Anchor month for the trend window. Defaults to the current UTC month.
+        - name: year
+          in: query
+          schema:
+            type: integer
+            minimum: 2000
+          description: Anchor year for the trend window. Defaults to the current UTC year.
       responses:
         "200":
-          description: Monthly income/expense/net going backwards from current month. Zero-transaction months included. Transfers excluded.
+          description: Monthly income/expense/net going backwards from the anchor month. Zero-transaction months included. Transfers excluded.
           content:
             application/json:
               schema:

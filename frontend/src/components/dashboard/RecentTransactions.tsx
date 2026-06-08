@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Card } from "@/components/ui/Card"
-import { cn, useCurrencyFormatter, formatDate, getCategoryName } from "@/lib/utils"
+import { cn, useCurrencyFormatter, formatCalendarDate, getCategoryName } from "@/lib/utils"
 import type { Transaction, Category } from "@/lib/types"
 
 interface RecentTransactionsProps {
@@ -68,7 +68,9 @@ export function RecentTransactions({ transactions, categories }: RecentTransacti
 										{isTransfer ? "" : isPositive ? "+" : "-"}
 										{formatCurrency(Math.abs(tx.amount))}
 									</p>
-									<p className="text-xs text-fg-muted">{formatDate(tx.date)}</p>
+									<p className="text-xs text-fg-muted">
+										{formatCalendarDate(tx.date)}
+									</p>
 								</div>
 							</div>
 						)

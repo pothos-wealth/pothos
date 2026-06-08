@@ -125,7 +125,7 @@ export default function DashboardPage() {
 			api.budgets.list(month, year),
 			api.transactions.list({ limit: 5 }),
 			api.categories.list(),
-			api.reports.trends(6),
+			api.reports.trends(6, month, year),
 		])
 			.then(
 				([
