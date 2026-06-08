@@ -144,7 +144,7 @@ export function DescriptionAutocompleteInput({
 				aria-autocomplete="list"
 				aria-controls={listboxId}
 				aria-expanded={open}
-				className={className}
+				className={cn("w-full", className)}
 			/>
 
 			{open && suggestions.length > 0 && (
