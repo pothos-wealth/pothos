@@ -65,13 +65,21 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 
 // ── Prompt (mirrors backend/src/services/parser.ts buildPrompt) ─────────────
 
+function toDateInputValue(date: Date): string {
+	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+}
+
+function calendarDateToUnix(dateValue: string): number {
+	return Math.floor(new Date(`${dateValue}T00:00:00Z`).getTime() / 1000)
+}
+
 function buildPrompt(
 	rawContent: string,
 	accounts: { id: string; name: string }[],
 	categories: { id: string; name: string; type: string }[],
 	currency: string
 ): string {
-	const today = new Date().toISOString().slice(0, 10)
+	const today = toDateInputValue(new Date())
 	return `You are a financial transaction parser. Today's date is ${today}. The user's currency is ${currency}.
 User's bank accounts: ${JSON.stringify(accounts)}
 Available categories: ${JSON.stringify(categories)}
@@ -146,7 +154,7 @@ function validateResult(raw: unknown): ParsedResult | null {
 
 	// Accept YYYY-MM-DD string and convert to Unix timestamp
 	if (typeof obj.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(obj.date)) return null
-	const dateTs = Math.floor(new Date(obj.date).getTime() / 1000)
+	const dateTs = calendarDateToUnix(obj.date)
 	if (isNaN(dateTs)) return null
 
 	return {

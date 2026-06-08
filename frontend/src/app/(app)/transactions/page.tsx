@@ -11,7 +11,16 @@ import { PageTransition } from "@/components/ui/PageTransition"
 import { DescriptionAutocompleteInput } from "@/components/ui/DescriptionAutocompleteInput"
 import { api } from "@/lib/api"
 import { useCurrency } from "@/lib/currency-context"
-import { cn, useCurrencyFormatter, formatDate, getCategoryName } from "@/lib/utils"
+import {
+	cn,
+	useCurrencyFormatter,
+	formatCalendarDate,
+	getCategoryName,
+	todayInputValue,
+	toDateInputValue,
+	inputValueToCalendarDate,
+	calendarDateToInputValue,
+} from "@/lib/utils"
 import type { Account, Category, Transaction, TransactionList } from "@/lib/types"
 
 type TxTab = "transaction" | "transfer"
@@ -34,28 +43,9 @@ interface TransferForm {
 	description: string
 }
 
-function localDateISO(d: Date): string {
-	const y = d.getFullYear()
-	const m = String(d.getMonth() + 1).padStart(2, "0")
-	const day = String(d.getDate()).padStart(2, "0")
-	return `${y}-${m}-${day}`
-}
-
-function todayISO() {
-	return localDateISO(new Date())
-}
-
 function firstOfMonthISO() {
 	const d = new Date()
-	return localDateISO(new Date(d.getFullYear(), d.getMonth(), 1))
-}
-
-function toUnix(dateStr: string) {
-	return Math.floor(new Date(`${dateStr}T00:00:00Z`).getTime() / 1000)
-}
-
-function fromUnix(ts: number) {
-	return new Date(ts * 1000).toISOString().slice(0, 10)
+	return toDateInputValue(new Date(d.getFullYear(), d.getMonth(), 1))
 }
 
 export default function TransactionsPage() {
@@ -73,7 +63,7 @@ export default function TransactionsPage() {
 	const [filterCategory, setFilterCategory] = useState("")
 	const [filterType, setFilterType] = useState("")
 	const [filterStart, setFilterStart] = useState(firstOfMonthISO)
-	const [filterEnd, setFilterEnd] = useState(todayISO)
+	const [filterEnd, setFilterEnd] = useState(todayInputValue)
 	const [searchInput, setSearchInput] = useState("")
 	const [filterSearch, setFilterSearch] = useState("")
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -86,7 +76,7 @@ export default function TransactionsPage() {
 		accountId: "",
 		categoryId: "",
 		amount: "",
-		date: todayISO(),
+		date: todayInputValue(),
 		description: "",
 		notes: "",
 	})
@@ -94,7 +84,7 @@ export default function TransactionsPage() {
 		fromAccountId: "",
 		toAccountId: "",
 		amount: "",
-		date: todayISO(),
+		date: todayInputValue(),
 		description: "",
 	})
 
@@ -121,8 +111,8 @@ export default function TransactionsPage() {
 		if (filterAccount) params.accountId = filterAccount
 		if (filterCategory) params.categoryId = filterCategory
 		if (filterType) params.type = filterType
-		if (filterStart) params.startDate = toUnix(filterStart)
-		if (filterEnd) params.endDate = toUnix(filterEnd) + 86399
+		if (filterStart) params.startDate = inputValueToCalendarDate(filterStart)
+		if (filterEnd) params.endDate = inputValueToCalendarDate(filterEnd) + 86399
 		if (filterSearch) params.search = filterSearch
 
 		Promise.all([api.transactions.list(params), api.accounts.list(), api.categories.list()])
@@ -168,7 +158,7 @@ export default function TransactionsPage() {
 			accountId: firstAccount,
 			categoryId: "",
 			amount: "",
-			date: todayISO(),
+			date: todayInputValue(),
 			description: "",
 			notes: "",
 		})
@@ -176,7 +166,7 @@ export default function TransactionsPage() {
 			fromAccountId: firstAccount,
 			toAccountId: activeAccounts[1]?.id ?? "",
 			amount: "",
-			date: todayISO(),
+			date: todayInputValue(),
 			description: "",
 		})
 		setAddTab("transaction")
@@ -189,7 +179,7 @@ export default function TransactionsPage() {
 		if (tx.type === "transfer") {
 			setEditTransferForm({
 				amount: (Math.abs(tx.amount) / 100).toFixed(2),
-				date: fromUnix(tx.date),
+				date: calendarDateToInputValue(tx.date),
 				description: tx.description,
 				notes: tx.notes ?? "",
 			})
@@ -197,7 +187,7 @@ export default function TransactionsPage() {
 			setEditForm({
 				categoryId: tx.categoryId ?? "",
 				amount: (Math.abs(tx.amount) / 100).toFixed(2),
-				date: fromUnix(tx.date),
+				date: calendarDateToInputValue(tx.date),
 				description: tx.description,
 				notes: tx.notes ?? "",
 			})
@@ -243,7 +233,7 @@ export default function TransactionsPage() {
 					categoryId: txForm.categoryId || undefined,
 					type: txForm.type,
 					amount: Math.round(Number(txForm.amount) * 100),
-					date: toUnix(txForm.date),
+					date: inputValueToCalendarDate(txForm.date),
 					description: txForm.description,
 					notes: txForm.notes || undefined,
 				})
@@ -252,7 +242,7 @@ export default function TransactionsPage() {
 					fromAccountId: transferForm.fromAccountId,
 					toAccountId: transferForm.toAccountId,
 					amount: Math.round(Number(transferForm.amount) * 100),
-					date: toUnix(transferForm.date),
+					date: inputValueToCalendarDate(transferForm.date),
 					description: transferForm.description,
 				})
 			}
@@ -276,7 +266,9 @@ export default function TransactionsPage() {
 					amount: editTransferForm.amount
 						? Math.round(Number(editTransferForm.amount) * 100)
 						: undefined,
-					date: editTransferForm.date ? toUnix(editTransferForm.date) : undefined,
+					date: editTransferForm.date
+						? inputValueToCalendarDate(editTransferForm.date)
+						: undefined,
 					description: editTransferForm.description || undefined,
 					notes: editTransferForm.notes || null,
 				})
@@ -284,7 +276,9 @@ export default function TransactionsPage() {
 				await api.transactions.update(editTx.id, {
 					categoryId: editForm.categoryId || undefined,
 					amount: editForm.amount ? Math.round(Number(editForm.amount) * 100) : undefined,
-					date: editForm.date ? toUnix(editForm.date) : undefined,
+					date: editForm.date
+						? inputValueToCalendarDate(editForm.date)
+						: undefined,
 					description: editForm.description,
 					notes: editForm.notes || undefined,
 				})
@@ -500,7 +494,7 @@ export default function TransactionsPage() {
 												{formatCurrency(Math.abs(tx.amount))}
 											</p>
 											<p className="text-xs text-fg-muted">
-												{formatDate(tx.date)}
+												{formatCalendarDate(tx.date)}
 											</p>
 										</div>
 										<button

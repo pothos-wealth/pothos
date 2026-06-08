@@ -20,7 +20,14 @@ import { Skeleton } from "@/components/ui/Skeleton"
 import { PageTransition } from "@/components/ui/PageTransition"
 import { DescriptionAutocompleteInput } from "@/components/ui/DescriptionAutocompleteInput"
 import { api } from "@/lib/api"
-import { useCurrencyFormatter, formatDate } from "@/lib/utils"
+import {
+	useCurrencyFormatter,
+	formatCalendarDate,
+	formatTimestampDate,
+	toDateInputValue,
+	calendarDateToInputValue,
+	inputValueToCalendarDate,
+} from "@/lib/utils"
 import { useInboxCount } from "@/lib/inbox-count-context"
 import type {
 	Account,
@@ -54,26 +61,13 @@ interface ParseForm {
 	notes: string
 }
 
-function todayISO() {
-	const d = new Date()
-	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
-}
-
-function toUnix(dateStr: string) {
-	return Math.floor(new Date(`${dateStr}T00:00:00Z`).getTime() / 1000)
-}
-
-function fromUnix(ts: number) {
-	return new Date(ts * 1000).toISOString().slice(0, 10)
-}
-
 const defaultEditForm = (pt: ParsedTransaction): EditForm => ({
 	type: pt.type,
 	accountId: pt.accountId ?? "",
 	toAccountId: pt.toAccountId ?? "",
 	categoryId: pt.categoryId ?? "",
 	amount: (pt.amount / 100).toFixed(2),
-	date: fromUnix(pt.date),
+	date: calendarDateToInputValue(pt.date),
 	description: pt.description,
 	notes: pt.notes ?? "",
 })
@@ -84,7 +78,7 @@ const defaultParseForm = (msg: PendingMessage): ParseForm => ({
 	toAccountId: "",
 	categoryId: "",
 	amount: "",
-	date: todayISO(),
+	date: toDateInputValue(new Date(msg.createdAt * 1000)),
 	description: "",
 	notes: "",
 })
@@ -221,7 +215,7 @@ export default function InboxPage() {
 			await api.parsedTransactions.update(editItem.id, {
 				type: editForm.type,
 				amount: Math.round(parseFloat(editForm.amount) * 100),
-				date: toUnix(editForm.date),
+				date: inputValueToCalendarDate(editForm.date),
 				description: editForm.description,
 				accountId: editForm.accountId || null,
 				toAccountId: editForm.type === "transfer" ? editForm.toAccountId || null : null,
@@ -262,7 +256,7 @@ export default function InboxPage() {
 			await api.parseQueue.submit(parseItem.id, {
 				type: parseForm.type,
 				amount: Math.round(parseFloat(parseForm.amount) * 100),
-				date: toUnix(parseForm.date),
+				date: inputValueToCalendarDate(parseForm.date),
 				description: parseForm.description,
 				accountId: parseForm.accountId || null,
 				toAccountId: parseForm.type === "transfer" ? parseForm.toAccountId || null : null,
@@ -391,7 +385,7 @@ export default function InboxPage() {
 											{msg.subject ?? "(No subject)"}
 										</p>
 										<p className="text-xs text-fg-muted mt-0.5">
-											{formatDate(msg.createdAt)}
+											{formatTimestampDate(msg.createdAt)}
 										</p>
 										<p className="text-xs text-fg-muted mt-1.5 line-clamp-2 leading-relaxed">
 											{msg.rawContent.slice(0, 160)}
@@ -441,7 +435,7 @@ export default function InboxPage() {
 										</p>
 										<div className="flex items-center gap-2 mt-1 flex-wrap">
 											<span className="text-xs text-fg-muted">
-												{formatDate(pt.date)}
+												{formatCalendarDate(pt.date)}
 											</span>
 											{pt.accountName ? (
 												<span className="text-xs text-fg-muted">
@@ -460,7 +454,7 @@ export default function InboxPage() {
 										</div>
 										{pt.emailSubject && (
 											<p className="text-xs text-fg-muted mt-1 italic truncate">
-												"{pt.emailSubject}"
+												&ldquo;{pt.emailSubject}&rdquo;
 											</p>
 										)}
 									</div>
@@ -553,7 +547,7 @@ export default function InboxPage() {
 										{parseItem.subject ?? "(No subject)"}
 									</p>
 									<p className="text-xs text-fg-muted mt-0.5">
-										{formatDate(parseItem.createdAt)}
+										{formatTimestampDate(parseItem.createdAt)}
 									</p>
 								</div>
 								<div className="px-4 py-3 max-h-44 overflow-y-auto">

@@ -10,10 +10,16 @@ interface Overview {
 }
 
 interface CategoryBreakdown {
-	categoryId: string
+	categoryId: string | null
 	categoryName: string
 	categoryIcon: string | null
 	total: number
+}
+
+interface CategoryBreakdownResponse {
+	month: number
+	year: number
+	data: CategoryBreakdown[]
 }
 
 interface TrendPoint {
@@ -22,6 +28,11 @@ interface TrendPoint {
 	income: number
 	expenses: number
 	net: number
+}
+
+interface TrendsResponse {
+	months: number
+	data: TrendPoint[]
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -90,7 +101,7 @@ export function registerReportTools(server: McpServer) {
 				const m = month ?? now.getMonth() + 1
 				const y = year ?? now.getFullYear()
 
-				const breakdown = await apiFetch<CategoryBreakdown[]>(
+				const response = await apiFetch<CategoryBreakdownResponse>(
 					`/reports/categories?month=${m}&year=${y}`
 				)
 				const monthName = new Date(y, m - 1).toLocaleDateString("en-US", {
@@ -98,7 +109,7 @@ export function registerReportTools(server: McpServer) {
 					year: "numeric",
 				})
 
-				if (breakdown.length === 0) {
+				if (response.data.length === 0) {
 					return {
 						content: [
 							{
@@ -109,9 +120,9 @@ export function registerReportTools(server: McpServer) {
 					}
 				}
 
-				const totalExpenses = breakdown.reduce((sum, c) => sum + Math.abs(c.total), 0)
+				const totalExpenses = response.data.reduce((sum, c) => sum + Math.abs(c.total), 0)
 				const lines = [`${monthName} — Expenses by Category:`]
-				for (const c of breakdown) {
+				for (const c of response.data) {
 					const icon = c.categoryIcon ? ` ${c.categoryIcon}` : ""
 					const abs = Math.abs(c.total)
 					const pct = totalExpenses > 0 ? ((abs / totalExpenses) * 100).toFixed(1) : "0.0"
@@ -151,15 +162,32 @@ export function registerReportTools(server: McpServer) {
 					.optional()
 					.default(6)
 					.describe("Number of months to look back (1-24, default 6)"),
+				month: z
+					.number()
+					.int()
+					.min(1)
+					.max(12)
+					.optional()
+					.describe("Anchor month (1-12). Defaults to current month."),
+				year: z
+					.number()
+					.int()
+					.optional()
+					.describe("Anchor year. Defaults to current year."),
 			},
 		},
-		async ({ months }) => {
+		async ({ months, month, year }) => {
 			try {
 				const n = months ?? 6
-				const trends = await apiFetch<TrendPoint[]>(`/reports/trends?months=${n}`)
+				const now = new Date()
+				const m = month ?? now.getMonth() + 1
+				const y = year ?? now.getFullYear()
+				const response = await apiFetch<TrendsResponse>(
+					`/reports/trends?months=${n}&month=${m}&year=${y}`
+				)
 
 				const lines = [`Spending trends (last ${n} months):`]
-				for (const t of trends) {
+				for (const t of response.data) {
 					const netSign = t.net >= 0 ? "+" : ""
 					lines.push(
 						`  ${MONTHS[t.month - 1]} ${t.year}: income ${fmtAmount(t.income)} | expenses ${fmtAmount(Math.abs(t.expenses))} | net ${netSign}${fmtAmount(t.net)}`

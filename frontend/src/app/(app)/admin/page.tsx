@@ -9,7 +9,7 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal"
 import { PageTransition } from "@/components/ui/PageTransition"
 import { PothosLottie } from "@/components/ui/PothosLottie"
 import { api } from "@/lib/api"
-import { formatDate } from "@/lib/utils"
+import { formatTimestampDate } from "@/lib/utils"
 import { Copy, Check } from "lucide-react"
 import type { AdminStats, AdminUser, AdminSession, AdminSettings, User } from "@/lib/types"
 
@@ -265,7 +265,7 @@ export default function AdminPage() {
 											)}
 										</td>
 										<td className="px-5 py-3 text-fg-muted">
-											{formatDate(u.createdAt)}
+											{formatTimestampDate(u.createdAt)}
 										</td>
 										<td className="px-5 py-3 text-fg-muted">
 											{u.currency ?? "—"}
@@ -330,10 +330,10 @@ export default function AdminPage() {
 								>
 									<div>
 										<p className="text-xs text-fg-muted">
-											Created: {formatDate(s.createdAt)}
+											Created: {formatTimestampDate(s.createdAt)}
 										</p>
 										<p className="text-xs text-fg-muted">
-											Expires: {formatDate(s.expiresAt)}
+											Expires: {formatTimestampDate(s.expiresAt)}
 										</p>
 									</div>
 									<button

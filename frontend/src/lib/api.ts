@@ -105,7 +105,12 @@ export const api = {
 			apiFetch<Overview>(`/reports/overview?month=${month}&year=${year}`),
 		categories: (month: number, year: number) =>
 			apiFetch<CategoryReport>(`/reports/categories?month=${month}&year=${year}`),
-		trends: (months = 6) => apiFetch<TrendsReport>(`/reports/trends?months=${months}`),
+		trends: (months = 6, month?: number, year?: number) => {
+			const qs = new URLSearchParams({ months: String(months) })
+			if (month != null) qs.set("month", String(month))
+			if (year != null) qs.set("year", String(year))
+			return apiFetch<TrendsReport>(`/reports/trends?${qs}`)
+		},
 	},
 	budgets: {
 		list: (month: number, year: number) =>

@@ -26,6 +26,22 @@ export function cn(...classes: (string | undefined | false | null)[]): string {
 	return classes.filter(Boolean).join(" ")
 }
 
+export function toDateInputValue(date: Date): string {
+	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+}
+
+export function todayInputValue(): string {
+	return toDateInputValue(new Date())
+}
+
+export function calendarDateToInputValue(timestamp: number): string {
+	return new Date(timestamp * 1000).toISOString().slice(0, 10)
+}
+
+export function inputValueToCalendarDate(dateValue: string): number {
+	return Math.floor(new Date(`${dateValue}T00:00:00Z`).getTime() / 1000)
+}
+
 // Amounts are stored as integers in the smallest unit (e.g., paise for INR, cents for USD)
 // Divide by 100 to get the base unit, then format
 export function formatCurrency(amount: number, currency = "INR"): string {
@@ -81,14 +97,25 @@ const MONTH_NAMES_SHORT = [
 	"Dec",
 ]
 
-export function formatDate(timestamp: number): string {
-	const date = new Date(timestamp * 1000)
+function yesterdayInputValue(): string {
 	const now = new Date()
-	const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-	const yesterdayUTC = todayUTC - 86400000
-	const txDayUTC = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+	return toDateInputValue(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1))
+}
 
-	if (txDayUTC === todayUTC) return "Today"
-	if (txDayUTC === yesterdayUTC) return "Yesterday"
+export function formatCalendarDate(timestamp: number): string {
+	const date = new Date(timestamp * 1000)
+	const dateValue = date.toISOString().slice(0, 10)
+
+	if (dateValue === todayInputValue()) return "Today"
+	if (dateValue === yesterdayInputValue()) return "Yesterday"
 	return `${MONTH_NAMES_SHORT[date.getUTCMonth()]} ${date.getUTCDate()}`
+}
+
+export function formatTimestampDate(timestamp: number): string {
+	const date = new Date(timestamp * 1000)
+	const dateValue = toDateInputValue(date)
+
+	if (dateValue === todayInputValue()) return "Today"
+	if (dateValue === yesterdayInputValue()) return "Yesterday"
+	return `${MONTH_NAMES_SHORT[date.getMonth()]} ${date.getDate()}`
 }

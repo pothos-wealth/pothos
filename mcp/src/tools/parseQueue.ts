@@ -1,6 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { z } from "zod"
-import { apiFetch, fmtAmount, fmtDate, PothosApiError } from "../client.js"
+import {
+	apiFetch,
+	fmtAmount,
+	fmtCalendarDate,
+	fmtTimestampDate,
+	calendarDateToUnix,
+	PothosApiError,
+} from "../client.js"
 
 interface PendingMessage {
 	id: string
@@ -18,10 +25,6 @@ interface PendingEmailsResponse {
 		total: number
 		totalPages: number
 	}
-}
-
-function dateToUnix(dateStr: string): number {
-	return Math.floor(new Date(`${dateStr}T00:00:00`).getTime() / 1000)
 }
 
 export function registerParseQueueTools(server: McpServer) {
@@ -73,7 +76,7 @@ export function registerParseQueueTools(server: McpServer) {
 				for (const msg of emails) {
 					lines.push(`\n--- Email ID: ${msg.id} ---`)
 					lines.push(`Subject: ${msg.subject ?? "(no subject)"}`)
-					lines.push(`Received: ${fmtDate(msg.createdAt)}`)
+					lines.push(`Received: ${fmtTimestampDate(msg.createdAt)}`)
 					lines.push(`Body:\n${msg.rawContent}`)
 				}
 				if (remaining > 0) {
@@ -140,7 +143,7 @@ export function registerParseQueueTools(server: McpServer) {
 		async ({ messageId, type, amount, date, description, accountId, categoryId, notes }) => {
 			try {
 				const minorUnits = Math.round(amount * 100)
-				const unixTs = dateToUnix(date)
+				const unixTs = calendarDateToUnix(date)
 
 				await apiFetch(`/parse-queue/${messageId}/submit`, {
 					method: "POST",
@@ -161,7 +164,7 @@ export function registerParseQueueTools(server: McpServer) {
 						{
 							type: "text" as const,
 							text:
-								`Submitted: ${type} of ${fmtAmount(minorUnits)} on ${fmtDate(unixTs)} — "${description}".\n` +
+								`Submitted: ${type} of ${fmtAmount(minorUnits)} on ${fmtCalendarDate(unixTs)} — "${description}".\n` +
 								`Review and approve it in your Pothos inbox.`,
 						},
 					],
