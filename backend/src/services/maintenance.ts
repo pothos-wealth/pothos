@@ -2,6 +2,7 @@ import cron from "node-cron"
 import { db } from "../db/index.js"
 import { parsedTransactions, pendingMessages } from "../db/schema.js"
 import { eq, or, inArray } from "drizzle-orm"
+import { generateDueRecurringTransactions } from "./recurringTransactions.js"
 
 const BATCH_SIZE = 500
 
@@ -65,13 +66,28 @@ export function runInboxCleanup(): void {
 	}
 }
 
+export function runRecurringTransactionGeneration(): void {
+	try {
+		const result = generateDueRecurringTransactions()
+		console.info(
+			`[maintenance] Recurring transaction generation complete: ${result.created} created, ${result.skipped} skipped`
+		)
+	} catch (err) {
+		console.error(
+			"[maintenance] Recurring transaction generation failed:",
+			err instanceof Error ? err.message : String(err)
+		)
+	}
+}
+
 // Every day at 3 AM
 const MAINTENANCE_CRON = process.env.MAINTENANCE_CRON ?? "0 3 * * *"
 
 export function startMaintenance(): void {
 	console.info(`[maintenance] Scheduling inbox cleanup on cron: ${MAINTENANCE_CRON}`)
 	cron.schedule(MAINTENANCE_CRON, () => {
-		console.info("[maintenance] Running scheduled inbox cleanup…")
+		console.info("[maintenance] Running scheduled maintenance…")
+		runRecurringTransactionGeneration()
 		runInboxCleanup()
 	})
 }

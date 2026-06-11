@@ -6,6 +6,8 @@ import type {
 	BudgetWithSpent,
 	TransactionList,
 	Transaction,
+	RecurringTransaction,
+	RecurringTransactionInput,
 	TrendsReport,
 	User,
 	UserSettings,
@@ -196,6 +198,29 @@ export const api = {
 				body: JSON.stringify(data),
 			}),
 		delete: (id: string) => apiFetch<void>(`/transactions/${id}`, { method: "DELETE" }),
+	},
+	recurringTransactions: {
+		list: () => apiFetch<RecurringTransaction[]>("/recurring-transactions"),
+		create: (data: RecurringTransactionInput) =>
+			apiFetch<RecurringTransaction>("/recurring-transactions", {
+				method: "POST",
+				body: JSON.stringify(data),
+			}),
+		update: (id: string, data: Partial<RecurringTransactionInput>) =>
+			apiFetch<RecurringTransaction>(`/recurring-transactions/${id}`, {
+				method: "PUT",
+				body: JSON.stringify(data),
+			}),
+		pause: (id: string) =>
+			apiFetch<RecurringTransaction>(`/recurring-transactions/${id}/pause`, {
+				method: "POST",
+			}),
+		resume: (id: string) =>
+			apiFetch<RecurringTransaction>(`/recurring-transactions/${id}/resume`, {
+				method: "POST",
+			}),
+		delete: (id: string) =>
+			apiFetch<void>(`/recurring-transactions/${id}`, { method: "DELETE" }),
 	},
 	user: {
 		me: () => apiFetch<User>("/user/me"),

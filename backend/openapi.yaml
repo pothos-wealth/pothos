@@ -142,6 +142,8 @@ components:
           type: [string, "null"]
         transferTransactionId:
           type: [string, "null"]
+        recurringTransactionId:
+          type: [string, "null"]
         type:
           type: string
           enum: [income, expense, transfer]
@@ -159,6 +161,84 @@ components:
           type: integer
         updatedAt:
           type: integer
+
+    RecurringTransaction:
+      type: object
+      required: [id, userId, accountId, type, amount, description, repeatDay, startDate, isActive, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        accountId:
+          type: string
+        toAccountId:
+          type: [string, "null"]
+        categoryId:
+          type: [string, "null"]
+        type:
+          type: string
+          enum: [income, expense, transfer]
+        amount:
+          type: integer
+          minimum: 1
+          description: Positive minor units. Sign is applied when generated.
+        description:
+          type: string
+        notes:
+          type: [string, "null"]
+        repeatDay:
+          type: integer
+          minimum: 1
+          maximum: 31
+        startDate:
+          type: integer
+          description: Unix timestamp (seconds)
+        endDate:
+          type: [integer, "null"]
+          description: Unix timestamp (seconds)
+        isActive:
+          type: boolean
+        createdAt:
+          type: integer
+        updatedAt:
+          type: integer
+
+    RecurringTransactionInput:
+      type: object
+      required: [accountId, type, amount, description, repeatDay, startDate]
+      properties:
+        accountId:
+          type: string
+        toAccountId:
+          type: [string, "null"]
+          description: Required for transfer templates.
+        categoryId:
+          type: [string, "null"]
+        type:
+          type: string
+          enum: [income, expense, transfer]
+        amount:
+          type: integer
+          minimum: 1
+          maximum: 1000000000
+        description:
+          type: string
+          minLength: 1
+        notes:
+          type: [string, "null"]
+        repeatDay:
+          type: integer
+          minimum: 1
+          maximum: 31
+        startDate:
+          type: integer
+          description: Unix timestamp (seconds)
+        endDate:
+          type: [integer, "null"]
+          description: Unix timestamp (seconds)
+        isActive:
+          type: boolean
 
     Budget:
       type: object
@@ -864,6 +944,150 @@ paths:
                 $ref: "#/components/schemas/Error"
 
   # ── Transactions ──────────────────────────────────────────────────────────
+
+  /recurring-transactions:
+    get:
+      summary: List recurring transaction templates
+      tags: [Recurring Transactions]
+      responses:
+        "200":
+          description: Recurring transaction templates owned by the current user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RecurringTransaction"
+    post:
+      summary: Create a recurring transaction template
+      tags: [Recurring Transactions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecurringTransactionInput"
+      responses:
+        "201":
+          description: Created recurring transaction template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecurringTransaction"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Account or category not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Account is closed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /recurring-transactions/{id}:
+    put:
+      summary: Update a recurring transaction template
+      tags: [Recurring Transactions]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecurringTransactionInput"
+      responses:
+        "200":
+          description: Updated recurring transaction template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecurringTransaction"
+        "404":
+          description: Template, account, or category not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      summary: Delete a recurring transaction template
+      tags: [Recurring Transactions]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted; already generated transactions remain
+        "404":
+          description: Recurring transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /recurring-transactions/{id}/pause:
+    post:
+      summary: Pause a recurring transaction template
+      tags: [Recurring Transactions]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paused recurring transaction template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecurringTransaction"
+        "404":
+          description: Recurring transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /recurring-transactions/{id}/resume:
+    post:
+      summary: Resume a recurring transaction template
+      tags: [Recurring Transactions]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Resumed recurring transaction template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecurringTransaction"
+        "404":
+          description: Recurring transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /transactions:
     get:
@@ -2060,6 +2284,8 @@ tags:
     description: Transaction categories
   - name: Transactions
     description: Income, expense, and transfer transactions
+  - name: Recurring Transactions
+    description: Monthly recurring transaction templates
   - name: Budgets
     description: Monthly budgets per category
   - name: Reports

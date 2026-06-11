@@ -57,6 +57,7 @@ export interface Transaction {
 	categoryId: string | null
 	transferAccountId: string | null
 	transferTransactionId: string | null
+	recurringTransactionId: string | null
 	type: "income" | "expense" | "transfer"
 	amount: number
 	date: number
@@ -65,6 +66,38 @@ export interface Transaction {
 }
 
 export type TransactionType = Transaction["type"]
+
+export interface RecurringTransaction {
+	id: string
+	userId: string
+	accountId: string
+	toAccountId: string | null
+	categoryId: string | null
+	type: TransactionType
+	amount: number
+	description: string
+	notes: string | null
+	repeatDay: number
+	startDate: number
+	endDate: number | null
+	isActive: boolean
+	createdAt: number
+	updatedAt: number
+}
+
+export type RecurringTransactionInput = {
+	accountId: string
+	toAccountId?: string | null
+	categoryId?: string | null
+	type: TransactionType
+	amount: number
+	description: string
+	notes?: string | null
+	repeatDay: number
+	startDate: number
+	endDate?: number | null
+	isActive?: boolean
+}
 
 export interface TransactionList {
 	data: Transaction[]
