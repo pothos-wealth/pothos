@@ -82,7 +82,10 @@ function validateGenerationAccounts(template: RecurringTransaction): boolean {
 		.where(and(eq(accounts.id, template.accountId), eq(accounts.userId, template.userId)))
 		.get()
 
-	if (!fromAccount?.isActive) return false
+	if (!fromAccount?.isActive) {
+		console.warn(`[recurring] Template ${template.id}: account ${template.accountId} is inactive or missing — skipping`)
+		return false
+	}
 
 	if (template.type === "transfer") {
 		if (!template.toAccountId || template.toAccountId === template.accountId) return false
@@ -91,7 +94,11 @@ function validateGenerationAccounts(template: RecurringTransaction): boolean {
 			.from(accounts)
 			.where(and(eq(accounts.id, template.toAccountId), eq(accounts.userId, template.userId)))
 			.get()
-		return toAccount?.isActive === true
+		if (!toAccount?.isActive) {
+			console.warn(`[recurring] Template ${template.id}: destination account ${template.toAccountId} is inactive or missing — skipping`)
+			return false
+		}
+		return true
 	}
 
 	return true

@@ -39,7 +39,15 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 		let message = `Request failed: ${res.status}`
 		try {
 			const body = await res.json()
-			if (body?.error) message = body.error
+			if (body?.error) {
+				message = body.error
+				if (body?.details) {
+					const fieldErrors = Object.values(body.details.fieldErrors ?? {}).flat() as string[]
+					const formErrors = (body.details.formErrors ?? []) as string[]
+					const all = [...formErrors, ...fieldErrors]
+					if (all.length > 0) message = all.join(". ")
+				}
+			}
 		} catch {}
 		throw new Error(message)
 	}

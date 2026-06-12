@@ -215,6 +215,13 @@ export async function recurringTransactionRoutes(app: FastifyInstance) {
 			isActive: result.data.isActive ?? existing.isActive,
 		}
 
+		if (merged.endDate != null && merged.endDate < merged.startDate) {
+			return reply.status(400).send({
+				error: "Validation error",
+				details: { fieldErrors: { endDate: ["End date must be after start date"] }, formErrors: [] },
+			})
+		}
+
 		const normalized = normalizeTemplateInput(merged, request.user.id, reply)
 		if (!normalized) return
 
@@ -252,21 +259,15 @@ export async function recurringTransactionRoutes(app: FastifyInstance) {
 		{ preHandler: authenticate },
 		async (request, reply) => {
 			const { id } = request.params as { id: string }
-			const existing = db
-				.select({ id: recurringTransactions.id })
-				.from(recurringTransactions)
-				.where(
-					and(eq(recurringTransactions.id, id), eq(recurringTransactions.userId, request.user.id))
-				)
+			const deleted = db
+				.delete(recurringTransactions)
+				.where(and(eq(recurringTransactions.id, id), eq(recurringTransactions.userId, request.user.id)))
+				.returning({ id: recurringTransactions.id })
 				.get()
 
-			if (!existing) {
+			if (!deleted) {
 				return reply.status(404).send({ error: "Recurring transaction not found" })
 			}
-
-			db.delete(recurringTransactions)
-				.where(and(eq(recurringTransactions.id, id), eq(recurringTransactions.userId, request.user.id)))
-				.run()
 
 			return reply.status(204).send()
 		}

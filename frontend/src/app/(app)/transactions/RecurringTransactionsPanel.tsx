@@ -180,19 +180,28 @@ export function RecurringTransactionsPanel({
 	}
 
 	async function toggleActive(item: RecurringTransaction) {
-		if (item.isActive) {
-			await api.recurringTransactions.pause(item.id)
-		} else {
-			await api.recurringTransactions.resume(item.id)
+		try {
+			if (item.isActive) {
+				await api.recurringTransactions.pause(item.id)
+			} else {
+				await api.recurringTransactions.resume(item.id)
+			}
+			await load()
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Failed to update recurring transaction")
 		}
-		await load()
 	}
 
 	async function confirmDelete() {
 		if (!pendingDelete) return
-		await api.recurringTransactions.delete(pendingDelete.id)
-		setPendingDelete(null)
-		await load()
+		try {
+			await api.recurringTransactions.delete(pendingDelete.id)
+			setPendingDelete(null)
+			await load()
+		} catch (err) {
+			setPendingDelete(null)
+			setError(err instanceof Error ? err.message : "Failed to delete recurring transaction")
+		}
 	}
 
 	return (
@@ -450,6 +459,7 @@ export function RecurringTransactionsPanel({
 						/>
 						<input
 							type="date"
+							min={form.startDate}
 							value={form.endDate}
 							onChange={(event) =>
 								setForm((current) => ({

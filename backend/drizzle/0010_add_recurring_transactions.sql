@@ -20,7 +20,7 @@ CREATE TABLE `recurring_transactions` (
 	FOREIGN KEY (`category_id`) REFERENCES `categories`(`id`) ON UPDATE no action ON DELETE set null
 );
 --> statement-breakpoint
-ALTER TABLE `transactions` ADD `recurring_transaction_id` text REFERENCES recurring_transactions(id);
+ALTER TABLE `transactions` ADD `recurring_transaction_id` text REFERENCES recurring_transactions(id) ON UPDATE no action ON DELETE set null;
 --> statement-breakpoint
 CREATE TABLE `recurring_transaction_runs` (
 	`id` text PRIMARY KEY NOT NULL,
