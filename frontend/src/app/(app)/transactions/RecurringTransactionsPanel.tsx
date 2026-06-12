@@ -234,15 +234,8 @@ export function RecurringTransactionsPanel({
 			{loading ? (
 				<Card className="text-sm text-fg-muted">Loading recurring transactions...</Card>
 			) : items.length === 0 ? (
-				<Card className="flex items-center justify-between gap-3">
+				<Card>
 					<p className="text-sm text-fg-muted">No recurring transactions yet</p>
-					<button
-						type="button"
-						onClick={openCreate}
-						className="text-sm font-semibold text-primary hover:underline"
-					>
-						Create one
-					</button>
 				</Card>
 			) : (
 				<div className="grid gap-2 md:grid-cols-2">
