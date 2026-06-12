@@ -26,7 +26,7 @@ const createRecurringSchema = recurringFieldsSchema
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				path: ["endDate"],
-				message: "End date must be after start date",
+				message: "End date must be on or after start date",
 			})
 		}
 
@@ -57,12 +57,12 @@ const updateRecurringSchema = recurringFieldsSchema.partial().superRefine((data,
 		ctx.addIssue({
 			code: z.ZodIssueCode.custom,
 			path: ["endDate"],
-			message: "End date must be after start date",
+			message: "End date must be on or after start date",
 		})
 	}
 })
 
-function getActiveOwnedAccount(accountId: string, userId: string) {
+function getOwnedAccount(accountId: string, userId: string) {
 	return db
 		.select()
 		.from(accounts)
@@ -91,7 +91,7 @@ function normalizeTemplateInput(
 	userId: string,
 	reply: FastifyReply
 ) {
-	const account = getActiveOwnedAccount(data.accountId, userId)
+	const account = getOwnedAccount(data.accountId, userId)
 	if (!account) {
 		reply.status(404).send({ error: "Account not found" })
 		return null
@@ -106,7 +106,7 @@ function normalizeTemplateInput(
 			reply.status(400).send({ error: "Destination account is required" })
 			return null
 		}
-		const toAccount = getActiveOwnedAccount(data.toAccountId, userId)
+		const toAccount = getOwnedAccount(data.toAccountId, userId)
 		if (!toAccount) {
 			reply.status(404).send({ error: "Destination account not found" })
 			return null
@@ -218,7 +218,7 @@ export async function recurringTransactionRoutes(app: FastifyInstance) {
 		if (merged.endDate != null && merged.endDate < merged.startDate) {
 			return reply.status(400).send({
 				error: "Validation error",
-				details: { fieldErrors: { endDate: ["End date must be after start date"] }, formErrors: [] },
+				details: { fieldErrors: { endDate: ["End date must be on or after start date"] }, formErrors: [] },
 			})
 		}
 

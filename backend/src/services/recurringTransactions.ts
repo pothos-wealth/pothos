@@ -58,6 +58,13 @@ function dueOccurrencesForTemplate(
 
 	let year = start.year
 	let month = start.month
+	// Cap backfill to 12 months to prevent runaway generation for old startDates
+	const cutoffYear = current.year - 1
+	const cutoffMonth = current.month
+	if (year < cutoffYear || (year === cutoffYear && month < cutoffMonth)) {
+		year = cutoffYear
+		month = cutoffMonth
+	}
 	while (year < current.year || (year === current.year && month <= current.month)) {
 		const occurrenceDate = getMonthlyOccurrenceDate(year, month, template.repeatDay)
 		if (
@@ -88,7 +95,11 @@ function validateGenerationAccounts(template: RecurringTransaction): boolean {
 	}
 
 	if (template.type === "transfer") {
-		if (!template.toAccountId || template.toAccountId === template.accountId) return false
+		if (!template.toAccountId) {
+			console.warn(`[recurring] Template ${template.id}: transfer has null toAccountId (destination account may have been deleted) — skipping`)
+			return false
+		}
+		if (template.toAccountId === template.accountId) return false
 		const toAccount = db
 			.select({ id: accounts.id, isActive: accounts.isActive })
 			.from(accounts)

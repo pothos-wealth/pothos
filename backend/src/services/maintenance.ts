@@ -66,17 +66,19 @@ export function runInboxCleanup(): void {
 	}
 }
 
-export function runRecurringTransactionGeneration(): void {
+export function runRecurringTransactionGeneration(): { created: number; skipped: number } | null {
 	try {
 		const result = generateDueRecurringTransactions()
 		console.info(
 			`[maintenance] Recurring transaction generation complete: ${result.created} created, ${result.skipped} skipped`
 		)
+		return result
 	} catch (err) {
 		console.error(
 			"[maintenance] Recurring transaction generation failed:",
 			err instanceof Error ? err.message : String(err)
 		)
+		return null
 	}
 }
 

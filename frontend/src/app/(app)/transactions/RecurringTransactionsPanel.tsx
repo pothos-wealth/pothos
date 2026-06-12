@@ -107,6 +107,7 @@ export function RecurringTransactionsPanel({
 	const [editing, setEditing] = useState<RecurringTransaction | null>(null)
 	const [form, setForm] = useState<RecurringForm>(() => defaultForm(activeAccounts))
 	const [error, setError] = useState("")
+	const [panelError, setPanelError] = useState("")
 	const [submitting, setSubmitting] = useState(false)
 	const [pendingDelete, setPendingDelete] = useState<RecurringTransaction | null>(null)
 
@@ -117,9 +118,12 @@ export function RecurringTransactionsPanel({
 
 	async function load() {
 		setLoading(true)
+		setPanelError("")
 		try {
 			const result = await api.recurringTransactions.list()
 			setItems(result)
+		} catch (err) {
+			setPanelError(err instanceof Error ? err.message : "Failed to load recurring transactions")
 		} finally {
 			setLoading(false)
 		}
@@ -188,7 +192,7 @@ export function RecurringTransactionsPanel({
 			}
 			await load()
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to update recurring transaction")
+			setPanelError(err instanceof Error ? err.message : "Failed to update recurring transaction")
 		}
 	}
 
@@ -200,7 +204,7 @@ export function RecurringTransactionsPanel({
 			await load()
 		} catch (err) {
 			setPendingDelete(null)
-			setError(err instanceof Error ? err.message : "Failed to delete recurring transaction")
+			setPanelError(err instanceof Error ? err.message : "Failed to delete recurring transaction")
 		}
 	}
 
@@ -220,6 +224,12 @@ export function RecurringTransactionsPanel({
 					Add
 				</button>
 			</div>
+
+			{panelError && (
+				<div className="bg-expense-light border border-expense text-expense rounded-xl px-4 py-3 text-sm mb-2">
+					{panelError}
+				</div>
+			)}
 
 			{loading ? (
 				<Card className="text-sm text-fg-muted">Loading recurring transactions...</Card>

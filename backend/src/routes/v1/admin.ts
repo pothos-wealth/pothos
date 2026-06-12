@@ -193,9 +193,9 @@ export async function adminRoutes(app: FastifyInstance) {
 		"/admin/maintenance/run",
 		{ preHandler: authenticateAdmin },
 		async (_request, reply) => {
-			runRecurringTransactionGeneration()
+			const recurring = runRecurringTransactionGeneration()
 			runInboxCleanup()
-			return reply.send({ ok: true })
+			return reply.send({ ok: true, recurring })
 		}
 	)
 }
