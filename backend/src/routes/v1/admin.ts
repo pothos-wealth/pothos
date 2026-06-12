@@ -4,7 +4,7 @@ import * as fs from "fs"
 import { db } from "../../db/index.js"
 import { users, userSettings, accounts, transactions, sessions } from "../../db/schema.js"
 import { authenticateAdmin } from "../../middleware/authenticateAdmin.js"
-import { runInboxCleanup } from "../../services/maintenance.js"
+import { runInboxCleanup, runRecurringTransactionGeneration } from "../../services/maintenance.js"
 
 export async function adminRoutes(app: FastifyInstance) {
 	// ─── Settings ─────────────────────────────────────────────────────────────
@@ -193,8 +193,9 @@ export async function adminRoutes(app: FastifyInstance) {
 		"/admin/maintenance/run",
 		{ preHandler: authenticateAdmin },
 		async (_request, reply) => {
+			const recurring = runRecurringTransactionGeneration()
 			runInboxCleanup()
-			return reply.send({ ok: true })
+			return reply.send({ ok: true, recurring })
 		}
 	)
 }

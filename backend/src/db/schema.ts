@@ -95,6 +95,34 @@ export const categories = sqliteTable("categories", {
 		.default(sql`(unixepoch())`),
 })
 
+// ─── Recurring Transactions ──────────────────────────────────────────────────
+
+export const recurringTransactions = sqliteTable("recurring_transactions", {
+	id: text("id").primaryKey(),
+	userId: text("user_id")
+		.notNull()
+		.references(() => users.id, { onDelete: "cascade" }),
+	accountId: text("account_id")
+		.notNull()
+		.references(() => accounts.id, { onDelete: "cascade" }),
+	toAccountId: text("to_account_id").references(() => accounts.id, { onDelete: "set null" }),
+	categoryId: text("category_id").references(() => categories.id, { onDelete: "set null" }),
+	type: text("type", { enum: ["income", "expense", "transfer"] }).notNull(),
+	amount: integer("amount").notNull(),
+	description: text("description").notNull(),
+	notes: text("notes"),
+	repeatDay: integer("repeat_day").notNull(),
+	startDate: integer("start_date").notNull(),
+	endDate: integer("end_date"),
+	isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+	createdAt: integer("created_at")
+		.notNull()
+		.default(sql`(unixepoch())`),
+	updatedAt: integer("updated_at")
+		.notNull()
+		.default(sql`(unixepoch())`),
+})
+
 // ─── Transactions ─────────────────────────────────────────────────────────────
 
 export const transactions = sqliteTable("transactions", {
@@ -112,6 +140,10 @@ export const transactions = sqliteTable("transactions", {
 		onDelete: "set null",
 	}),
 	transferTransactionId: text("transfer_transaction_id"),
+	recurringTransactionId: text("recurring_transaction_id").references(
+		() => recurringTransactions.id,
+		{ onDelete: "set null" }
+	),
 	type: text("type", { enum: ["income", "expense", "transfer"] }).notNull(),
 	amount: integer("amount").notNull(),
 	date: integer("date").notNull(),
@@ -124,6 +156,32 @@ export const transactions = sqliteTable("transactions", {
 		.notNull()
 		.default(sql`(unixepoch())`),
 })
+
+export const recurringTransactionRuns = sqliteTable(
+	"recurring_transaction_runs",
+	{
+		id: text("id").primaryKey(),
+		recurringTransactionId: text("recurring_transaction_id")
+			.notNull()
+			.references(() => recurringTransactions.id, { onDelete: "cascade" }),
+		occurrenceMonth: text("occurrence_month").notNull(),
+		transactionId: text("transaction_id").references(() => transactions.id, {
+			onDelete: "set null",
+		}),
+		transferTransactionId: text("transfer_transaction_id").references(() => transactions.id, {
+			onDelete: "set null",
+		}),
+		createdAt: integer("created_at")
+			.notNull()
+			.default(sql`(unixepoch())`),
+	},
+	(table) => ({
+		uniqueTemplateMonth: uniqueIndex("recurring_transaction_runs_template_month_idx").on(
+			table.recurringTransactionId,
+			table.occurrenceMonth
+		),
+	})
+)
 
 // ─── Budgets ──────────────────────────────────────────────────────────────────
 
@@ -273,8 +331,14 @@ export type NewAccount = typeof accounts.$inferInsert
 export type Category = typeof categories.$inferSelect
 export type NewCategory = typeof categories.$inferInsert
 
+export type RecurringTransaction = typeof recurringTransactions.$inferSelect
+export type NewRecurringTransaction = typeof recurringTransactions.$inferInsert
+
 export type Transaction = typeof transactions.$inferSelect
 export type NewTransaction = typeof transactions.$inferInsert
+
+export type RecurringTransactionRun = typeof recurringTransactionRuns.$inferSelect
+export type NewRecurringTransactionRun = typeof recurringTransactionRuns.$inferInsert
 
 export type Budget = typeof budgets.$inferSelect
 export type NewBudget = typeof budgets.$inferInsert

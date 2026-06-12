@@ -6,6 +6,8 @@ import type {
 	BudgetWithSpent,
 	TransactionList,
 	Transaction,
+	RecurringTransaction,
+	RecurringTransactionInput,
 	TrendsReport,
 	User,
 	UserSettings,
@@ -37,7 +39,15 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 		let message = `Request failed: ${res.status}`
 		try {
 			const body = await res.json()
-			if (body?.error) message = body.error
+			if (body?.error) {
+				message = body.error
+				if (body?.details) {
+					const fieldErrors = Object.values(body.details.fieldErrors ?? {}).flat() as string[]
+					const formErrors = (body.details.formErrors ?? []) as string[]
+					const all = [...formErrors, ...fieldErrors]
+					if (all.length > 0) message = all.join(". ")
+				}
+			}
 		} catch {}
 		throw new Error(message)
 	}
@@ -196,6 +206,29 @@ export const api = {
 				body: JSON.stringify(data),
 			}),
 		delete: (id: string) => apiFetch<void>(`/transactions/${id}`, { method: "DELETE" }),
+	},
+	recurringTransactions: {
+		list: () => apiFetch<RecurringTransaction[]>("/recurring-transactions"),
+		create: (data: RecurringTransactionInput) =>
+			apiFetch<RecurringTransaction>("/recurring-transactions", {
+				method: "POST",
+				body: JSON.stringify(data),
+			}),
+		update: (id: string, data: Partial<RecurringTransactionInput>) =>
+			apiFetch<RecurringTransaction>(`/recurring-transactions/${id}`, {
+				method: "PUT",
+				body: JSON.stringify(data),
+			}),
+		pause: (id: string) =>
+			apiFetch<RecurringTransaction>(`/recurring-transactions/${id}/pause`, {
+				method: "POST",
+			}),
+		resume: (id: string) =>
+			apiFetch<RecurringTransaction>(`/recurring-transactions/${id}/resume`, {
+				method: "POST",
+			}),
+		delete: (id: string) =>
+			apiFetch<void>(`/recurring-transactions/${id}`, { method: "DELETE" }),
 	},
 	user: {
 		me: () => apiFetch<User>("/user/me"),
