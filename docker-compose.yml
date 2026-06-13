@@ -82,6 +82,8 @@ services:
             options:
                 max-size: "10m"
                 max-file: "3"
+        # Reload every 6h so renewed certs are picked up without a restart
+        command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
         ports:
             - "80:80"
             - "443:443"
