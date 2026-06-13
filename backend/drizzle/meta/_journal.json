@@ -71,6 +71,13 @@
 			"when": 1774265502424,
 			"tag": "0009_add_transfer_to_parsed_transactions",
 			"breakpoints": true
+		},
+		{
+			"idx": 10,
+			"version": "6",
+			"when": 1780925400000,
+			"tag": "0010_add_recurring_transactions",
+			"breakpoints": true
 		}
 	]
 }

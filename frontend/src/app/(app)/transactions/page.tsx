@@ -9,6 +9,7 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal"
 import { Skeleton } from "@/components/ui/Skeleton"
 import { PageTransition } from "@/components/ui/PageTransition"
 import { DescriptionAutocompleteInput } from "@/components/ui/DescriptionAutocompleteInput"
+import { RecurringTransactionsPanel } from "./RecurringTransactionsPanel"
 import { api } from "@/lib/api"
 import { useCurrency } from "@/lib/currency-context"
 import {
@@ -409,6 +410,12 @@ export default function TransactionsPage() {
 					</div>
 				</div>
 
+				<RecurringTransactionsPanel
+					accounts={accounts}
+					categories={categories}
+					inputClassName={inputCls}
+				/>
+
 				{/* List */}
 				{loading || currencyLoading ? (
 					<Card className="p-0 overflow-hidden">
@@ -477,6 +484,7 @@ export default function TransactionsPage() {
 													: getCategoryName(tx.categoryId, categories)}
 												{" · "}
 												{getAccountName(tx.accountId)}
+												{tx.recurringTransactionId ? " · Recurring" : ""}
 											</p>
 										</div>
 										<div className="text-right shrink-0">
