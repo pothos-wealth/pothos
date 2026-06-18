@@ -262,7 +262,13 @@ export function RecurringTransactionsPanel({
 							<span
 								className={cn(
 									"h-2.5 w-2.5 rounded-full shrink-0",
-									item.isActive ? "bg-primary" : "bg-fg-muted"
+									!item.isActive
+										? "bg-fg-muted"
+										: item.type === "expense"
+											? "bg-expense"
+											: item.type === "income"
+												? "bg-primary"
+												: "bg-fg-muted"
 								)}
 							/>
 							<div className="min-w-0 flex-1">
