@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Trash2, ArrowLeftRight, ChevronLeft, ChevronRight, Search } from "lucide-react"
+import { Plus, Trash2, ArrowLeftRight, ChevronLeft, ChevronRight, Search, BarChart2 } from "lucide-react"
 import { Card } from "@/components/ui/Card"
 import { Modal } from "@/components/ui/Modal"
 import { ConfirmModal } from "@/components/ui/ConfirmModal"
@@ -49,11 +49,43 @@ function firstOfMonthISO() {
 	return toDateInputValue(new Date(d.getFullYear(), d.getMonth(), 1))
 }
 
+function SummaryChip({
+	list,
+	formatCurrency,
+	fullWidth,
+}: {
+	list: TransactionList
+	formatCurrency: (amount: number) => string
+	fullWidth?: boolean
+}) {
+	const netColor = list.summary.net < 0 ? "text-expense" : "text-income"
+	return (
+		<div className={cn("flex items-center gap-3 rounded-xl border border-border bg-bg-2 px-3 py-2 text-xs", fullWidth ? "w-full justify-between" : "")}>
+			<span className="flex-1 lg:flex-none text-center lg:text-left whitespace-nowrap">
+				<span className="hidden lg:inline text-fg-muted">Income: </span>
+				<span className="lg:hidden font-bold text-income">+</span>
+				<span className="font-semibold text-income">{formatCurrency(list.summary.income)}</span>
+			</span>
+			<span className="flex-1 lg:flex-none text-center lg:text-left whitespace-nowrap border-l border-border pl-2 lg:border-l-0 lg:pl-0">
+				<span className="hidden lg:inline text-fg-muted">Expense: </span>
+				<span className="lg:hidden font-bold text-expense">−</span>
+				<span className="font-semibold text-expense">{formatCurrency(list.summary.expense)}</span>
+			</span>
+			<span className="flex-1 lg:flex-none text-center lg:text-left whitespace-nowrap border-l border-border pl-2 lg:border-l-0 lg:pl-0">
+				<span className="hidden lg:inline text-fg-muted">Net: </span>
+				<span className={`font-semibold ${netColor}`}>{formatCurrency(list.summary.net)}</span>
+			</span>
+		</div>
+	)
+}
+
 export default function TransactionsPage() {
 	const router = useRouter()
 	const { loading: currencyLoading } = useCurrency()
 	const formatCurrency = useCurrencyFormatter()
 	const [list, setList] = useState<TransactionList | null>(null)
+	const [summaryOpen, setSummaryOpen] = useState(false)
+	const [summaryHovered, setSummaryHovered] = useState(false)
 	const [accounts, setAccounts] = useState<Account[]>([])
 	const [categories, setCategories] = useState<Category[]>([])
 	const [loading, setLoading] = useState(true)
@@ -318,15 +350,46 @@ export default function TransactionsPage() {
 		<PageTransition>
 			<div className="px-4 py-6 md:px-6 max-w-5xl mx-auto">
 				{/* Header */}
-				<div className="flex items-center justify-between mb-6">
-					<h1 className="text-2xl font-bold text-fg">Transactions</h1>
-					<button
-						onClick={openAdd}
-						className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors duration-150"
-					>
-						<Plus size={16} strokeWidth={2.5} />
-						Add
-					</button>
+				<div className="mb-6">
+					<div className={cn("flex items-center justify-between gap-3", list && summaryOpen ? "mb-2" : "")}>
+						<h1 className="text-2xl font-bold text-fg shrink-0">Transactions</h1>
+						<div className="flex items-center gap-2">
+							{list && (
+								<div
+									className="flex items-center gap-2"
+									onMouseEnter={() => setSummaryHovered(true)}
+									onMouseLeave={() => setSummaryHovered(false)}
+								>
+									{/* Desktop: inline on hover/open */}
+									{(summaryOpen || summaryHovered) && (
+										<div className="hidden sm:flex">
+											<SummaryChip list={list} formatCurrency={formatCurrency} />
+										</div>
+									)}
+									<button
+										onClick={() => setSummaryOpen((v) => !v)}
+										className="p-2 rounded-xl text-fg-muted hover:text-fg hover:bg-bg-2 transition-colors"
+										aria-label="Toggle summary"
+									>
+										<BarChart2 size={15} />
+									</button>
+								</div>
+							)}
+							<button
+								onClick={openAdd}
+								className="shrink-0 flex items-center gap-2 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl px-4 py-2 text-sm transition-colors duration-150"
+							>
+								<Plus size={16} strokeWidth={2.5} />
+								Add
+							</button>
+						</div>
+					</div>
+					{/* Mobile: full-width bar below header when tapped */}
+					{list && summaryOpen && (
+						<div className="sm:hidden mt-2">
+							<SummaryChip list={list} formatCurrency={formatCurrency} fullWidth />
+						</div>
+					)}
 				</div>
 
 				{/* Filters */}
@@ -369,12 +432,36 @@ export default function TransactionsPage() {
 							className={inputCls}
 						>
 							<option value="">All categories</option>
-							{categories.map((c) => (
-								<option key={c.id} value={c.id}>
-									{c.icon ? `${c.icon} ` : ""}
-									{c.name}
-								</option>
-							))}
+							<optgroup label="Income">
+								{categories
+									.filter((c) => c.type === "income")
+									.map((c) => (
+										<option key={c.id} value={c.id}>
+											{c.icon ? `${c.icon} ` : ""}
+											{c.name}
+										</option>
+									))}
+							</optgroup>
+							<optgroup label="Expense">
+								{categories
+									.filter((c) => c.type === "expense")
+									.map((c) => (
+										<option key={c.id} value={c.id}>
+											{c.icon ? `${c.icon} ` : ""}
+											{c.name}
+										</option>
+									))}
+							</optgroup>
+							<optgroup label="Neutral">
+								{categories
+									.filter((c) => c.type === "neutral")
+									.map((c) => (
+										<option key={c.id} value={c.id}>
+											{c.icon ? `${c.icon} ` : ""}
+											{c.name}
+										</option>
+									))}
+							</optgroup>
 						</select>
 						<select
 							value={filterType}
@@ -586,7 +673,7 @@ export default function TransactionsPage() {
 										<button
 											key={t}
 											type="button"
-											onClick={() => setTxForm((f) => ({ ...f, type: t }))}
+											onClick={() => setTxForm((f) => ({ ...f, type: t, categoryId: "" }))}
 											className={cn(
 												"flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors duration-150",
 												txForm.type === t

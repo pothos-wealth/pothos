@@ -1,7 +1,16 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { CalendarClock, Pause, Pencil, Play, Plus, Trash2 } from "lucide-react"
+import {
+	CalendarClock,
+	ChevronDown,
+	ChevronRight,
+	Pause,
+	Pencil,
+	Play,
+	Plus,
+	Trash2,
+} from "lucide-react"
 import { Card } from "@/components/ui/Card"
 import { ConfirmModal } from "@/components/ui/ConfirmModal"
 import { Modal } from "@/components/ui/Modal"
@@ -102,6 +111,7 @@ export function RecurringTransactionsPanel({
 	const formatCurrency = useCurrencyFormatter()
 	const activeAccounts = accounts.filter((a) => a.isActive)
 	const [items, setItems] = useState<RecurringTransaction[]>([])
+	const [expanded, setExpanded] = useState(false)
 	const [loading, setLoading] = useState(false)
 	const [modalOpen, setModalOpen] = useState(false)
 	const [editing, setEditing] = useState<RecurringTransaction | null>(null)
@@ -211,10 +221,17 @@ export function RecurringTransactionsPanel({
 	return (
 		<div className="mb-6">
 			<div className="flex items-center justify-between mb-3">
-				<div className="flex items-center gap-2">
+				<button
+					type="button"
+					onClick={() => setExpanded((e) => !e)}
+					className="flex items-center gap-2 text-fg hover:text-primary transition-colors"
+				>
+					{expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
 					<CalendarClock size={17} className="text-primary" />
-					<h2 className="text-base font-semibold text-fg">Recurring</h2>
-				</div>
+					<h2 className="text-base font-semibold">
+						Recurring{items.length > 0 ? ` (${items.length})` : ""}
+					</h2>
+				</button>
 				<button
 					type="button"
 					onClick={openCreate}
@@ -225,21 +242,22 @@ export function RecurringTransactionsPanel({
 				</button>
 			</div>
 
-			{panelError && (
+			{expanded && panelError && (
 				<div className="bg-expense-light border border-expense text-expense rounded-xl px-4 py-3 text-sm mb-2">
 					{panelError}
 				</div>
 			)}
 
-			{loading ? (
-				<Card className="text-sm text-fg-muted">Loading recurring transactions...</Card>
-			) : items.length === 0 ? (
-				<Card>
-					<p className="text-sm text-fg-muted">No recurring transactions yet</p>
-				</Card>
-			) : (
-				<div className="grid gap-2 md:grid-cols-2">
-					{items.map((item) => (
+			{expanded &&
+				(loading ? (
+					<Card className="text-sm text-fg-muted">Loading recurring transactions...</Card>
+				) : items.length === 0 ? (
+					<Card>
+						<p className="text-sm text-fg-muted">No recurring transactions yet</p>
+					</Card>
+				) : (
+					<div className="grid gap-2 md:grid-cols-2">
+						{items.map((item) => (
 						<Card key={item.id} className="flex items-center gap-3 p-4">
 							<span
 								className={cn(
@@ -295,7 +313,7 @@ export function RecurringTransactionsPanel({
 						</Card>
 					))}
 				</div>
-			)}
+			))}
 
 			<Modal
 				open={modalOpen}
@@ -318,7 +336,7 @@ export function RecurringTransactionsPanel({
 									setForm((current) => ({
 										...current,
 										type,
-										categoryId: type === "transfer" ? "" : current.categoryId,
+										categoryId: "",
 									}))
 								}
 								className={cn(
