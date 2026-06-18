@@ -92,6 +92,18 @@ export async function transactionRoutes(app: FastifyInstance) {
 
 		const total = totalResult?.count ?? 0
 
+		const summaryResult = db
+			.select({
+				income: sql<number>`coalesce(sum(case when ${transactions.type} = 'income' then ${transactions.amount} else 0 end), 0)`,
+				expense: sql<number>`coalesce(sum(case when ${transactions.type} = 'expense' then -${transactions.amount} else 0 end), 0)`,
+			})
+			.from(transactions)
+			.where(and(...conditions))
+			.get()
+
+		const income = summaryResult?.income ?? 0
+		const expense = summaryResult?.expense ?? 0
+
 		return reply.send({
 			data: rows,
 			pagination: {
@@ -99,6 +111,11 @@ export async function transactionRoutes(app: FastifyInstance) {
 				limit,
 				total,
 				totalPages: Math.ceil(total / limit),
+			},
+			summary: {
+				income,
+				expense,
+				net: income - expense,
 			},
 		})
 	})

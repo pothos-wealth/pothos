@@ -107,6 +107,11 @@ export interface TransactionList {
 		total: number
 		totalPages: number
 	}
+	summary: {
+		income: number
+		expense: number
+		net: number
+	}
 }
 
 export interface TrendPoint {
